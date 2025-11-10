@@ -79,7 +79,8 @@
   </head>
 
   <body>
-    <h1>Absensi Katekumen</h1>
+    <h1>Presensi Katekumen Dewasa</h1>
+	<h2>Gereja Katedral St. Petrus Bandung</h2>
 
     <label for="week">Pilih Topik:</label>
     <select id="week">
@@ -89,7 +90,7 @@
     <div id="reader"></div>
     <div id="status"></div>
 
-    <footer>© 2025 Tim TI Katekumen Dewasa - St. Petrus Katedral</footer>
+    <footer>© 2025 Tim TI Katekumen Dewasa - St. Petrus Katedral Bandung</footer>
 
     <script>
       const reader = new Html5Qrcode("reader");
@@ -170,7 +171,7 @@
 
             if (res.status === "ok") {
               showStatus(
-                `✅ <b>${res.name}</b><br>Hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
+                `✅ <b>${res.name}</b><br>hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
                 "success"
               );
             } else {
@@ -184,7 +185,7 @@
           .finally(() => {
             setTimeout(() => {
               scanCooldown = false;
-              showStatus("📷 Siap scan berikutnya", "");
+              showStatus("Siap scan berikutnya", "");
             }, 3000);
           });
       }
