@@ -1,134 +1,174 @@
-###### 📘 \*\*Absensi Katekumen Dewasa – Gereja Katedral St. Petrus Bandung\*\*
+###### md
+
+###### \# Absensi Katekumen - Katedral St. Petrus Bandung (Alpha)
 
 ###### 
 
-###### Sistem absensi digital berbasis \*\*QR Code\*\* untuk kegiatan Katekumen Dewasa, mencatat kehadiran peserta langsung ke \*\*Google Spreadsheet\*\* melalui Google Apps Script.  
-
-###### Antarmuka web sederhana dan dapat digunakan langsung di ponsel dengan kamera belakang.
+###### Absensi Katekumen Dewasa – Gereja Katedral St. Petrus Bandung. Sistem absensi digital berbasis QR Code untuk kegiatan Katekumen Dewasa, mencatat kehadiran peserta langsung ke Google Spreadsheet melalui Google Apps Script. Antarmuka web sederhana dan dapat digunakan langsung di ponsel dengan kamera belakang.
 
 ###### 
 
-###### ---
+###### \## ✨ Fitur Utama
 
 ###### 
 
-###### ✨ \*\*Fitur Utama\*\*
+###### \*   📷 \*\*Pemindaian Kode QR Otomatis:\*\* Peserta cukup memindai QR Code dengan kamera ponsel.
+
+###### \*   📊 \*\*Pencatatan Kehadiran Real-time:\*\* Data kehadiran langsung tercatat di Google Spreadsheet.
+
+###### \*   📱 \*\*Responsif dan Mudah Digunakan:\*\* Antarmuka web yang dirancang untuk penggunaan di perangkat seluler.
+
+###### \*   🌐 \*\*CORS Enabled API:\*\* API dirancang untuk dapat diakses dari berbagai sumber.
 
 ###### 
 
-###### 📷 Pemindaian Kode QR Otomatis  
-
-###### Peserta cukup memindai kode QR masing-masing untuk menandai kehadiran tanpa input manual.  
+###### \## ⚙️ Technologies
 
 ###### 
 
-###### ☁️ Integrasi Langsung dengan Google Sheets  
-
-###### Setiap hasil pemindaian otomatis tersimpan di sheet \*Absensi\* menggunakan Google Apps Script.  
+###### \### Languages
 
 ###### 
 
-###### 🗂️ Dropdown Topik Dinamis  
-
-###### Daftar topik diambil langsung dari sheet \*Topik\*, sehingga tidak perlu mengubah kode saat jadwal berganti.  
+###### \*   JavaScript
 
 ###### 
 
-###### ✅ Validasi Kehadiran Otomatis  
-
-###### Jika peserta sudah hadir, sistem akan mencentang kolom topik yang sesuai.  
+###### \## 📂 Project Structure
 
 ###### 
 
-###### 🖥️ Tampilan Web Minimalis  
+###### ```
 
-###### Desain bersih dan responsif, mudah digunakan oleh panitia dan peserta.  
+###### ├── README.md
 
-###### 
+###### └── api/
 
-###### ⏳ Waktu Tunggu 3 Detik  
+###### &nbsp;   ├── absensi.js
 
-###### Sistem menunggu 3 detik sebelum memindai kode berikutnya untuk menghindari duplikasi.
+###### └── index.html
 
-###### 
-
-###### ---
+###### ```
 
 ###### 
 
-###### 🧠 \*\*Teknologi yang Digunakan\*\*
+###### \## 🛠️ Prerequisites \& Dependencies
 
 ###### 
 
-###### • Frontend: HTML, CSS, JavaScript  
+###### \*   \*\*Web Browser:\*\* Modern web browser (Chrome, Firefox, Safari, etc.)
 
-###### • Scanner: Html5-Qrcode  
+###### \*   \*\*Google Apps Script:\*\* A Google account and familiarity with Google Apps Script for configuring the backend.
 
-###### • Backend: Google Apps Script  
+###### \*   \*\*HTML5 QR Code Library:\*\* Used for QR code scanning functionality, included via CDN: `https://unpkg.com/html5-qrcode`
 
-###### • Database: Google Spreadsheet  
-
-###### • Hosting: Vercel  
+###### \*   \*\*Google Spreadsheet:\*\* A Google Spreadsheet to record attendance data.
 
 ###### 
 
-###### ---
+###### \## 🚀 Installation \& Setup Instructions
 
 ###### 
 
-###### 🧩 \*\*Struktur Spreadsheet\*\*
+###### 1\.  \*\*Clone the Repository:\*\*
 
 ###### 
 
-###### | Sheet | Fungsi | Kolom Penting |
+###### &nbsp;   ```bash
 
-###### |-------|---------|----------------|
+###### &nbsp;   git clone https://github.com/ojeeeeedev/absensikatekumen.git
 
-###### | Absensi | Data kehadiran peserta | B: Nama, L: StudentID, O–R: Topik 1–4 |
+###### &nbsp;   cd absensikatekumen
 
-###### | Data Siswa | Daftar peserta \& QR | B: Nama, L: StudentID |
-
-###### | Topik | Nama topik katekumen | A: Nomor, B: Nama Topik |
+###### &nbsp;   ```
 
 ###### 
 
-###### ---
+###### 2\.  \*\*Set up Google Apps Script:\*\*
 
 ###### 
 
-###### 🚧 \*\*Fitur Eksperimen (Branch `feature-duplicate-scan`)\*\*
+###### &nbsp;   \*   Create a new Google Spreadsheet.
+
+###### &nbsp;   \*   Open the Script editor in your Google Sheet (Tools > Script editor).
+
+###### &nbsp;   \*   Create a function that handles incoming POST requests and appends data to the sheet.  You will need to deploy this as a Web App.
+
+###### &nbsp;   \*   Copy the `scriptURL` from `api/absensi.js` and replace the placeholder with your deployed Web App URL from Google Apps Script.
 
 ###### 
 
-###### 🔹 Deteksi otomatis jika QR sudah pernah dipindai sebelumnya.  
-
-###### Pesan peringatan:  
-
-###### > ⚠️ Kode peserta <STUDENTID> sudah dipindai.
+###### 3\.  \*\*Configure CORS (if necessary):\*\*
 
 ###### 
 
-###### ---
+###### &nbsp;   The provided `api/absensi.js` already includes CORS headers allowing requests from all origins.  Review the `api/absensi.js` file and adjust as needed.
 
 ###### 
 
-###### 👥 \*\*Tim Pengembang\*\*
+###### 4\.  \*\*Deploy `index.html`:\*\*
 
 ###### 
 
-###### Tim TI Katekumen Dewasa – Gereja Katedral St. Petrus Bandung  
+###### &nbsp;   \*   You can directly open `index.html` in your browser from your local file system.
 
-###### Dikembangkan oleh \*\*Antonius Andar P.\*\*
-
-###### 
-
-###### ---
+###### &nbsp;   \*   Alternatively, you can host the `index.html` file on a web server (e.g., Netlify, Vercel, GitHub Pages).
 
 ###### 
 
-###### > “Bertolaklah ke tempat yang dalam.”  
-
-###### > — Lukas 5:4
+###### \## 📝 Usage Examples
 
 ###### 
+
+###### 1\.  \*\*Open `index.html` in your browser on a mobile device.\*\*
+
+###### 
+
+###### 2\.  \*\*Grant camera permissions when prompted.\*\*
+
+###### 
+
+###### 3\.  \*\*Point the camera at the QR code. The data will be automatically sent to your Google Spreadsheet.\*\*
+
+###### 
+
+###### \## ⚙️ Configuration Options
+
+###### 
+
+###### \*   \*\*`scriptURL` in `api/absensi.js`:\*\*  This is the most important configuration.  Update this with the URL of your deployed Google Apps Script Web App.
+
+###### 
+
+###### \## 🤝 Contributing Guidelines
+
+###### 
+
+###### Contributions are welcome! To contribute:
+
+###### 
+
+###### 1\.  Fork the repository.
+
+###### 2\.  Create a new branch for your feature or bug fix.
+
+###### 3\.  Make your changes and commit them with descriptive messages.
+
+###### 4\.  Submit a pull request.
+
+###### 
+
+###### \## ⚖️ License Information
+
+###### 
+
+###### No license is currently specified for this project. All rights are reserved by the owner.
+
+###### 
+
+###### \## 🙏 Acknowledgments
+
+###### 
+
+###### \*   Uses the `html5-qrcode` library for QR code scanning.
 
