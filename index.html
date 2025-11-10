@@ -137,17 +137,18 @@
           body: JSON.stringify({ studentId, week }),
         })
           .then(r => r.json())
-          .then(res => {
+          	.then((res) => {
+ 		 if (!res) return;
  		 if (res.status === "ok") {
-   		 const studentDisplayId = res.studentId ? res.studentId.toUpperCase() : "UNKNOWN";
    		 showStatus(
-    		  `✅ ${res.name || "Nama tidak diketahui"}<br>${studentDisplayId} hadir Topik ${week}`,
+    		  `✅ <b>${res.name}</b><br>Hadir <b>Topik ${week}</b><br>${res.studentId.toUpperCase()}`,
     		  "success"
-  		  );
+   		 );
  		 } else {
- 		   showStatus("❌ Data tidak ditemukan!", "error");
- 		 }
+  		  showStatus(`❌ ${res.message || "Data tidak ditemukan"}`, "error");
+ 	 }
 	})
+
 
           .catch(err => {
             console.error(err);
