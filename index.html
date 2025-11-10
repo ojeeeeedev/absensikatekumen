@@ -8,9 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" />
 
     <style>
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
       html, body {
         margin: 0;
         padding: 0;
@@ -64,14 +62,8 @@
         padding: 0.8rem;
         border-radius: 8px;
       }
-      .success {
-        background: #00c851;
-        color: #fff;
-      }
-      .error {
-        background: #ff4444;
-        color: #fff;
-      }
+      .success { background: #00c851; color: #fff; }
+      .error { background: #ff4444; color: #fff; }
       .student-id {
         font-size: 0.9rem;
         font-weight: 400;
@@ -103,16 +95,15 @@
       const reader = new Html5Qrcode("reader");
       let scanCooldown = false;
 
-      // ✅ Change this to your active Apps Script URL
+      // ✅ Your deployed Apps Script URL
       const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx62YPWU49CeQylXXVy7O9zKIc_BthgA3sas6O2pjYH9jqW-b8jdMz0M60HKtKFv3TLZw/exec";
 
-      // Load topic list dynamically from Google Sheets
+      // Load topik list dynamically
       async function loadTopikList() {
         const select = document.getElementById("week");
         select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
 
         try {
-          console.log("Fetching topik list...");
           const res = await fetch(`${SCRIPT_URL}?action=topik`);
           const data = await res.json();
 
@@ -125,7 +116,6 @@
               opt.textContent = `${item.week}. ${item.name}`;
               select.appendChild(opt);
             });
-            console.log("Topik loaded:", data.topik.length, "items");
           } else {
             select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
           }
@@ -159,8 +149,6 @@
         scanCooldown = true;
 
         const week = document.getElementById("week").value;
-        const selectedText = document.querySelector(`#week option[value="${week}"]`).textContent.split(". ")[1] || `Topik ${week}`;
-
         showStatus("⏳ Mengirim data...", "");
 
         fetch("/api/absensi", {
@@ -182,7 +170,7 @@
 
             if (res.status === "ok") {
               showStatus(
-                `✅ <b>${res.name}</b><br>Hadir <b>${selectedText}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
+                `✅ <b>${res.name}</b><br>Hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
                 "success"
               );
             } else {
