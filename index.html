@@ -6,8 +6,11 @@
     <title>Absensi Katekumen</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" />
+
     <style>
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
       html, body {
         margin: 0;
         padding: 0;
@@ -61,8 +64,14 @@
         padding: 0.8rem;
         border-radius: 8px;
       }
-      .success { background: #00c851; color: #fff; }
-      .error { background: #ff4444; color: #fff; }
+      .success {
+        background: #00c851;
+        color: #fff;
+      }
+      .error {
+        background: #ff4444;
+        color: #fff;
+      }
       .student-id {
         font-size: 0.9rem;
         font-weight: 400;
@@ -80,111 +89,122 @@
   <body>
     <h1>Absensi Katekumen</h1>
 
-<label for="week">Pilih Topik:</label>
-<select id="week">
-  <option disabled selected>Memuat daftar topik...</option>
-</select>
+    <label for="week">Pilih Topik:</label>
+    <select id="week">
+      <option disabled selected>Memuat daftar topik...</option>
+    </select>
 
-<script>
-  const reader = new Html5Qrcode("reader");
-  let scanCooldown = false;
+    <div id="reader"></div>
+    <div id="status"></div>
 
-  async function loadTopikList() {
-    const select = document.getElementById("week");
-    select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
+    <footer>© 2025 IT Katekumen Dewasa - St. Petrus Katedral</footer>
 
-    try {
-      // ✅ Replace with your actual Apps Script Web App URL
-      const res = await fetch("https://script.google.com/macros/s/AKfycbx62YPWU49CeQylXXVy7O9zKIc_BthgA3sas6O2pjYH9jqW-b8jdMz0M60HKtKFv3TLZw/exec?action=topik");
-      const data = await res.json();
+    <script>
+      const reader = new Html5Qrcode("reader");
+      let scanCooldown = false;
 
-      select.innerHTML = "";
+      // ✅ Change this to your active Apps Script URL
+      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx62YPWU49CeQylXXVy7O9zKIc_BthgA3sas6O2pjYH9jqW-b8jdMz0M60HKtKFv3TLZw/exec";
 
-      if (data.status === "ok" && Array.isArray(data.topik) && data.topik.length > 0) {
-        data.topik.forEach(item => {
-          const opt = document.createElement("option");
-          opt.value = item.week;
-          opt.textContent = `${item.week}. ${item.name}`;
-          select.appendChild(opt);
-        });
-      } else {
-        select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
-      }
-    } catch (err) {
-      console.error("Gagal memuat daftar topik:", err);
-      select.innerHTML = `<option disabled>⚠️ Gagal memuat topik</option>`;
-    }
-  }
+      // Load topic list dynamically from Google Sheets
+      async function loadTopikList() {
+        const select = document.getElementById("week");
+        select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
 
-  async function startScanner() {
-    try {
-      await reader.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 350, height: 350 } },
-        (decodedText) => handleScan(decodedText)
-      );
-    } catch (err) {
-      console.error("Camera Error:", err);
-      showStatus("⚠️ Tidak bisa mengakses kamera", "error");
-    }
-  }
-
-  function showStatus(text, type) {
-    const el = document.getElementById("status");
-    el.innerHTML = text;
-    el.className = type;
-  }
-
-  function handleScan(decodedText) {
-    if (scanCooldown) return;
-    scanCooldown = true;
-
-    const week = document.getElementById("week").value;
-    showStatus("⏳ Mengirim data...", "");
-
-    fetch("/api/absensi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: decodedText, week }),
-    })
-      .then(async (r) => {
-        const text = await r.text();
-        console.log("Raw response:", text);
-
-        let res;
         try {
-          res = JSON.parse(text);
-        } catch {
-          showStatus("⚠️ Server mengirim data tidak valid.", "error");
-          return;
-        }
+          console.log("Fetching topik list...");
+          const res = await fetch(`${SCRIPT_URL}?action=topik`);
+          const data = await res.json();
 
-        if (res.status === "ok") {
-          showStatus(
-            `✅ <b>${res.name}</b><br>Hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
-            "success"
+          select.innerHTML = "";
+
+          if (data.status === "ok" && Array.isArray(data.topik) && data.topik.length > 0) {
+            data.topik.forEach((item) => {
+              const opt = document.createElement("option");
+              opt.value = item.week;
+              opt.textContent = `${item.week}. ${item.name}`;
+              select.appendChild(opt);
+            });
+            console.log("Topik loaded:", data.topik.length, "items");
+          } else {
+            select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
+          }
+        } catch (err) {
+          console.error("Gagal memuat daftar topik:", err);
+          select.innerHTML = `<option disabled>⚠️ Gagal memuat topik</option>`;
+        }
+      }
+
+      async function startScanner() {
+        try {
+          await reader.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 350, height: 350 } },
+            (decodedText) => handleScan(decodedText)
           );
-        } else {
-          showStatus(`❌ ${res.message || "Data tidak ditemukan!"}`, "error");
+        } catch (err) {
+          console.error("Camera Error:", err);
+          showStatus("⚠️ Tidak bisa mengakses kamera", "error");
         }
-      })
-      .catch((err) => {
-        console.error("Fetch failed:", err);
-        showStatus("⚠️ Koneksi error!", "error");
-      })
-      .finally(() => {
-        setTimeout(() => {
-          scanCooldown = false;
-          showStatus("📷 Siap scan berikutnya", "");
-        }, 3000);
-      });
-  }
+      }
 
-  window.onload = async () => {
-    await loadTopikList();
-    startScanner();
-  };
-</script>
+      function showStatus(text, type) {
+        const el = document.getElementById("status");
+        el.innerHTML = text;
+        el.className = type;
+      }
 
+      function handleScan(decodedText) {
+        if (scanCooldown) return;
+        scanCooldown = true;
+
+        const week = document.getElementById("week").value;
+        const selectedText = document.querySelector(`#week option[value="${week}"]`).textContent.split(". ")[1] || `Topik ${week}`;
+
+        showStatus("⏳ Mengirim data...", "");
+
+        fetch("/api/absensi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentId: decodedText, week }),
+        })
+          .then(async (r) => {
+            const text = await r.text();
+            console.log("Raw response:", text);
+
+            let res;
+            try {
+              res = JSON.parse(text);
+            } catch {
+              showStatus("⚠️ Server mengirim data tidak valid.", "error");
+              return;
+            }
+
+            if (res.status === "ok") {
+              showStatus(
+                `✅ <b>${res.name}</b><br>Hadir <b>${selectedText}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
+                "success"
+              );
+            } else {
+              showStatus(`❌ ${res.message || "Data tidak ditemukan!"}`, "error");
+            }
+          })
+          .catch((err) => {
+            console.error("Fetch failed:", err);
+            showStatus("⚠️ Koneksi error!", "error");
+          })
+          .finally(() => {
+            setTimeout(() => {
+              scanCooldown = false;
+              showStatus("📷 Siap scan berikutnya", "");
+            }, 3000);
+          });
+      }
+
+      window.onload = async () => {
+        await loadTopikList();
+        startScanner();
+      };
+    </script>
   </body>
 </html>
