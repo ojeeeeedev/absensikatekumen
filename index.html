@@ -138,15 +138,17 @@
         })
           .then(r => r.json())
           .then(res => {
-            if (res.status === "ok") {
-              showStatus(
-                `✅ ${res.name}<br>${res.id.toUpperCase()} hadir Topik ${week}`,
-                "success"
-              );
-            } else {
-              showStatus("❌ Data tidak ditemukan!", "error");
-            }
-          })
+ 		 if (res.status === "ok") {
+   		 const studentDisplayId = res.studentId ? res.studentId.toUpperCase() : "UNKNOWN";
+   		 showStatus(
+    		  `✅ ${res.name || "Nama tidak diketahui"}<br>${studentDisplayId} hadir Topik ${week}`,
+    		  "success"
+  		  );
+ 		 } else {
+ 		   showStatus("❌ Data tidak ditemukan!", "error");
+ 		 }
+	})
+
           .catch(err => {
             console.error(err);
             showStatus("⚠️ Koneksi error!", "error");
@@ -154,7 +156,7 @@
           .finally(() => {
             setTimeout(() => {
               scanCooldown = false;
-              showStatus("📷 Siap untuk scan berikutnya", "");
+              showStatus("Siap untuk scan berikutnya", "");
             }, 2000);
           });
       }
