@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Absensi Katekumen</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" />
     <style>
       * { box-sizing: border-box; }
       html, body {
@@ -23,8 +23,8 @@
       }
       h1 {
         margin: 1rem 0 0.4rem 0;
-        font-size: 1.8rem;
-        color: #00aaff;
+        font-size: 2.2rem;
+        color: #0ffffff;
         text-align: center;
       }
       label {
@@ -54,22 +54,15 @@
       #status {
         margin-top: 1rem;
         font-size: 1.1rem;
-        font-weight: 500;
+        font-weight: 600;
         text-align: center;
         width: 90%;
         max-width: 420px;
         padding: 0.8rem;
         border-radius: 8px;
-        line-height: 1.4;
       }
       .success { background: #00c851; color: #fff; }
       .error { background: #ff4444; color: #fff; }
-      .id {
-        font-size: 0.9rem;
-        color: #ddd;
-        display: block;
-        margin-top: 0.2rem;
-      }
       footer {
         font-size: 0.9rem;
         color: #666;
@@ -97,45 +90,30 @@
 
     <script>
       const reader = new Html5Qrcode("reader");
-      let scanningDisabled = false;
-
-      // ✅ New, reliable supermarket beep (from jsDelivr)
-      const beepSound = new Audio("https://cdn.jsdelivr.net/gh/aleene/audio-library/beep.mp3");
-      beepSound.preload = "auto";
+      let scanCooldown = false;
 
       async function startScanner() {
         try {
-          if (reader.isScanning) await reader.stop();
+          const cameras = await Html5Qrcode.getCameras();
+          if (!cameras || cameras.length === 0) {
+            showStatus("🚫 Tidak ada kamera yang terdeteksi", "error");
+            return;
+          }
+
+          const backCam =
+            cameras.find(cam =>
+              cam.label.toLowerCase().includes("back") ||
+              cam.label.toLowerCase().includes("rear")
+            ) || cameras[0];
 
           await reader.start(
-            { facingMode: { exact: "environment" } },
+            { deviceId: { exact: backCam.id } },
             { fps: 10, qrbox: { width: 350, height: 350 } },
-            (decodedText) => handleScan(decodedText)
+            handleScan
           );
         } catch (err) {
-          console.warn("Camera Error, fallback to auto:", err);
-          try {
-            const cameras = await Html5Qrcode.getCameras();
-            if (cameras && cameras.length > 0) {
-              const backCam =
-                cameras.find(
-                  (cam) =>
-                    cam.label.toLowerCase().includes("back") ||
-                    cam.label.toLowerCase().includes("rear")
-                ) || cameras[0];
-
-              await reader.start(
-                { deviceId: { exact: backCam.id } },
-                { fps: 10, qrbox: { width: 350, height: 350 } },
-                (decodedText) => handleScan(decodedText)
-              );
-            } else {
-              showStatus("🚫 Tidak ada kamera yang terdeteksi", "error");
-            }
-          } catch (fallbackErr) {
-            console.error("Camera Fallback Error:", fallbackErr);
-            showStatus("⚠️ Tidak bisa mengakses kamera", "error");
-          }
+          console.error("Camera Error:", err);
+          showStatus("⚠️ Tidak bisa mengakses kamera", "error");
         }
       }
 
@@ -145,44 +123,38 @@
         el.className = type;
       }
 
-      function handleScan(decodedText) {
-        if (scanningDisabled) return;
-        scanningDisabled = true;
+      async function handleScan(decodedText) {
+        if (scanCooldown) return;
+        scanCooldown = true;
 
+        const studentId = decodedText.trim().toUpperCase();
         const week = document.getElementById("week").value;
         showStatus("⏳ Mengirim data...", "");
 
         fetch("/api/absensi", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentId: decodedText, week }),
+          body: JSON.stringify({ studentId, week }),
         })
-          .then((r) => r.json())
-          .then((res) => {
-            console.log("Server response:", res);
+          .then(r => r.json())
+          .then(res => {
             if (res.status === "ok") {
               showStatus(
-                `✅ ${res.studentName}<span class="id">${res.studentId}</span><br>hadir Topik ${res.week}`,
+                `✅ ${res.name}<br>${res.id.toUpperCase()} hadir Topik ${week}`,
                 "success"
               );
-              // ✅ Play beep once
-              beepSound.pause();
-              beepSound.currentTime = 0;
-              beepSound.play().catch((e) => console.warn("Beep blocked:", e));
-            } else if (res.status === "not found") {
-              showStatus(`❌ ${res.message}`, "error");
             } else {
-              showStatus("⚠️ Respon tidak valid dari server", "error");
+              showStatus("❌ Data tidak ditemukan!", "error");
             }
           })
-          .catch((err) => {
-            console.error("Fetch error:", err);
+          .catch(err => {
+            console.error(err);
             showStatus("⚠️ Koneksi error!", "error");
           })
           .finally(() => {
-            // Wait 2 seconds before allowing another scan
             setTimeout(() => {
-              scanningDisabled = false;
+              scanCooldown = false;
+              showStatus("📷 Siap untuk scan berikutnya", "");
             }, 2000);
           });
       }
