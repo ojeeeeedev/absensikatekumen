@@ -1,4 +1,3 @@
-md
 # Absensi Katekumen - Katedral St. Petrus Bandung (Alpha)
 
 Absensi Katekumen Dewasa – Gereja Katedral St. Petrus Bandung. Sistem absensi digital berbasis QR Code untuk kegiatan Katekumen Dewasa, mencatat kehadiran peserta langsung ke Google Spreadsheet melalui Google Apps Script. Antarmuka web sederhana dan dapat digunakan langsung di ponsel dengan kamera belakang.
