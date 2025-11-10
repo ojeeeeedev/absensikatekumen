@@ -105,7 +105,7 @@
       const reader = new Html5Qrcode("reader");
       let scanCooldown = false;
 
-      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx62YPWU49CeQylXXVy7O9zKIc_BthgA3sas6O2pjYH9jqW-b8jdMz0M60HKtKFv3TLZw/exec";
+      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxmF5fXmowi7vp92mrWLfOCGHLZST84Y0TB1jEdMu0WURjs4Gb2ehBVtYv-iiDgzyMnQ/exec";
 
       async function loadTopikList() {
         const select = document.getElementById("week");
@@ -188,13 +188,19 @@
             }
 
             if (res.status === "ok") {
-              showStatus(
-                `✅ <b>${res.name}</b><br>hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
-                "success"
-              );
-            } else {
-              showStatus(`❌ ${res.message || "Data tidak ditemukan!"}`, "error");
-            }
+  		showStatus(
+    		`✅ <b>${res.name}</b><br>hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}		</span>`,
+   		 "success"
+	  );
+} else if (res.status === "duplicate") {
+  showStatus(
+    `⚠️ ${res.message}`,
+    "error"
+  );
+} else {
+  showStatus(`❌ ${res.message || "Data tidak ditemukan!"}`, "error");
+}
+
           })
           .catch((err) => {
             console.error("Fetch failed:", err);
