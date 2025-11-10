@@ -7,7 +7,9 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" />
     <style>
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
       html, body {
         margin: 0;
         padding: 0;
@@ -24,7 +26,7 @@
       h1 {
         margin: 1rem 0 0.4rem 0;
         font-size: 2.2rem;
-        color: #0ffffff;
+        color: #00ffff;
         text-align: center;
       }
       label {
@@ -61,8 +63,19 @@
         padding: 0.8rem;
         border-radius: 8px;
       }
-      .success { background: #00c851; color: #fff; }
-      .error { background: #ff4444; color: #fff; }
+      .success {
+        background: #00c851;
+        color: #fff;
+      }
+      .error {
+        background: #ff4444;
+        color: #fff;
+      }
+      .student-id {
+        font-size: 0.9rem;
+        font-weight: 400;
+        opacity: 0.9;
+      }
       footer {
         font-size: 0.9rem;
         color: #666;
@@ -90,53 +103,71 @@
 
     <script>
       const reader = new Html5Qrcode("reader");
-     let scanCooldown = false;
+      let scanCooldown = false;
 
-function handleScan(decodedText) {
-  if (scanCooldown) return; // Prevent scanning too fast
-  scanCooldown = true;
-
-  const week = document.getElementById("week").value;
-  showStatus("⏳ Mengirim data...", "");
-
-  fetch("/api/absensi", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ studentId: decodedText, week }),
-  })
-    .then(async (r) => {
-      const text = await r.text();
-      console.log("Raw response:", text);
-
-      let res;
-      try {
-        res = JSON.parse(text);
-      } catch {
-        showStatus("⚠️ Server mengirim data tidak valid.", "error");
-        return;
+      async function startScanner() {
+        try {
+          await reader.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 350, height: 350 } },
+            (decodedText) => handleScan(decodedText)
+          );
+        } catch (err) {
+          console.error("Camera Error:", err);
+          showStatus("⚠️ Tidak bisa mengakses kamera", "error");
+        }
       }
 
-      if (res.status === "ok") {
-        showStatus(
-          `✅ <b>${res.name}</b><br>Hadir <b>Topik ${week}</b><br>${res.studentId.toUpperCase()}`,
-          "success"
-        );
-      } else {
-        showStatus(`❌ ${res.message || "Data tidak ditemukan!"}`, "error");
+      function showStatus(text, type) {
+        const el = document.getElementById("status");
+        el.innerHTML = text;
+        el.className = type;
       }
-    })
-    .catch((err) => {
-      console.error("Fetch failed:", err);
-      showStatus("⚠️ Koneksi error!", "error");
-    })
-    .finally(() => {
-      // Wait 3 seconds before re-enabling scanner
-      setTimeout(() => {
-        scanCooldown = false;
-        showStatus("📷 Siap scan berikutnya", "");
-      }, 3000);
-    });
-}
+
+      function handleScan(decodedText) {
+        if (scanCooldown) return;
+        scanCooldown = true;
+
+        const week = document.getElementById("week").value;
+        showStatus("⏳ Mengirim data...", "");
+
+        fetch("/api/absensi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentId: decodedText, week }),
+        })
+          .then(async (r) => {
+            const text = await r.text();
+            console.log("Raw response:", text);
+
+            let res;
+            try {
+              res = JSON.parse(text);
+            } catch {
+              showStatus("⚠️ Server mengirim data tidak valid.", "error");
+              return;
+            }
+
+            if (res.status === "ok") {
+              showStatus(
+                `✅ <b>${res.name}</b><br>Hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
+                "success"
+              );
+            } else {
+              showStatus(`❌ ${res.message || "Data tidak ditemukan!"}`, "error");
+            }
+          })
+          .catch((err) => {
+            console.error("Fetch failed:", err);
+            showStatus("⚠️ Koneksi error!", "error");
+          })
+          .finally(() => {
+            setTimeout(() => {
+              scanCooldown = false;
+              showStatus("📷 Siap scan berikutnya", "");
+            }, 3000);
+          });
+      }
 
       window.onload = () => startScanner();
     </script>
