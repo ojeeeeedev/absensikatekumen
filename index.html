@@ -28,6 +28,13 @@
         color: #ffffff;
         text-align: center;
       }
+      h2 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #aaa;
+        text-align: center;
+        font-weight: 500;
+      }
       label {
         font-size: 1.2rem;
         margin-top: 0.6rem;
@@ -61,6 +68,7 @@
         max-width: 420px;
         padding: 0.8rem;
         border-radius: 8px;
+        transition: opacity 0.4s ease;
       }
       .success { background: #00c851; color: #fff; }
       .error { background: #ff4444; color: #fff; }
@@ -80,7 +88,7 @@
 
   <body>
     <h1>Presensi Katekumen Dewasa</h1>
-	<h2>Gereja Katedral St. Petrus Bandung</h2>
+    <h2>Gereja Katedral St. Petrus Bandung</h2>
 
     <label for="week">Pilih Topik:</label>
     <select id="week">
@@ -96,10 +104,8 @@
       const reader = new Html5Qrcode("reader");
       let scanCooldown = false;
 
-      // ✅ Your deployed Apps Script URL
       const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx62YPWU49CeQylXXVy7O9zKIc_BthgA3sas6O2pjYH9jqW-b8jdMz0M60HKtKFv3TLZw/exec";
 
-      // Load topik list dynamically
       async function loadTopikList() {
         const select = document.getElementById("week");
         select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
@@ -143,6 +149,17 @@
         const el = document.getElementById("status");
         el.innerHTML = text;
         el.className = type;
+        el.style.opacity = "1";
+      }
+
+      function clearStatus() {
+        const el = document.getElementById("status");
+        el.style.opacity = "0";
+        setTimeout(() => {
+          el.innerHTML = "📷 Silakan pindai kode QR berikutnya";
+          el.className = "";
+          el.style.opacity = "1";
+        }, 400);
       }
 
       function handleScan(decodedText) {
@@ -185,7 +202,7 @@
           .finally(() => {
             setTimeout(() => {
               scanCooldown = false;
-              showStatus("Siap scan berikutnya", "");
+              clearStatus();
             }, 3000);
           });
       }
