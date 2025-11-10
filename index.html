@@ -99,10 +99,13 @@
     <div id="reader"></div>
     <div id="status"></div>
 
-   <footer>
+   <footer class="site-footer">
   <p>© 2025 IT Katekumen Dewasa - St. Petrus Katedral</p>
-  <p>dikembangkan oleh Antonius Andar P.</p>
-  <p><a href="https://github.com/ojeeeeedev" target="_blank">GitHub</a></p>
+  <p>
+    <a href="https://github.com/ojeeeeedev" target="_blank" rel="noopener noreferrer">
+      github.com/ojeeeeedev
+    </a>
+  </p>
 </footer>
 
     <script>
@@ -154,7 +157,7 @@
 
             if (res.status === "ok") {
               showStatus(
-                `✅ <b>${res.name}</b><br>Hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
+                `✅ <b>${res.name}</b><br>hadir <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
                 "success"
               );
             } else {
