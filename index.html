@@ -125,7 +125,7 @@
     const week = document.getElementById("week").value;
     showStatus("⏳ Mengirim data...", "");
 
-    fetch("https://script.google.com/macros/s/AKfycbx2Wu2kEsLxgR92IR-5GeF1yWJsOZIcTHvRd2-PtqtUObZ0lSD3bZbvp60rAmhQPxBkVw/exec?nocache=" + Date.now(), {
+    fetch("https://script.google.com/macros/s/AKfycbxPK4OTRBDDpJgdmW_cKLD6CBYczZ6UJC31-LUhvVktN5_Fe92B3ALhZ_FKE3I5cYwS8Q/exec?nocache=" + Date.now(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ studentId: decodedText, week }),
