@@ -89,36 +89,62 @@
     <footer>© 2025 IT Katekumen Dewasa - St. Petrus Katedral</footer>
 
     <script>
-      const reader = new Html5Qrcode("reader");
+  const reader = new Html5Qrcode("reader");
 
-      async function startScanner() {
-        try {
-          await reader.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 350, height: 350 } },
-            (decodedText) => handleScan(decodedText)
-          );
-        } catch (err) {
-          console.error("Camera Error:", err);
-          showStatus("⚠️ Tidak bisa mengakses kamera", "error");
+  async function startScanner() {
+    try {
+      // Stop existing scanner if already running (prevents blank screen)
+      if (reader.isScanning) {
+        await reader.stop();
+      }
+
+      // List available cameras and start the environment one
+      const cameras = await Html5Qrcode.getCameras();
+      if (cameras && cameras.length) {
+        await reader.start(
+          { deviceId: { exact: cameras[0].id } },
+          { fps: 10, qrbox: { width: 350, height: 350 } },
+          (decodedText) => handleScan(decodedText)
+        );
+      } else {
+        showStatus("🚫 Kamera tidak ditemukan", "error");
+      }
+    } catch (err) {
+      console.error("Camera Error:", err);
+      showStatus("⚠️ Tidak bisa mengakses kamera", "error");
+    }
+  }
+
+  function showStatus(text, type) {
+    const el = document.getElementById("status");
+    el.textContent = text;
+    el.className = type;
+  }
+
+  function handleScan(decodedText) {
+    const week = document.getElementById("week").value;
+    showStatus("⏳ Mengirim data...", "");
+
+    fetch("https://script.google.com/macros/s/AKfycbx2Wu2kEsLxgR92IR-5GeF1yWJsOZIcTHvRd2-PtqtUObZ0lSD3bZbvp60rAmhQPxBkVw/exec?nocache=" + Date.now(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId: decodedText, week }),
+    })
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.status === "ok") {
+          showStatus(`✅ ${res.name} (${res.id}) hadir Topik ${week}`, "success");
+          new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg").play();
+        } else {
+          showStatus("❌ Data tidak ditemukan!", "error");
         }
-      }
+      })
+      .catch((err) => {
+        console.error(err);
+        showStatus("⚠️ Koneksi error!", "error");
+      });
+  }
 
-      function showStatus(text, type) {
-        const el = document.getElementById("status");
-        el.textContent = text;
-        el.className = type;
-      }
+  window.onload = () => startScanner();
+</script>
 
-      function handleScan(decodedText) {
-        const week = document.getElementById("week").value;
-        showStatus("⏳ Mengirim data...", "");
-
-        fetch("https://script.google.com/macros/s/AKfycbx2Wu2kEsLxgR92IR-5GeF1yWJsOZIcTHvRd2-PtqtUObZ0lSD3bZbvp60rAmhQPxBkVw/exec?nocache=" + Date.now(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentId: decodedText, week }),
-        })
-          .then((r) => r.json())
-          .then((res) => {
-            if
