@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     try {
       // Google Apps Script endpoint
-      const scriptURL = "https://script.google.com/macros/s/AKfycbza-F3A40kbklmXFnZuFI8J8TO3JfO8ewqF5uG46QusLn7-i1vK7WXcFLjJVT1OJ72_ew/exec";
+      const scriptURL = "https://script.google.com/macros/s/AKfycbwZAEdIikC3ud6rbX7owkZkixHMboRY0k-4uvcLqmGCePZAxk6bYLox6e3uLVijPc6LtA/exec";
 
       // Forward the request body to the Apps Script
       const response = await fetch(scriptURL, {
