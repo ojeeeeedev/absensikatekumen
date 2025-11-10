@@ -89,29 +89,47 @@
     <footer>© 2025 IT Katekumen Dewasa - St. Petrus Katedral</footer>
 
     <script>
+ <script>
   const reader = new Html5Qrcode("reader");
 
   async function startScanner() {
     try {
-      // Stop existing scanner if already running (prevents blank screen)
+      // Stop any existing scanner before restarting
       if (reader.isScanning) {
         await reader.stop();
       }
 
-      // List available cameras and start the environment one
-      const cameras = await Html5Qrcode.getCameras();
-      if (cameras && cameras.length) {
-        await reader.start(
-          { deviceId: { exact: cameras[0].id } },
-          { fps: 10, qrbox: { width: 350, height: 350 } },
-          (decodedText) => handleScan(decodedText)
-        );
-      } else {
-        showStatus("🚫 Kamera tidak ditemukan", "error");
-      }
+      // Explicitly request the back camera
+      await reader.start(
+        { facingMode: { exact: "environment" } },
+        { fps: 10, qrbox: { width: 350, height: 350 } },
+        (decodedText) => handleScan(decodedText)
+      );
+
     } catch (err) {
-      console.error("Camera Error:", err);
-      showStatus("⚠️ Tidak bisa mengakses kamera", "error");
+      console.warn("Camera Error, fallback to auto:", err);
+
+      // If environment camera not available, fallback to default
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+          const backCam = cameras.find(cam =>
+            cam.label.toLowerCase().includes("back") ||
+            cam.label.toLowerCase().includes("rear")
+          ) || cameras[0];
+
+          await reader.start(
+            { deviceId: { exact: backCam.id } },
+            { fps: 10, qrbox: { width: 350, height: 350 } },
+            (decodedText) => handleScan(decodedText)
+          );
+        } else {
+          showStatus("🚫 Tidak ada kamera yang terdeteksi", "error");
+        }
+      } catch (fallbackErr) {
+        console.error("Camera Fallback Error:", fallbackErr);
+        showStatus("⚠️ Tidak bisa mengakses kamera", "error");
+      }
     }
   }
 
@@ -125,7 +143,7 @@
     const week = document.getElementById("week").value;
     showStatus("⏳ Mengirim data...", "");
 
-fetch("https://script.google.com/macros/s/AKfycbxHvi5ye-wF_ov-a_uF2JEnY9VzAnXZx36Cez5LHTdLQUpvSw9CcDwfijdONxgfPHlsZA/exec?nocache=" + Date.now(), {
+    fetch("https://script.google.com/macros/s/AKfycbxHvi5ye-wF_ov-a_uF2JEnY9VzAnXZx36Cez5LHTdLQUpvSw9CcDwfijdONxgfPHlsZA/exec?nocache=" + Date.now(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ studentId: decodedText, week }),
