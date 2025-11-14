@@ -114,33 +114,33 @@
     SCRIPT_MAP = await res.json();
   }
 
-  async function loadTopikList() {
-    const select = document.getElementById("week");
-    select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
+ async function loadTopikList() {
+  const select = document.getElementById("week");
+  select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
 
-    const firstUrl = Object.values(SCRIPT_MAP)[0];
+  try {
+    // Default class for loading topics
+    const res = await fetch(`/api/absensi?action=topik&classCode=SAB`);
+    const data = await res.json();
 
-    try {
-      const res = await fetch(`${firstUrl}?action=topik`);
-      const data = await res.json();
+    select.innerHTML = "";
 
-      select.innerHTML = "";
-
-      if (data.status === "ok" && Array.isArray(data.topik)) {
-        data.topik.forEach((item) => {
-          const opt = document.createElement("option");
-          opt.value = item.week;
-          opt.textContent = `${item.week}. ${item.name}`;
-          select.appendChild(opt);
-        });
-      } else {
-        select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
-      }
-    } catch (err) {
-      console.error("Gagal memuat daftar topik:", err);
-      select.innerHTML = `<option disabled>⚠️ Gagal memuat topik</option>`;
+    if (data.status === "ok" && Array.isArray(data.topik)) {
+      data.topik.forEach((item) => {
+        const opt = document.createElement("option");
+        opt.value = item.week;
+        opt.textContent = `${item.week}. ${item.name}`;
+        select.appendChild(opt);
+      });
+    } else {
+      select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
     }
+  } catch (err) {
+    console.error("Gagal memuat daftar topik:", err);
+    select.innerHTML = `<option disabled>⚠️ Gagal memuat topik</option>`;
   }
+}
+
 
   function showStatus(text, type) {
     const el = document.getElementById("status");
