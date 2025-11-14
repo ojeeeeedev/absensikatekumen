@@ -103,122 +103,137 @@
 	<br>Ada kendala/kritik/saran? Kontak: Andar - WA 0812 2175 2365 </br></center></footer>
 
     <script>
-      const reader = new Html5Qrcode("reader");
-      let scanCooldown = false;
+  const reader = new Html5Qrcode("reader");
+  let scanCooldown = false;
+  let SCRIPT_MAP = {}; 
+  let currentScriptUrl = ""; 
 
-      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxB3TcQA-bsX5hgXi4mL1v__-RL4HGzy8D6QJdeWy0-x737yw3sTGxvFbFdEc07zJfepQ/exec";
+  // Load JSON mapping
+  async function loadScriptMap() {
+    const res = await fetch("/config.json");
+    SCRIPT_MAP = await res.json();
+  }
 
-      async function loadTopikList() {
-        const select = document.getElementById("week");
-        select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
+  async function loadTopikList() {
+    const select = document.getElementById("week");
+    select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
 
-        try {
-          const res = await fetch(`${SCRIPT_URL}?action=topik`);
-          const data = await res.json();
+    const firstUrl = Object.values(SCRIPT_MAP)[0];
 
-          select.innerHTML = "";
+    try {
+      const res = await fetch(`${firstUrl}?action=topik`);
+      const data = await res.json();
 
-          if (data.status === "ok" && Array.isArray(data.topik) && data.topik.length > 0) {
-            data.topik.forEach((item) => {
-              const opt = document.createElement("option");
-              opt.value = item.week;
-              opt.textContent = `${item.week}. ${item.name}`;
-              select.appendChild(opt);
-            });
-          } else {
-            select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
-          }
-        } catch (err) {
-          console.error("Gagal memuat daftar topik:", err);
-          select.innerHTML = `<option disabled>⚠️ Gagal memuat topik</option>`;
-        }
+      select.innerHTML = "";
+
+      if (data.status === "ok" && Array.isArray(data.topik)) {
+        data.topik.forEach((item) => {
+          const opt = document.createElement("option");
+          opt.value = item.week;
+          opt.textContent = `${item.week}. ${item.name}`;
+          select.appendChild(opt);
+        });
+      } else {
+        select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
       }
+    } catch (err) {
+      console.error("Gagal memuat daftar topik:", err);
+      select.innerHTML = `<option disabled>⚠️ Gagal memuat topik</option>`;
+    }
+  }
 
-      async function startScanner() {
-        try {
-          await reader.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 350, height: 350 } },
-            (decodedText) => handleScan(decodedText)
-          );
-        } catch (err) {
-          console.error("Camera Error:", err);
-          showStatus("⚠️ Tidak bisa mengakses kamera", "error");
-        }
-      }
+  function showStatus(text, type) {
+    const el = document.getElementById("status");
+    el.innerHTML = text;
+    el.className = type;
+    el.style.opacity = "1";
+  }
 
-      function showStatus(text, type) {
-        const el = document.getElementById("status");
-        el.innerHTML = text;
-        el.className = type;
-        el.style.opacity = "1";
-      }
+  function clearStatus() {
+    const el = document.getElementById("status");
+    el.style.opacity = "0";
+    setTimeout(() => {
+      el.innerHTML = "📷 Silakan pindai kode QR berikutnya";
+      el.className = "";
+      el.style.opacity = "1";
+    }, 400);
+  }
 
-      function clearStatus() {
-        const el = document.getElementById("status");
-        el.style.opacity = "0";
-        setTimeout(() => {
-          el.innerHTML = "📷 Silakan pindai kode QR berikutnya";
-          el.className = "";
-          el.style.opacity = "1";
-        }, 400);
-      }
+  async function handleScan(decodedText) {
+    if (scanCooldown) return;
+    scanCooldown = true;
 
-      function handleScan(decodedText) {
-        if (scanCooldown) return;
-        scanCooldown = true;
+    const parts = decodedText.split("/");
+const classCode = parts[1]?.toUpperCase();
 
-        const week = document.getElementById("week").value;
-        showStatus("⏳ Menyimpan presensi...", "");
-
-        fetch("/api/absensi", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentId: decodedText, week }),
-        })
-          .then(async (r) => {
-            const text = await r.text();
-            console.log("Raw response:", text);
-
-            let res;
-            try {
-              res = JSON.parse(text);
-            } catch {
-              showStatus("⚠️ Server mengirim data tidak valid.", "error");
-              return;
-            }
-
-            if (res.status === "ok") {
-  		showStatus(
-    		`✅ <b>${res.name}</b><br> hadir </br> <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}		</span>`,
-   		 "success"
-	  );
-} else if (res.status === "duplicate") {
-  showStatus(
-    `⚠️ ${res.message}`,
-    "error"
-  );
-} else {
-  showStatus(`❌ ${res.message || "Data tidak ditemukan!"}`, "error");
+if (!classCode || !SCRIPT_MAP[classCode]) {
+  showStatus(`❌ Kode kelas tidak valid: ${classCode}`, "error");
+  scanCooldown = false;
+  return;
 }
 
-          })
-          .catch((err) => {
-            console.error("Fetch failed:", err);
-            showStatus("⚠️ Koneksi error!", "error");
-          })
-          .finally(() => {
-            setTimeout(() => {
-              scanCooldown = false;
-              clearStatus();
-            }, 5000);
-          });
-      }
 
-      window.onload = async () => {
-        await loadTopikList();
-        startScanner();
-      };
-    </script>
+    currentScriptUrl = SCRIPT_MAP[classCode];
+
+    const week = document.getElementById("week").value;
+    showStatus("⏳ Menyimpan presensi...", "");
+
+    fetch("/api/absensi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentId: decodedText,
+        week,
+        classCode
+      }),
+    })
+      .then(async (r) => {
+        const text = await r.text();
+
+        let res;
+        try {
+          res = JSON.parse(text);
+        } catch {
+          showStatus("⚠️ Server mengirim data tidak valid.", "error");
+          return;
+        }
+
+        if (res.status === "ok") {
+          showStatus(
+            `✅ <b>${res.name}</b><br> hadir </br> <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
+            "success"
+          );
+        } else if (res.status === "duplicate") {
+          showStatus(`⚠️ ${res.message}`, "error");
+        } else {
+          showStatus(`❌ ${res.message}`, "error");
+        }
+      })
+      .catch(() => {
+        showStatus("⚠️ Koneksi error!", "error");
+      })
+      .finally(() => {
+        setTimeout(() => {
+          scanCooldown = false;
+          clearStatus();
+        }, 5000);
+      });
+  }
+
+  async function startScanner() {
+    await reader.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 350, height: 350 } },
+      handleScan
+    );
+  }
+
+  window.onload = async () => {
+    await loadScriptMap();
+    await loadTopikList();
+    startScanner();
+  };
+</script>
+
   </body>
 </html>
