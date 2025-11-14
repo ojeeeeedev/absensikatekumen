@@ -16,9 +16,8 @@ if (req.method === "POST") {
 
     // Load your mapping
     const SCRIPT_MAP = {
-      SAB: "https://script.google.com/macros/s/PASTE_SAB_APP_SCRIPT_URL/exec",
-      ROM: "https://script.google.com/macros/s/PASTE_ROM_APP_SCRIPT_URL/exec",
-      PHI: "https://script.google.com/macros/s/PASTE_PHI_APP_SCRIPT_URL/exec"
+      SAB: "https://script.google.com/macros/s/AKfycbxB3TcQA-bsX5hgXi4mL1v__-RL4HGzy8D6QJdeWy0-x737yw3sTGxvFbFdEc07zJfepQ/exec",
+      ROM: "https://script.google.com/macros/s/AKfycby8cp12Ck9BvHWe4S3kg8kW6D-Trhe2SX9snlwUy17RLUbBHBhRwfNvh0S1dLWJrxcyQA/exec",
     };
 
     const scriptURL = SCRIPT_MAP[classCode];
