@@ -15,7 +15,7 @@
 
       html, body {
         margin: 0; padding: 0; width: 100%; height: 100%;
-        background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+        /* background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); */
         background: linear-gradient(135deg, #330B0D 0%, #0a0a0a 70%);
         color: #e0e0e0; /* Slightly softer white for better reading */
         font-family: "Inter", sans-serif;
@@ -24,16 +24,67 @@
 
       /* --- FLOATING GLASS CONTAINER --- */
       .glass-container {
-        background: rgba(30, 30, 30, 0.5);
+        background: rgba(25, 25, 25, 0.4);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px); /* For Safari */
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         padding: 1.5rem; margin: 1rem 0;
         width: 95%;
         max-width: 450px;
         display: flex; flex-direction: column; align-items: center;
         max-height: 95vh;
+        position: relative; z-index: 2;
+      }
+
+      /* --- ON-LOAD ANIMATIONS --- */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .glass-container > * {
+        opacity: 0; /* Start hidden */
+        animation: fadeInUp 0.6s ease-out forwards;
+      }
+      .glass-container > h1 { animation-delay: 0.1s; }
+      .glass-container > h2 { animation-delay: 0.2s; }
+      .glass-container > #topic-trigger { animation-delay: 0.3s; }
+      .glass-container > #reader-container { animation-delay: 0.4s; }
+      .glass-container > #status { animation-delay: 0.5s; }
+      .glass-container > footer { animation-delay: 0.6s; }
+
+      /* --- LIQUID GLASS BACKGROUND --- */
+      .liquid-background {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 1;
+        overflow: hidden;
+      }
+      .liquid-shape {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(100px);
+        opacity: 0.7;
+      }
+      .shape1 {
+        width: 350px; height: 350px;
+        background: #9A2126;
+        top: -100px; left: -150px;
+        animation: move1 25s infinite alternate;
+      }
+      .shape2 {
+        width: 250px; height: 250px;
+        background: #4a148c; /* A complementary deep purple */
+        bottom: -50px; right: -80px;
+        animation: move2 30s infinite alternate;
+      }
+      @keyframes move1 {
+        from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(200px, 300px) rotate(180deg); }
+      }
+      @keyframes move2 {
+        from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); }
       }
 
       h1 { margin: 0 0 0.4rem 0; font-size: 1.8rem; text-align: center; color: #fff; font-family: 'Playfair Display', serif; font-weight: 500; }
@@ -64,6 +115,16 @@
         padding: 1rem; max-height: 70vh; overflow-y: auto;
         display: flex; flex-direction: column; gap: 10px;
         border-top: 1px solid #333;
+      }
+      #topic-search-input {
+        width: 100%;
+        padding: 0.8rem 1rem;
+        margin-bottom: 10px;
+        background: #333;
+        border: 1px solid #444;
+        border-radius: 8px;
+        color: #eee;
+        font-size: 0.9rem;
       }
       .topic-option {
         padding: 1rem; background: #2a2a2a; border-radius: 8px;
@@ -112,7 +173,7 @@
       #status {
         margin-top: 1rem; width: 100%;
         padding: 1rem; border-radius: 8px; min-height: 60px;
-        display: flex; align-items: center; gap: 12px; text-align: center;    
+        display: flex; align-items: center; gap: 12px; text-align: left;    
         font-weight: 400; /* Ensuring normal weight */
       }
       
@@ -133,6 +194,11 @@
   </head>
 
   <body>
+    <div class="liquid-background">
+      <div class="liquid-shape shape1"></div>
+      <div class="liquid-shape shape2"></div>
+    </div>
+
     <main class="glass-container">
       <h1>Presensi Katekumen</h1>
       <h2>Gereja Katedral St. Petrus Bandung</h2>
@@ -160,6 +226,7 @@
     <div id="topic-modal">
         <div class="modal-content">
             <h3 style="margin: 0 0 10px 0; text-align: center; color: #fff; font-weight:400;">Pilih Topik Absensi</h3>
+            <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="🔍 Cari topik...">
             <div id="topic-list-container">
                 <div style="text-align:center; padding:20px; color:#666;">Memuat topik...</div>
             </div>
@@ -184,6 +251,19 @@
         document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
         element.classList.add('active');
         setTimeout(closeTopicModal, 200);
+      }
+
+      function filterTopics() {
+        const searchTerm = document.getElementById('topic-search-input').value.toLowerCase();
+        const topics = document.querySelectorAll('.topic-option');
+        topics.forEach(topic => {
+          const topicText = topic.textContent.toLowerCase();
+          if (topicText.includes(searchTerm)) {
+            topic.style.display = 'block';
+          } else {
+            topic.style.display = 'none';
+          }
+        });
       }
 
       // --- DATA LOADING ---
@@ -299,10 +379,14 @@
         if (Object.keys(SCRIPT_MAP).length === 0) await loadScriptMap();
 
         const scanConfig = { 
-            fps: 5, // Reduced from 10 to 5 to save CPU
+            fps: 10, // Increased for faster recognition
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
             disableFlip: false,
+            experimentalFeatures: {
+                // Use native BarcodeDetector if supported, for faster scans
+                useBarCodeDetectorIfSupported: true
+            },
             // Pass video constraints directly into the config object
             videoConstraints: {
                 facingMode: "environment",
