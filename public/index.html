@@ -4,75 +4,210 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Absensi Katekumen</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
     <script src="https://unpkg.com/html5-qrcode"></script>
-    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <style>
-      * { box-sizing: border-box; }
+      /* Global Reset & Transitions */
+      * { 
+        box-sizing: border-box; 
+        transition: all 0.2s ease-out; /* Smooth transitions for all elements */
+      }
+
       html, body {
         margin: 0; padding: 0; width: 100%; height: 100%;
-        background: #000; color: #fff;
-        font-family: "Inter", sans-serif; /* Fixed font matching */
+        /* GRADIENT BACKGROUND */
+        background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+        color: #fff;
+        font-family: "Inter", sans-serif;
         display: flex; flex-direction: column; align-items: center;
         overflow: hidden;
       }
+
       h1 { margin: 1rem 0 0.4rem 0; font-size: 1.5rem; text-align: center; }
       h2 { margin: 0; font-size: 1rem; color: #a8a8a8; text-align: center; font-weight: 500; }
-      
-      label { font-size: 0.95rem; margin-top: 0.6rem; }
-      
-      select {
+
+      /* --- CUSTOM DROPDOWN STYLES --- */
+      .topic-selector-btn {
         width: 90%; max-width: 400px;
-        background: #111; color: #fff;
-        font-size: .9rem; text-align: center;
-        padding: 0.6rem; border-radius: 8px;
-        border: 1px solid #333; margin-top: 0.4rem;
+        background: #1a1a1a; /* Darker background */
+        color: #eee;
+        font-size: .95rem; text-align: left;
+        padding: 0.8rem 1rem; 
+        border-radius: 8px;
+        border: 1px solid #333; 
+        margin-top: 1rem;
+        display: flex; justify-content: space-between; align-items: center;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3); /* Subtle shadow */
+      }
+      .topic-selector-btn:hover {
+        transform: translateY(-2px); /* Lift effect on hover */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      }
+      .topic-selector-btn:after {
+        content: '▼'; font-size: 0.7rem; color: #666;
       }
 
-      #reader {
+      /* Modal Overlay for Topics */
+      #topic-modal {
+        display: none; /* Hidden by default */
+        position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85);
+        z-index: 999;
+        flex-direction: column; justify-content: flex-end;
+      }
+      
+      .modal-content {
+        background: #1a1a1a;
+        border-top-left-radius: 16px; border-top-right-radius: 16px;
+        padding: 1rem;
+        max-height: 70vh;
+        overflow-y: auto;
+        display: flex; flex-direction: column; gap: 10px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+      }
+
+      .topic-option {
+        padding: 1rem;
+        background: #2a2a2a;
+        border-radius: 8px;
+        text-align: left;
+        font-size: 0.9rem;
+        color: #eee;
+        border: 1px solid #333;
+        cursor: pointer;
+      }
+      .topic-option:hover {
+        background: #3a3a3a;
+        transform: scale(1.01); /* Slight grow on hover */
+        border-color: #555;
+      }
+      .topic-option.active {
+        border-color: #72b7ff; background: #22303d; color: #72b7ff;
+        font-weight: 600;
+        transform: scale(1.02); /* More prominent when active */
+      }
+
+      .modal-close-btn {
+        margin-top: 15px; /* Increased margin */
+        padding: 1rem;
+        background: #ff4444;
+        color: white;
+        text-align: center;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        position: sticky; bottom: 0;
+        box-shadow: 0 -2px 10px rgba(255,68,68,0.3);
+      }
+      .modal-close-btn:hover {
+        background: #cc3333;
+        transform: translateY(-2px);
+      }
+
+      /* --- CAMERA STYLES --- */
+      #reader-container {
+        position: relative;
         width: 92vw; max-width: 420px;
         aspect-ratio: 1 / 1;
         margin-top: 1rem; border-radius: 14px;
-        overflow: hidden; background: #111;
-        position: relative;
-      }
-      
-      /* Loading Placeholder for Camera */
-      #reader::before {
-        content: "Memuat Kamera...";
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        color: #666; font-size: 0.9rem;
-        z-index: 0;
+        overflow: hidden; 
+        background: #000;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.5); /* Stronger shadow for camera */
       }
 
+      #reader { width: 100%; height: 100%; }
+
+      /* Loading Spinner for Camera */
+      #camera-loader {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: #1a1a1a; /* Darker background */
+        display: flex; justify-content: center; align-items: center;
+        color: #bbb; font-size: 0.9rem;
+        z-index: 10;
+        flex-direction: column; /* Stack text and spinner */
+        gap: 15px;
+      }
+
+      /* Actual CSS Spinner */
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #72b7ff; /* Blue spinner */
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      /* --- STATUS BOX --- */
       #status {
-        margin-top: 1rem; font-size: 0.85rem;
-        font-weight: 400; text-align: center;
+        margin-top: 1rem; 
         width: 90%; max-width: 420px;
-        padding: 0.8rem; border-radius: 8px;
-        min-height: 50px; /* Prevent layout jump */
-        display: flex; align-items: center; justify-content: center;
-        transition: all 0.3s ease;
+        padding: 1rem; 
+        border-radius: 12px;
+        min-height: 60px;
+        display: flex; 
+        align-items: center; 
+        gap: 12px;           
+        text-align: left;    
+        transition: all 0.3s ease-out; /* Ensures smooth transitions */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      }
+
+      /* Icons and Colors */
+      .idle { background: #1a1a1a; color: #aaa; border: 1px dashed #333; justify-content: center; }
+      .success { background: #00c851; color: #fff; border: none; box-shadow: 0 4px 15px rgba(0,200,81,0.3); }
+      .error { background: #ff4444; color: #fff; border: none; box-shadow: 0 4px 15px rgba(255,68,68,0.3); }
+      
+      /* Processing Animation (Pulsing Effect) */
+      .processing { 
+        background: #0099CC; color: #fff; justify-content: center; 
+        animation: pulse 1.5s infinite alternate; /* Pulsing effect */
+        box-shadow: 0 4px 15px rgba(0,153,204,0.3);
+      }
+      @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(1.02); opacity: 0.8; }
+      }
+
+      /* Text Layout inside the box */
+      .status-icon {
+        font-size: 1.8rem; 
+        flex-shrink: 0;    
       }
       
-      .idle { background: #111; color: #aaa; border: 1px dashed #333; }
-      .success { background: #00c851; color: #fff; border: none; }
-      .error { background: #ff4444; color: #fff; border: none; }
-      .processing { background: #0099CC; color: #fff; animation: pulse 1s infinite; }
+      .status-content {
+        display: flex;
+        flex-direction: column; 
+        flex: 1; 
+        overflow: hidden;
+      }
 
-      @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+      .student-name {
+        font-weight: 700;
+        font-size: 1rem;
+        line-height: 1.2;
+        margin-bottom: 4px;
+        word-wrap: break-word; 
+      }
 
-      .student-id { display: block; margin-top: 4px; font-size: 0.75rem; font-weight: 600; opacity: 0.9; }
-      
+      .student-details {
+        font-size: 0.75rem;
+        opacity: 0.9;
+        font-weight: 400;
+      }
+
       footer {
         font-size: 0.65rem; color: #666;
         margin-top: auto; padding-bottom: 1rem;
-        line-height: 1.4; text-align: center;
+        text-align: center;
       }
       footer a { color: #72b7ff; text-decoration: none; }
       footer a:hover { color: #a8d4ff; text-decoration: underline; }
@@ -80,172 +215,217 @@
   </head>
 
   <body>
-    <h1>Presensi Katekumen Dewasa</h1>
+    <h1>Presensi Katekumen</h1>
     <h2>Gereja Katedral St. Petrus Bandung</h2>
 
-    <label for="week"><b>Pilih Topik:</b></label>
-    <select id="week">
-      <option disabled selected value="">Memuat daftar topik...</option>
-    </select>
+    <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
+        Pilih Topik...
+    </div>
 
-    <div id="reader"></div>
+    <div id="topic-modal">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 10px 0; text-align: center; color: #fff;">Pilih Topik Absensi</h3>
+            <div id="topic-list-container">
+                <div style="text-align:center; padding:20px; color:#666;">Memuat topik...</div>
+            </div>
+            <div class="modal-close-btn" onclick="closeTopicModal()">Tutup / Selesai</div>
+        </div>
+    </div>
+
+    <div id="reader-container">
+        <div id="camera-loader">
+            <div class="spinner"></div> Sedang Memuat Kamera...
+        </div>
+        <div id="reader"></div>
+    </div>
+
     <div id="status" class="idle">📷 Silakan pindai kode QR</div>
 
     <footer>
-      <b>© 2025 Tim TI Katekumen Dewasa - St. Petrus Katedral Bandung</b><br>
-      Ada kendala/kritik/saran?<br>
-      Kontak: <b>Andar - WA</b>
-      <a href="https://wa.me/6281221752365">0812 2175 2365</a>
+      © 2025 Tim TI Katekumen<br>
+      Kontak: <a href="https://wa.me/6281221752365">Andar 0812 2175 2365</a>
     </footer>
 
     <script>
       const html5QrcodeScanner = new Html5Qrcode("reader");
       let scanCooldown = false;
       let SCRIPT_MAP = {}; 
+      let selectedWeek = null; 
 
-      // Sound effect for success
-      const beepSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'); // Short placeholder, replace with real sound URL if needed
-
-      function playBeep() {
-        // Simple beep using Web Audio API is better, but for simplicity:
-        // beepSound.play().catch(e => console.log("Audio play blocked"));
+      // --- MODAL FUNCTIONS ---
+      function openTopicModal() {
+        document.getElementById('topic-modal').style.display = 'flex';
       }
 
+      function closeTopicModal() {
+        document.getElementById('topic-modal').style.display = 'none';
+      }
+
+      function selectTopic(week, name, element) {
+        selectedWeek = week;
+        
+        document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
+        document.getElementById('topic-trigger').style.borderColor = "#72b7ff";
+        
+        document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+
+        setTimeout(closeTopicModal, 200);
+      }
+
+      // --- MAIN LOGIC ---
       async function loadScriptMap() {
         try {
           const res = await fetch("/config.json");
           SCRIPT_MAP = await res.json();
-        } catch (e) {
-          console.error("Failed to load script map", e);
-          showStatus("⚠️ Gagal memuat konfigurasi kelas.", "error");
+        } catch (e) { 
+          console.error("Error loading script map", e);
+          showStatus("Gagal memuat konfigurasi.", "error");
         }
       }
 
       async function loadTopikList() {
-        const select = document.getElementById("week");
-        // NOTE: I kept ClassCode=SAB. If this needs to be dynamic based on the QR,
-        // you need to change the logic to load topics AFTER scanning, or have a class selector UI.
+        const listContainer = document.getElementById("topic-list-container");
         try {
           const res = await fetch(`/api/absensi?action=topik&classCode=SAB`);
           const data = await res.json();
 
-          select.innerHTML = "";
-          
           if (data.status === "ok" && Array.isArray(data.topik)) {
-             // Add a placeholder option
-            const placeholder = document.createElement("option");
-            placeholder.text = "-- Pilih Topik --";
-            placeholder.value = "";
-            placeholder.disabled = true;
-            placeholder.selected = true;
-            select.appendChild(placeholder);
-
-            data.topik.forEach((item) => {
-              const opt = document.createElement("option");
-              opt.value = item.week;
-              opt.textContent = `${item.week}. ${item.name}`;
-              select.appendChild(opt);
-            });
+            listContainer.innerHTML = "";
             
-            // Select the last item automatically if appropriate, or leave placeholder
+            data.topik.forEach((item) => {
+              const div = document.createElement("div");
+              div.className = "topic-option";
+              div.textContent = `${item.week}. ${item.name}`;
+              div.onclick = () => selectTopic(item.week, item.name, div);
+              listContainer.appendChild(div);
+            });
+            // Auto-select the last topic by default
             if(data.topik.length > 0) {
-               select.value = data.topik[data.topik.length - 1].week; // Auto-select latest week
+                const lastTopic = data.topik[data.topik.length - 1];
+                const lastTopicElement = listContainer.lastChild;
+                selectTopic(lastTopic.week, lastTopic.name, lastTopicElement);
             }
           } else {
-            select.innerHTML = `<option disabled selected>Data topik tidak ditemukan</option>`;
+            listContainer.innerHTML = `<div style="color:#ff4444; text-align:center; padding:20px;">Data topik tidak ditemukan.</div>`;
+            showStatus("Data topik tidak ditemukan.", "error");
           }
         } catch (err) {
           console.error("Gagal memuat topik:", err);
-          select.innerHTML = `<option disabled selected>⚠️ Gagal memuat topik</option>`;
+          listContainer.innerHTML = `<div style="color:#ff4444; text-align:center; padding:20px;">Gagal memuat topik.</div>`;
+          showStatus("Gagal memuat daftar topik.", "error");
         }
       }
 
-      function showStatus(text, type) {
+      function showStatus(textOrHtmlContent, type) {
         const el = document.getElementById("status");
-        el.innerHTML = text;
+        
+        if(type === 'success') {
+            el.innerHTML = textOrHtmlContent; // This is already well-formatted HTML from handleScan
+        } else {
+            // For error, idle, processing, we use a consistent structure
+            let icon = '';
+            if (type === 'error') icon = '⚠️';
+            else if (type === 'processing') icon = '⏳';
+            else icon = '📷'; // Idle
+            
+            el.innerHTML = `
+                <div class="status-icon">${icon}</div>
+                <div class="status-content">
+                    <div class="student-name">${textOrHtmlContent}</div>
+                </div>
+            `;
+        }
         el.className = type;
       }
 
       function resetStatus() {
-        const el = document.getElementById("status");
-        el.className = "idle";
-        el.innerHTML = "📷 Silakan pindai kode QR berikutnya";
+        showStatus("Silakan pindai kode QR berikutnya", "idle");
       }
 
       async function handleScan(decodedText) {
         if (scanCooldown) return;
 
-        // Validation: Ensure Topic is Selected
-        const week = document.getElementById("week").value;
-        if (!week) {
-           showStatus("⚠️ Harap pilih topik terlebih dahulu!", "error");
-           // Don't trigger cooldown for UI errors, let them retry immediately
+        if (!selectedWeek) {
+           showStatus("HARAP PILIH TOPIK TERLEBIH DAHULU!", "error");
+           openTopicModal(); 
            return;
         }
 
         scanCooldown = true;
+        showStatus("Memproses...", "processing");
 
         const parts = decodedText.split("/");
-        const classCode = parts[1]?.toUpperCase(); // Safety check using ?.
+        const classCode = parts[1]?.toUpperCase();
 
-        // Validate Class Code
         if (!classCode || !SCRIPT_MAP[classCode]) {
-          showStatus(`❌ Kode kelas tidak valid dalam QR.<br>Terbaca: ${classCode || 'Tidak ada'}`, "error");
+          showStatus(`Kode Kelas Tidak Valid: ${classCode || 'Tidak Ada'}`, "error");
           setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
           return;
         }
-
-        showStatus("⏳ Menyimpan presensi...", "processing");
 
         try {
           const response = await fetch("/api/absensi", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ studentId: decodedText, week, classCode }),
+            body: JSON.stringify({ studentId: decodedText, week: selectedWeek, classCode }),
           });
 
-          // Handle non-JSON responses safely
           const text = await response.text();
-          let res;
-          try { res = JSON.parse(text); } catch { throw new Error("Invalid Server Response"); }
+          let res = JSON.parse(text);
 
           if (res.status === "ok") {
-            playBeep();
-            showStatus(
-              `✅ <b>${res.name}</b><br>Hadir: Topik ${week}<br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
-              "success"
-            );
+            const successHTML = `
+              <div class="status-icon">✅</div>
+              <div class="status-content">
+                  <div class="student-name">${res.name}</div>
+                  <div class="student-details">
+                      ID: ${res.studentId} • Topik ${selectedWeek}
+                  </div>
+              </div>
+            `;
+            showStatus(successHTML, "success");
           } else if (res.status === "duplicate") {
-            showStatus(`⚠️ ${res.message}`, "error"); // Yellow/Red for duplicate?
+            showStatus(`Sudah Hadir: ${res.message}`, "error");
           } else {
-            showStatus(`❌ ${res.message}`, "error");
+            showStatus(`Gagal: ${res.message}`, "error");
           }
-
         } catch (error) {
-          console.error(error);
-          showStatus("⚠️ Koneksi Error / Gagal menghubungi server", "error");
+          console.error("Fetch error:", error);
+          showStatus("Koneksi Error / Gagal menghubungi server", "error");
         } finally {
-          setTimeout(() => {
-            scanCooldown = false;
-            resetStatus();
-          }, 4000); // Reduced from 5000 to 4000 for faster queues
+          setTimeout(() => { scanCooldown = false; resetStatus(); }, 4000);
         }
       }
 
       async function startScanner() {
-        // Wait for config map before starting
+        // Ensure script map is loaded before starting
         if (Object.keys(SCRIPT_MAP).length === 0) await loadScriptMap();
         
         html5QrcodeScanner.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 300, height: 300 } }, // Reduced box size slightly
+          { fps: 10, qrbox: { width: 250, height: 250 } },
           handleScan
-        ).catch(err => {
-            showStatus("❌ Gagal akses kamera. Izinkan akses kamera.", "error");
+        ).then(() => {
+            // Camera started successfully, hide the loader
+            const loader = document.getElementById("camera-loader");
+            if(loader) loader.style.display = "none"; 
+            resetStatus(); // Set initial idle status
+        }).catch(err => {
+            // Camera failed to start
+            const loader = document.getElementById("camera-loader");
+            if(loader) {
+                loader.innerHTML = '<div style="color:red; text-align:center;">Gagal akses kamera.<br>Pastikan izin kamera diberikan.</div>';
+                loader.style.backgroundColor = '#300000'; // Dark red for error
+            }
+            console.error("Failed to start scanner:", err);
+            showStatus("Gagal Memulai Kamera. Periksa Izin.", "error");
         });
       }
 
       window.onload = async () => {
+        // Show initial loading state for topics
+        showStatus("Memuat daftar topik...", "processing");
         await Promise.all([loadScriptMap(), loadTopikList()]);
         startScanner();
       };
