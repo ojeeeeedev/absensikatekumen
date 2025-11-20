@@ -57,7 +57,7 @@
         border: 1px solid #333; cursor: pointer;
       }
       .topic-option.active {
-        border-color: #72b7ff; background: #1c2a35; color: #72b7ff;
+        border-color: #9A2126; background: #332222; color: #E57373;
       }
       .modal-close-btn {
         margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;
@@ -88,7 +88,7 @@
       }
       .spinner {
         border: 3px solid rgba(255, 255, 255, 0.1);
-        border-top: 3px solid #72b7ff;
+        border-top: 3px solid #9A2126;
         border-radius: 50%; width: 30px; height: 30px;
         animation: spin 1s linear infinite;
       }
@@ -106,7 +106,7 @@
       .idle { background: #111; color: #aaa; border: 1px dashed #333; justify-content: center; }
       .success { background: #1b5e20; color: #e8f5e9; border: 1px solid #2e7d32; }
       .error { background: #b71c1c; color: #ffebee; border: 1px solid #d32f2f; }
-      .processing { background: #01579b; color: #e1f5fe; justify-content: center; }
+      .processing { background: #332222; color: #E57373; border: 1px solid #9A2126; justify-content: center; }
 
       /* Typography inside status */
       .status-text-container { display: flex; flex-direction: column; }
@@ -114,7 +114,7 @@
       .sub-text { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
 
       footer { font-size: 0.7rem; color: #555; margin-top: auto; padding-bottom: 1rem; text-align: center; }
-      footer a { color: #5c9ad6; text-decoration: none; }
+      footer a { color: #9A2126; text-decoration: none; }
     </style>
   </head>
 
@@ -164,7 +164,7 @@
       function selectTopic(week, name, element) {
         selectedWeek = week;
         document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
-        document.getElementById('topic-trigger').style.borderColor = "#5c9ad6";
+        document.getElementById('topic-trigger').style.borderColor = "#9A2126";
         document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
         element.classList.add('active');
         setTimeout(closeTopicModal, 200);
