@@ -10,15 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <style>
-      /* Global Reset & Transitions */
-      * { 
-        box-sizing: border-box; 
-        transition: all 0.2s ease-out; /* Smooth transitions for all elements */
-      }
+      /* --- GLOBAL RESET & TRANSITIONS --- */
+      * { box-sizing: border-box; transition: all 0.2s ease-out; }
 
       html, body {
         margin: 0; padding: 0; width: 100%; height: 100%;
-        /* GRADIENT BACKGROUND */
         background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
         color: #fff;
         font-family: "Inter", sans-serif;
@@ -29,188 +25,136 @@
       h1 { margin: 1rem 0 0.4rem 0; font-size: 1.5rem; text-align: center; }
       h2 { margin: 0; font-size: 1rem; color: #a8a8a8; text-align: center; font-weight: 500; }
 
-      /* --- CUSTOM DROPDOWN STYLES --- */
+      /* --- TOPIC SELECTOR (BUTTON) --- */
       .topic-selector-btn {
         width: 90%; max-width: 400px;
-        background: #1a1a1a; /* Darker background */
-        color: #eee;
+        background: #1a1a1a; color: #eee;
         font-size: .95rem; text-align: left;
         padding: 0.8rem 1rem; 
-        border-radius: 8px;
-        border: 1px solid #333; 
+        border-radius: 8px; border: 1px solid #333; 
         margin-top: 1rem;
         display: flex; justify-content: space-between; align-items: center;
         cursor: pointer;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3); /* Subtle shadow */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       }
       .topic-selector-btn:hover {
-        transform: translateY(-2px); /* Lift effect on hover */
+        transform: translateY(-2px);
         box-shadow: 0 4px 15px rgba(0,0,0,0.4);
       }
-      .topic-selector-btn:after {
-        content: '▼'; font-size: 0.7rem; color: #666;
-      }
+      .topic-selector-btn:after { content: '▼'; font-size: 0.7rem; color: #666; }
 
-      /* Modal Overlay for Topics */
+      /* --- MODAL & LIST --- */
       #topic-modal {
-        display: none; /* Hidden by default */
-        position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.85);
-        z-index: 999;
+        display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); z-index: 999;
         flex-direction: column; justify-content: flex-end;
       }
-      
       .modal-content {
         background: #1a1a1a;
         border-top-left-radius: 16px; border-top-right-radius: 16px;
-        padding: 1rem;
-        max-height: 70vh;
-        overflow-y: auto;
+        padding: 1rem; max-height: 70vh; overflow-y: auto;
         display: flex; flex-direction: column; gap: 10px;
         box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
       }
-
       .topic-option {
-        padding: 1rem;
-        background: #2a2a2a;
-        border-radius: 8px;
-        text-align: left;
-        font-size: 0.9rem;
-        color: #eee;
-        border: 1px solid #333;
-        cursor: pointer;
-      }
-      .topic-option:hover {
-        background: #3a3a3a;
-        transform: scale(1.01); /* Slight grow on hover */
-        border-color: #555;
+        padding: 1rem; background: #2a2a2a; border-radius: 8px;
+        text-align: left; font-size: 0.9rem; color: #eee;
+        border: 1px solid #333; cursor: pointer;
       }
       .topic-option.active {
         border-color: #72b7ff; background: #22303d; color: #72b7ff;
-        font-weight: 600;
-        transform: scale(1.02); /* More prominent when active */
+        font-weight: 600; transform: scale(1.02);
       }
-
       .modal-close-btn {
-        margin-top: 15px; /* Increased margin */
-        padding: 1rem;
-        background: #ff4444;
-        color: white;
-        text-align: center;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-        position: sticky; bottom: 0;
-        box-shadow: 0 -2px 10px rgba(255,68,68,0.3);
-      }
-      .modal-close-btn:hover {
-        background: #cc3333;
-        transform: translateY(-2px);
+        margin-top: 15px; padding: 1rem; background: #ff4444; color: white;
+        text-align: center; border-radius: 8px; font-weight: bold;
+        cursor: pointer; position: sticky; bottom: 0;
       }
 
-      /* --- CAMERA STYLES --- */
+      /* --- CAMERA CONTAINER --- */
       #reader-container {
         position: relative;
         width: 92vw; max-width: 420px;
-        aspect-ratio: 1 / 1;
+        aspect-ratio: 1 / 1; /* Ensures the container itself is square */
         margin-top: 1rem; border-radius: 14px;
         overflow: hidden; 
         background: #000;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.5); /* Stronger shadow for camera */
+        box-shadow: 0 5px 20px rgba(0,0,0,0.5);
       }
+      #reader { width: 100%; height: 100%; object-fit: cover; }
 
-      #reader { width: 100%; height: 100%; }
+      /* --- CUSTOM SQUARE SCANNER OVERLAY --- */
+      /* This sits on top of the video to create the square viewfinder */
+      #scan-overlay {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 250px; /* Match the qrbox size in JS */
+        height: 250px;
+        z-index: 5;
+        pointer-events: none; /* Allows clicks to pass through to video */
+      }
+      
+      /* The 4 corners */
+      .scan-corner {
+        position: absolute;
+        width: 40px; height: 40px;
+        border-color: #ffffff;
+        border-style: solid;
+        border-width: 0;
+        box-shadow: 0 0 4px rgba(0,0,0,0.5); /* Small shadow for contrast */
+      }
+      
+      /* Positioning the corners */
+      .tl { top: 0; left: 0; border-top-width: 4px; border-left-width: 4px; }
+      .tr { top: 0; right: 0; border-top-width: 4px; border-right-width: 4px; }
+      .bl { bottom: 0; left: 0; border-bottom-width: 4px; border-left-width: 4px; }
+      .br { bottom: 0; right: 0; border-bottom-width: 4px; border-right-width: 4px; }
 
-      /* Loading Spinner for Camera */
+      /* --- LOADING SPINNER --- */
       #camera-loader {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: #1a1a1a; /* Darker background */
+        background: #1a1a1a;
         display: flex; justify-content: center; align-items: center;
         color: #bbb; font-size: 0.9rem;
         z-index: 10;
-        flex-direction: column; /* Stack text and spinner */
-        gap: 15px;
+        flex-direction: column; gap: 15px;
       }
-
-      /* Actual CSS Spinner */
       .spinner {
         border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid #72b7ff; /* Blue spinner */
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
+        border-top: 4px solid #72b7ff;
+        border-radius: 50%; width: 40px; height: 40px;
         animation: spin 1s linear infinite;
       }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
       /* --- STATUS BOX --- */
       #status {
-        margin-top: 1rem; 
-        width: 90%; max-width: 420px;
-        padding: 1rem; 
-        border-radius: 12px;
-        min-height: 60px;
-        display: flex; 
-        align-items: center; 
-        gap: 12px;           
-        text-align: left;    
-        transition: all 0.3s ease-out; /* Ensures smooth transitions */
+        margin-top: 1rem; width: 90%; max-width: 420px;
+        padding: 1rem; border-radius: 12px; min-height: 60px;
+        display: flex; align-items: center; gap: 12px; text-align: left;    
+        transition: all 0.3s ease-out;
         box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       }
-
-      /* Icons and Colors */
       .idle { background: #1a1a1a; color: #aaa; border: 1px dashed #333; justify-content: center; }
       .success { background: #00c851; color: #fff; border: none; box-shadow: 0 4px 15px rgba(0,200,81,0.3); }
       .error { background: #ff4444; color: #fff; border: none; box-shadow: 0 4px 15px rgba(255,68,68,0.3); }
-      
-      /* Processing Animation (Pulsing Effect) */
       .processing { 
         background: #0099CC; color: #fff; justify-content: center; 
-        animation: pulse 1.5s infinite alternate; /* Pulsing effect */
-        box-shadow: 0 4px 15px rgba(0,153,204,0.3);
+        animation: pulse 1.5s infinite alternate;
       }
-      @keyframes pulse {
-        0% { transform: scale(1); opacity: 1; }
-        100% { transform: scale(1.02); opacity: 0.8; }
-      }
+      @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.02); opacity: 0.8; } }
 
-      /* Text Layout inside the box */
-      .status-icon {
-        font-size: 1.8rem; 
-        flex-shrink: 0;    
-      }
+      .status-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .status-icon svg { fill: currentColor; width: 100%; height: 100%; }
+      .status-icon svg.rotate-icon { animation: spin 2s linear infinite; }
       
-      .status-content {
-        display: flex;
-        flex-direction: column; 
-        flex: 1; 
-        overflow: hidden;
-      }
+      .status-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+      .student-name { font-weight: 700; font-size: 1rem; line-height: 1.2; margin-bottom: 4px; word-wrap: break-word; }
+      .student-details { font-size: 0.75rem; opacity: 0.9; font-weight: 400; }
 
-      .student-name {
-        font-weight: 700;
-        font-size: 1rem;
-        line-height: 1.2;
-        margin-bottom: 4px;
-        word-wrap: break-word; 
-      }
-
-      .student-details {
-        font-size: 0.75rem;
-        opacity: 0.9;
-        font-weight: 400;
-      }
-
-      footer {
-        font-size: 0.65rem; color: #666;
-        margin-top: auto; padding-bottom: 1rem;
-        text-align: center;
-      }
+      footer { font-size: 0.65rem; color: #666; margin-top: auto; padding-bottom: 1rem; text-align: center; }
       footer a { color: #72b7ff; text-decoration: none; }
-      footer a:hover { color: #a8d4ff; text-decoration: underline; }
     </style>
   </head>
 
@@ -236,10 +180,18 @@
         <div id="camera-loader">
             <div class="spinner"></div> Sedang Memuat Kamera...
         </div>
+        
+        <div id="scan-overlay">
+            <div class="scan-corner tl"></div>
+            <div class="scan-corner tr"></div>
+            <div class="scan-corner bl"></div>
+            <div class="scan-corner br"></div>
+        </div>
+
         <div id="reader"></div>
     </div>
 
-    <div id="status" class="idle">📷 Silakan pindai kode QR</div>
+    <div id="status" class="idle"></div> 
 
     <footer>
       © 2025 Tim TI Katekumen<br>
@@ -247,39 +199,37 @@
     </footer>
 
     <script>
+      // --- SVG ICONS ---
+      const cameraSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm-6.5 1h-2a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h2a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5zM22 6a2 2 0 00-2-2H4a2 2 0 00-2 2v12c0 1.1.9 2 2 2h16a2 2 0 002-2V6zm-2 12H4V6h4.05L9 4.5h6l.95 1.5H20v12z"/></svg>`;
+      const hourglassSvg = `<svg class="rotate-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6z"/></svg>`;
+      const checkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+      const errorSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
+
+      // --- APP STATE ---
       const html5QrcodeScanner = new Html5Qrcode("reader");
       let scanCooldown = false;
       let SCRIPT_MAP = {}; 
       let selectedWeek = null; 
 
       // --- MODAL FUNCTIONS ---
-      function openTopicModal() {
-        document.getElementById('topic-modal').style.display = 'flex';
-      }
-
-      function closeTopicModal() {
-        document.getElementById('topic-modal').style.display = 'none';
-      }
+      function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
+      function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
 
       function selectTopic(week, name, element) {
         selectedWeek = week;
-        
         document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
         document.getElementById('topic-trigger').style.borderColor = "#72b7ff";
-        
         document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
         element.classList.add('active');
-
         setTimeout(closeTopicModal, 200);
       }
 
-      // --- MAIN LOGIC ---
+      // --- DATA LOADING ---
       async function loadScriptMap() {
         try {
           const res = await fetch("/config.json");
           SCRIPT_MAP = await res.json();
         } catch (e) { 
-          console.error("Error loading script map", e);
           showStatus("Gagal memuat konfigurasi.", "error");
         }
       }
@@ -292,7 +242,6 @@
 
           if (data.status === "ok" && Array.isArray(data.topik)) {
             listContainer.innerHTML = "";
-            
             data.topik.forEach((item) => {
               const div = document.createElement("div");
               div.className = "topic-option";
@@ -300,56 +249,44 @@
               div.onclick = () => selectTopic(item.week, item.name, div);
               listContainer.appendChild(div);
             });
-            // Auto-select the last topic by default
             if(data.topik.length > 0) {
+                // Auto select latest
                 const lastTopic = data.topik[data.topik.length - 1];
-                const lastTopicElement = listContainer.lastChild;
-                selectTopic(lastTopic.week, lastTopic.name, lastTopicElement);
+                selectTopic(lastTopic.week, lastTopic.name, listContainer.lastChild);
             }
           } else {
-            listContainer.innerHTML = `<div style="color:#ff4444; text-align:center; padding:20px;">Data topik tidak ditemukan.</div>`;
-            showStatus("Data topik tidak ditemukan.", "error");
+            listContainer.innerHTML = `<div style="color:#ff4444; text-align:center;">Data topik tidak ditemukan.</div>`;
           }
         } catch (err) {
-          console.error("Gagal memuat topik:", err);
-          listContainer.innerHTML = `<div style="color:#ff4444; text-align:center; padding:20px;">Gagal memuat topik.</div>`;
-          showStatus("Gagal memuat daftar topik.", "error");
+          listContainer.innerHTML = `<div style="color:#ff4444; text-align:center;">Gagal memuat topik.</div>`;
         }
       }
 
-      function showStatus(textOrHtmlContent, type) {
+      // --- STATUS HANDLER ---
+      function showStatus(textOrHtml, type) {
         const el = document.getElementById("status");
+        let iconHtml = cameraSvg;
         
+        if (type === 'success') iconHtml = checkSvg;
+        else if (type === 'error') iconHtml = errorSvg;
+        else if (type === 'processing') iconHtml = hourglassSvg;
+
         if(type === 'success') {
-            el.innerHTML = textOrHtmlContent; // This is already well-formatted HTML from handleScan
+            el.innerHTML = `<div class="status-icon">${checkSvg}</div><div class="status-content">${textOrHtml}</div>`;
         } else {
-            // For error, idle, processing, we use a consistent structure
-            let icon = '';
-            if (type === 'error') icon = '⚠️';
-            else if (type === 'processing') icon = '⏳';
-            else icon = '📷'; // Idle
-            
-            el.innerHTML = `
-                <div class="status-icon">${icon}</div>
-                <div class="status-content">
-                    <div class="student-name">${textOrHtmlContent}</div>
-                </div>
-            `;
+            el.innerHTML = `<div class="status-icon">${iconHtml}</div><div class="status-content"><div class="student-name">${textOrHtml}</div></div>`;
         }
         el.className = type;
       }
 
-      function resetStatus() {
-        showStatus("Silakan pindai kode QR berikutnya", "idle");
-      }
+      function resetStatus() { showStatus("Silakan pindai kode QR berikutnya", "idle"); }
 
+      // --- SCANNER LOGIC ---
       async function handleScan(decodedText) {
         if (scanCooldown) return;
-
         if (!selectedWeek) {
            showStatus("HARAP PILIH TOPIK TERLEBIH DAHULU!", "error");
-           openTopicModal(); 
-           return;
+           openTopicModal(); return;
         }
 
         scanCooldown = true;
@@ -359,7 +296,7 @@
         const classCode = parts[1]?.toUpperCase();
 
         if (!classCode || !SCRIPT_MAP[classCode]) {
-          showStatus(`Kode Kelas Tidak Valid: ${classCode || 'Tidak Ada'}`, "error");
+          showStatus(`Kode Kelas Tidak Valid: ${classCode || 'N/A'}`, "error");
           setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
           return;
         }
@@ -375,23 +312,17 @@
           let res = JSON.parse(text);
 
           if (res.status === "ok") {
-            const successHTML = `
-              <div class="status-icon">✅</div>
-              <div class="status-content">
-                  <div class="student-name">${res.name}</div>
-                  <div class="student-details">
-                      ID: ${res.studentId} • Topik ${selectedWeek}
-                  </div>
-              </div>
-            `;
-            showStatus(successHTML, "success");
+            showStatus(
+              `<div class="student-name">${res.name}</div>
+               <div class="student-details">ID: ${res.studentId} • Topik ${selectedWeek}</div>`, 
+              "success"
+            );
           } else if (res.status === "duplicate") {
             showStatus(`Sudah Hadir: ${res.message}`, "error");
           } else {
             showStatus(`Gagal: ${res.message}`, "error");
           }
         } catch (error) {
-          console.error("Fetch error:", error);
           showStatus("Koneksi Error / Gagal menghubungi server", "error");
         } finally {
           setTimeout(() => { scanCooldown = false; resetStatus(); }, 4000);
@@ -399,39 +330,32 @@
       }
 
       async function startScanner() {
-        // Ensure script map is loaded before starting
         if (Object.keys(SCRIPT_MAP).length === 0) await loadScriptMap();
         
         html5QrcodeScanner.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
+          { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0 
+          },
           handleScan
         ).then(() => {
-            // Camera started successfully, hide the loader
-            const loader = document.getElementById("camera-loader");
-            if(loader) loader.style.display = "none"; 
-            resetStatus(); // Set initial idle status
+            // Hide loader
+            document.getElementById("camera-loader").style.display = "none";
+            resetStatus();
         }).catch(err => {
-            // Camera failed to start
             const loader = document.getElementById("camera-loader");
-            if(loader) {
-                loader.innerHTML = '<div style="color:red; text-align:center;">Gagal akses kamera.<br>Pastikan izin kamera diberikan.</div>';
-                loader.style.backgroundColor = '#300000'; // Dark red for error
-            }
-            console.error("Failed to start scanner:", err);
-            showStatus("Gagal Memulai Kamera. Periksa Izin.", "error");
+            loader.innerHTML = '<div style="color:red;text-align:center">Izin kamera ditolak</div>';
+            showStatus("Gagal Memulai Kamera", "error");
         });
       }
 
       window.onload = async () => {
-        // Show initial loading state for topics
-        showStatus("Memuat daftar topik...", "processing");
+        showStatus("Memuat sistem...", "processing");
         await Promise.all([loadScriptMap(), loadTopikList()]);
         startScanner();
       };
     </script>
-    
-    <script>window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };</script>
-    <script defer src="/_vercel/speed-insights/script.js"></script>
   </body>
 </html>
