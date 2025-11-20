@@ -21,25 +21,6 @@ export default async function handler(req, res) {
   };
 
   // ============================================================
-  // 0️⃣ HANDLE LOGIN
-  // ============================================================
-  if (req.method === "POST" && req.body.action === 'login') {
-    if (req.body.secret === SHARED_SECRET) {
-      // Secret is correct, issue a token
-      const token = jwt.sign(
-        { authorized: true }, // payload
-        JWT_SECRET,
-        { expiresIn: '8h' } // Token expires in 8 hours
-      );
-      return res.status(200).json({ status: 'ok', token });
-    } else {
-      // Incorrect secret
-      return res.status(401).json({ status: 'error', message: 'Password salah' });
-    }
-    return; // Stop execution after handling login
-  }
-
-  // ============================================================
   // 1️⃣ HANDLE GET  →  loadTopikList()
   // ============================================================
   if (req.method === "GET") {
@@ -82,41 +63,57 @@ export default async function handler(req, res) {
   // 2️⃣ HANDLE POST  →  Save absensi
   // ============================================================
   if (req.method === "POST") {
-    // This block is now ONLY for attendance posts, not login posts.
-    try {
-      // --- Token validation for this specific action ---
-      const token = req.headers.authorization?.split(' ')[1];
-      if (!token || !jwt.verify(token, JWT_SECRET)) {
-        return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
+    // Check if it's a login action
+    if (req.body.action === 'login') {
+      if (req.body.secret === SHARED_SECRET) {
+        // Secret is correct, issue a token
+        const token = jwt.sign(
+          { authorized: true }, // payload
+          JWT_SECRET,
+          { expiresIn: '8h' } // Token expires in 8 hours
+        );
+        return res.status(200).json({ status: 'ok', token });
+      } else {
+        // Incorrect secret
+        return res.status(401).json({ status: 'error', message: 'Password salah' });
       }
-      // --- End token validation ---
+    } else {
+      // Otherwise, handle it as an attendance submission
+      try {
+        // --- Token validation for this specific action ---
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token || !jwt.verify(token, JWT_SECRET)) {
+          return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
+        }
+        // --- End token validation ---
 
-      const { classCode } = req.body;
-      const scriptURL = SCRIPT_MAP[classCode]; // This will now work correctly
-      if (!scriptURL) {
-        return res.status(400).json({
-          status: "error",
-          message: `Invalid classCode: ${classCode}`,
+        const { classCode } = req.body;
+        const scriptURL = SCRIPT_MAP[classCode];
+        if (!scriptURL) {
+          return res.status(400).json({
+            status: "error",
+            message: `Invalid classCode: ${classCode}`,
+          });
+        }
+
+        const response = await fetch(scriptURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(req.body),
         });
+
+        const text = await response.text();
+        return res.status(200).send(text);
+
+      } catch (err) {
+        console.error("POST error:", err);
+        return res.status(500).json({ status: "error", message: err.message });
       }
-
-      const response = await fetch(scriptURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body),
-      });
-
-      const text = await response.text();
-      return res.status(200).send(text);
-
-    } catch (err) {
-      console.error("POST error:", err);
-      return res.status(500).json({ status: "error", message: err.message });
     }
   }
 
   // ============================================================
   // Invalid method
   // ============================================================
-  return res.status(405).json({ status: "error", message: "Method not allowed" });
+  return res.status(405).json({ status: "error", message: `Method ${req.method} not allowed` });
 }
