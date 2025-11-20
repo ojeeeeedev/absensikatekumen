@@ -7,6 +7,7 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
     
     <style>
@@ -116,7 +117,7 @@
         display: flex; flex-direction: column; gap: 10px;
         border-top: 1px solid #333;
       }
-      #topic-search-input {
+      #topic-search-input { /* Removed emoji from placeholder */
         width: 100%;
         padding: 0.8rem 1rem;
         margin-bottom: 10px;
@@ -305,16 +306,16 @@
       function showStatus(mainText, type, subText = "") {
         const el = document.getElementById("status");
         
-        // Using simple emojis as text indicators
-        let icon = "";
-        if (type === 'success') icon = "✅";
-        else if (type === 'error') icon = "⚠️";
-        else if (type === 'processing') icon = "⏳";
-        else icon = "📷";
+        // Using Material Icons for visual indicators
+        let iconName = "";
+        if (type === 'success') iconName = "check_circle_outline";
+        else if (type === 'error') iconName = "error_outline";
+        else if (type === 'processing') iconName = "hourglass_empty";
+        else iconName = "qr_code_scanner"; // Default for idle/camera
 
         if (subText) {
             el.innerHTML = `
-                <span style="font-size: 1.5rem; margin-right: 10px;">${icon}</span>
+                <span class="material-icons-outlined" style="font-size: 1.5rem; margin-right: 10px;">${iconName}</span>
                 <div class="status-text-container">
                     <div class="main-text">${mainText}</div>
                     <div class="sub-text">${subText}</div>
@@ -322,7 +323,7 @@
             `;
         } else {
             el.innerHTML = `
-                <span style="font-size: 1.5rem; margin-right: 10px;">${icon}</span>
+                <span class="material-icons-outlined" style="font-size: 1.5rem; margin-right: 10px;">${iconName}</span>
                 <div class="main-text">${mainText}</div>
             `;
         }
