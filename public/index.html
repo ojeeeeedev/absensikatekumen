@@ -16,18 +16,33 @@
       html, body {
         margin: 0; padding: 0; width: 100%; height: 100%;
         background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+        background: linear-gradient(135deg, #330B0D 0%, #0a0a0a 70%);
         color: #e0e0e0; /* Slightly softer white for better reading */
         font-family: "Inter", sans-serif;
-        display: flex; flex-direction: column; align-items: center;
-        overflow: hidden;
+        display: flex; justify-content: center; align-items: center;
+        padding: 1rem 0;
       }
 
-      h1 { margin: 1rem 0 0.4rem 0; font-size: 1.8rem; text-align: center; color: #fff; font-family: 'Playfair Display', serif; font-weight: 500; }
+      /* --- FLOATING GLASS CONTAINER --- */
+      .glass-container {
+        background: rgba(30, 30, 30, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px); /* For Safari */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 1.5rem;
+        width: 95%;
+        max-width: 450px;
+        display: flex; flex-direction: column; align-items: center;
+        max-height: 95vh;
+      }
+
+      h1 { margin: 0 0 0.4rem 0; font-size: 1.8rem; text-align: center; color: #fff; font-family: 'Playfair Display', serif; font-weight: 500; }
       h2 { margin: 0; font-size: 1rem; color: #888; text-align: center; font-weight: 400; }
 
       /* --- TOPIC SELECTOR --- */
       .topic-selector-btn {
-        width: 90%; max-width: 400px;
+        width: 100%;
         background: #222; color: #ddd;
         font-size: .95rem; text-align: left;
         padding: 0.8rem 1rem; 
@@ -68,7 +83,7 @@
       /* --- CAMERA CONTAINER --- */
       #reader-container {
         position: relative;
-        width: 92vw; max-width: 420px;
+        width: 100%;
         aspect-ratio: 1 / 1; 
         margin-top: 1rem; border-radius: 14px;
         overflow: hidden; 
@@ -96,7 +111,7 @@
 
       /* --- STATUS BOX (Text Only, No Bold) --- */
       #status {
-        margin-top: 1rem; width: 90%; max-width: 420px;
+        margin-top: 1rem; width: 100%;
         padding: 1rem; border-radius: 8px; min-height: 60px;
         display: flex; align-items: center; gap: 12px; text-align: left;    
         font-weight: 400; /* Ensuring normal weight */
@@ -113,18 +128,35 @@
       .main-text { font-size: 1rem; margin-bottom: 4px; font-weight: 400; } /* Not bold */
       .sub-text { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
 
-      footer { font-size: 0.7rem; color: #555; margin-top: auto; padding-bottom: 1rem; text-align: center; }
+      footer { font-size: 0.7rem; color: #555; margin-top: 1.5rem; text-align: center; }
       footer a { color: #9A2126; text-decoration: none; }
     </style>
   </head>
 
   <body>
-    <h1>Presensi Katekumen</h1>
-    <h2>Gereja Katedral St. Petrus Bandung</h2>
+    <main class="glass-container">
+      <h1>Presensi Katekumen</h1>
+      <h2>Gereja Katedral St. Petrus Bandung</h2>
 
-    <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
-        Pilih Topik...
-    </div>
+      <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
+          Pilih Topik...
+      </div>
+
+      <div id="reader-container">
+          <div id="camera-loader">
+              <div class="spinner"></div>
+              <span style="margin-top:10px;">Memuat Kamera...</span>
+          </div>
+          <div id="reader"></div>
+      </div>
+
+      <div id="status" class="idle"></div> 
+
+      <footer>
+        © 2025 Tim TI Katekumen<br>
+        Kontak: <a href="https://wa.me/6281221752365">Andar 0812 2175 2365</a>
+      </footer>
+    </main>
 
     <div id="topic-modal">
         <div class="modal-content">
@@ -135,21 +167,6 @@
             <div class="modal-close-btn" onclick="closeTopicModal()">Tutup</div>
         </div>
     </div>
-
-    <div id="reader-container">
-        <div id="camera-loader">
-            <div class="spinner"></div>
-            <span style="margin-top:10px;">Memuat Kamera...</span>
-        </div>
-        <div id="reader"></div>
-    </div>
-
-    <div id="status" class="idle"></div> 
-
-    <footer>
-      © 2025 Tim TI Katekumen<br>
-      Kontak: <a href="https://wa.me/6281221752365">Andar 0812 2175 2365</a>
-    </footer>
 
     <script>
       let html5QrcodeScanner; // Will be initialized later
