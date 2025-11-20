@@ -7,7 +7,7 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     
     <style>
       /* --- GLOBAL RESET & TRANSITIONS --- */
@@ -16,37 +16,32 @@
       html, body {
         margin: 0; padding: 0; width: 100%; height: 100%;
         background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-        color: #fff;
+        color: #e0e0e0; /* Slightly softer white for better reading */
         font-family: "Inter", sans-serif;
         display: flex; flex-direction: column; align-items: center;
         overflow: hidden;
       }
 
-      h1 { margin: 1rem 0 0.4rem 0; font-size: 1.5rem; text-align: center; }
-      h2 { margin: 0; font-size: 1rem; color: #a8a8a8; text-align: center; font-weight: 500; }
+      h1 { margin: 1rem 0 0.4rem 0; font-size: 1.5rem; text-align: center; color: #fff; }
+      h2 { margin: 0; font-size: 1rem; color: #888; text-align: center; font-weight: 400; }
 
-      /* --- TOPIC SELECTOR (BUTTON) --- */
+      /* --- TOPIC SELECTOR --- */
       .topic-selector-btn {
         width: 90%; max-width: 400px;
-        background: #1a1a1a; color: #eee;
+        background: #222; color: #ddd;
         font-size: .95rem; text-align: left;
         padding: 0.8rem 1rem; 
         border-radius: 8px; border: 1px solid #333; 
         margin-top: 1rem;
         display: flex; justify-content: space-between; align-items: center;
         cursor: pointer;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      }
-      .topic-selector-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
       }
       .topic-selector-btn:after { content: '▼'; font-size: 0.7rem; color: #666; }
 
-      /* --- MODAL & LIST --- */
+      /* --- MODAL --- */
       #topic-modal {
         display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.85); z-index: 999;
+        background: rgba(0,0,0,0.9); z-index: 999;
         flex-direction: column; justify-content: flex-end;
       }
       .modal-content {
@@ -54,91 +49,72 @@
         border-top-left-radius: 16px; border-top-right-radius: 16px;
         padding: 1rem; max-height: 70vh; overflow-y: auto;
         display: flex; flex-direction: column; gap: 10px;
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        border-top: 1px solid #333;
       }
       .topic-option {
         padding: 1rem; background: #2a2a2a; border-radius: 8px;
-        text-align: left; font-size: 0.9rem; color: #eee;
+        text-align: left; font-size: 0.9rem; color: #ccc;
         border: 1px solid #333; cursor: pointer;
       }
       .topic-option.active {
-        border-color: #72b7ff; background: #22303d; color: #72b7ff;
-        font-weight: 600; transform: scale(1.02);
+        border-color: #72b7ff; background: #1c2a35; color: #72b7ff;
       }
       .modal-close-btn {
-        margin-top: 15px; padding: 1rem; background: #ff4444; color: white;
-        text-align: center; border-radius: 8px; font-weight: bold;
-        cursor: pointer; position: sticky; bottom: 0;
+        margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;
+        text-align: center; border-radius: 8px; cursor: pointer;
+        position: sticky; bottom: 0;
       }
 
       /* --- CAMERA CONTAINER --- */
       #reader-container {
         position: relative;
         width: 92vw; max-width: 420px;
-        aspect-ratio: 1 / 1; /* Ensures the container itself is square */
+        aspect-ratio: 1 / 1; 
         margin-top: 1rem; border-radius: 14px;
         overflow: hidden; 
         background: #000;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        border: 1px solid #333; /* Simple border instead of corners */
       }
       #reader { width: 100%; height: 100%; object-fit: cover; }
 
-      /* --- CUSTOM SQUARE SCANNER OVERLAY --- */
-      /* This sits on top of the video to create the square viewfinder */
-      #scan-overlay {
-        position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        width: 250px; /* Match the qrbox size in JS */
-        height: 250px;
-        z-index: 5;
-        pointer-events: none; /* Allows clicks to pass through to video */
-      }
-      
       /* --- LOADING SPINNER --- */
       #camera-loader {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: #1a1a1a;
+        background: #111;
         display: flex; justify-content: center; align-items: center;
-        color: #bbb; font-size: 0.9rem;
+        color: #888; font-size: 0.9rem;
         z-index: 10;
         flex-direction: column; gap: 15px;
       }
       .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid #72b7ff;
-        border-radius: 50%; width: 40px; height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top: 3px solid #72b7ff;
+        border-radius: 50%; width: 30px; height: 30px;
         animation: spin 1s linear infinite;
       }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-      /* --- STATUS BOX --- */
+      /* --- STATUS BOX (Text Only, No Bold) --- */
       #status {
         margin-top: 1rem; width: 90%; max-width: 420px;
-        padding: 1rem; border-radius: 12px; min-height: 60px;
+        padding: 1rem; border-radius: 8px; min-height: 60px;
         display: flex; align-items: center; gap: 12px; text-align: left;    
-        transition: all 0.3s ease-out;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        font-weight: 400; /* Ensuring normal weight */
       }
-      .idle { background: #1a1a1a; color: #aaa; border: 1px dashed #333; justify-content: center; }
-      .success { background: #00c851; color: #fff; border: none; box-shadow: 0 4px 15px rgba(0,200,81,0.3); }
-      .error { background: #ff4444; color: #fff; border: none; box-shadow: 0 4px 15px rgba(255,68,68,0.3); }
-      .processing { 
-        background: #0099CC; color: #fff; justify-content: center; 
-        animation: pulse 1.5s infinite alternate;
-      }
-      @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.02); opacity: 0.8; } }
-
-      .status-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-      .status-icon svg { fill: currentColor; width: 100%; height: 100%; }
-      .status-icon svg.rotate-icon { animation: spin 2s linear infinite; }
       
-      .status-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-      .student-name { font-weight: 700; font-size: 1rem; line-height: 1.2; margin-bottom: 4px; word-wrap: break-word; }
-      .student-details { font-size: 0.75rem; opacity: 0.9; font-weight: 400; }
+      /* Simple Status Colors */
+      .idle { background: #111; color: #aaa; border: 1px dashed #333; justify-content: center; }
+      .success { background: #1b5e20; color: #e8f5e9; border: 1px solid #2e7d32; }
+      .error { background: #b71c1c; color: #ffebee; border: 1px solid #d32f2f; }
+      .processing { background: #01579b; color: #e1f5fe; justify-content: center; }
 
-      footer { font-size: 0.65rem; color: #666; margin-top: auto; padding-bottom: 1rem; text-align: center; }
-      footer a { color: #72b7ff; text-decoration: none; }
+      /* Typography inside status */
+      .status-text-container { display: flex; flex-direction: column; }
+      .main-text { font-size: 1rem; margin-bottom: 4px; font-weight: 400; } /* Not bold */
+      .sub-text { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
+
+      footer { font-size: 0.7rem; color: #555; margin-top: auto; padding-bottom: 1rem; text-align: center; }
+      footer a { color: #5c9ad6; text-decoration: none; }
     </style>
   </head>
 
@@ -152,26 +128,19 @@
 
     <div id="topic-modal">
         <div class="modal-content">
-            <h3 style="margin: 0 0 10px 0; text-align: center; color: #fff;">Pilih Topik Absensi</h3>
+            <h3 style="margin: 0 0 10px 0; text-align: center; color: #fff; font-weight:400;">Pilih Topik Absensi</h3>
             <div id="topic-list-container">
                 <div style="text-align:center; padding:20px; color:#666;">Memuat topik...</div>
             </div>
-            <div class="modal-close-btn" onclick="closeTopicModal()">Tutup / Selesai</div>
+            <div class="modal-close-btn" onclick="closeTopicModal()">Tutup</div>
         </div>
     </div>
 
     <div id="reader-container">
         <div id="camera-loader">
-            <div class="spinner"></div> Sedang Memuat Kamera...
+            <div class="spinner"></div>
+            <span style="margin-top:10px;">Memuat Kamera...</span>
         </div>
-        
-        <div id="scan-overlay">
-            <div class="scan-corner tl"></div>
-            <div class="scan-corner tr"></div>
-            <div class="scan-corner bl"></div>
-            <div class="scan-corner br"></div>
-        </div>
-
         <div id="reader"></div>
     </div>
 
@@ -183,13 +152,6 @@
     </footer>
 
     <script>
-      // --- SVG ICONS ---
-      const cameraSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm-6.5 1h-2a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h2a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5zM22 6a2 2 0 00-2-2H4a2 2 0 00-2 2v12c0 1.1.9 2 2 2h16a2 2 0 002-2V6zm-2 12H4V6h4.05L9 4.5h6l.95 1.5H20v12z"/></svg>`;
-      const hourglassSvg = `<svg class="rotate-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6z"/></svg>`;
-      const checkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
-      const errorSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
-
-      // --- APP STATE ---
       const html5QrcodeScanner = new Html5Qrcode("reader");
       let scanCooldown = false;
       let SCRIPT_MAP = {}; 
@@ -202,7 +164,7 @@
       function selectTopic(week, name, element) {
         selectedWeek = week;
         document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
-        document.getElementById('topic-trigger').style.borderColor = "#72b7ff";
+        document.getElementById('topic-trigger').style.borderColor = "#5c9ad6";
         document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
         element.classList.add('active');
         setTimeout(closeTopicModal, 200);
@@ -213,9 +175,7 @@
         try {
           const res = await fetch("/config.json");
           SCRIPT_MAP = await res.json();
-        } catch (e) { 
-          showStatus("Gagal memuat konfigurasi.", "error");
-        }
+        } catch (e) { showStatus("Gagal memuat konfigurasi", "error"); }
       }
 
       async function loadTopikList() {
@@ -234,31 +194,41 @@
               listContainer.appendChild(div);
             });
             if(data.topik.length > 0) {
-                // Auto select latest
                 const lastTopic = data.topik[data.topik.length - 1];
                 selectTopic(lastTopic.week, lastTopic.name, listContainer.lastChild);
             }
           } else {
-            listContainer.innerHTML = `<div style="color:#ff4444; text-align:center;">Data topik tidak ditemukan.</div>`;
+            listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Data topik tidak ditemukan.</div>`;
           }
         } catch (err) {
-          listContainer.innerHTML = `<div style="color:#ff4444; text-align:center;">Gagal memuat topik.</div>`;
+          listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Gagal memuat topik.</div>`;
         }
       }
 
-      // --- STATUS HANDLER ---
-      function showStatus(textOrHtml, type) {
+      // --- STATUS HANDLER (Text Only) ---
+      function showStatus(mainText, type, subText = "") {
         const el = document.getElementById("status");
-        let iconHtml = cameraSvg;
         
-        if (type === 'success') iconHtml = checkSvg;
-        else if (type === 'error') iconHtml = errorSvg;
-        else if (type === 'processing') iconHtml = hourglassSvg;
+        // Using simple emojis as text indicators
+        let icon = "";
+        if (type === 'success') icon = "✅";
+        else if (type === 'error') icon = "⚠️";
+        else if (type === 'processing') icon = "⏳";
+        else icon = "📷";
 
-        if(type === 'success') {
-            el.innerHTML = `<div class="status-icon">${checkSvg}</div><div class="status-content">${textOrHtml}</div>`;
+        if (subText) {
+            el.innerHTML = `
+                <span style="font-size: 1.5rem; margin-right: 10px;">${icon}</span>
+                <div class="status-text-container">
+                    <div class="main-text">${mainText}</div>
+                    <div class="sub-text">${subText}</div>
+                </div>
+            `;
         } else {
-            el.innerHTML = `<div class="status-icon">${iconHtml}</div><div class="status-content"><div class="student-name">${textOrHtml}</div></div>`;
+            el.innerHTML = `
+                <span style="font-size: 1.5rem; margin-right: 10px;">${icon}</span>
+                <div class="main-text">${mainText}</div>
+            `;
         }
         el.className = type;
       }
@@ -269,7 +239,7 @@
       async function handleScan(decodedText) {
         if (scanCooldown) return;
         if (!selectedWeek) {
-           showStatus("HARAP PILIH TOPIK TERLEBIH DAHULU!", "error");
+           showStatus("Pilih topik terlebih dahulu!", "error");
            openTopicModal(); return;
         }
 
@@ -280,7 +250,7 @@
         const classCode = parts[1]?.toUpperCase();
 
         if (!classCode || !SCRIPT_MAP[classCode]) {
-          showStatus(`Kode Kelas Tidak Valid: ${classCode || 'N/A'}`, "error");
+          showStatus(`Kode kelas tidak valid: ${classCode || '-'}`, "error");
           setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
           return;
         }
@@ -296,18 +266,14 @@
           let res = JSON.parse(text);
 
           if (res.status === "ok") {
-            showStatus(
-              `<div class="student-name">${res.name}</div>
-               <div class="student-details">ID: ${res.studentId} • Topik ${selectedWeek}</div>`, 
-              "success"
-            );
+            showStatus(res.name, "success", `ID: ${res.studentId} • Topik ${selectedWeek}`);
           } else if (res.status === "duplicate") {
-            showStatus(`Sudah Hadir: ${res.message}`, "error");
+            showStatus("Sudah Hadir", "error", res.message);
           } else {
-            showStatus(`Gagal: ${res.message}`, "error");
+            showStatus("Gagal", "error", res.message);
           }
         } catch (error) {
-          showStatus("Koneksi Error / Gagal menghubungi server", "error");
+          showStatus("Error Koneksi", "error", "Gagal menghubungi server");
         } finally {
           setTimeout(() => { scanCooldown = false; resetStatus(); }, 4000);
         }
@@ -316,22 +282,31 @@
       async function startScanner() {
         if (Object.keys(SCRIPT_MAP).length === 0) await loadScriptMap();
         
-        html5QrcodeScanner.start(
-          { facingMode: "environment" },
-          { 
-            fps: 10, 
+        // PERFORMANCE FIX: Explicitly limiting resolution and FPS
+        const cameraConfig = { 
+            facingMode: "environment",
+            // Limit resolution to 720p (HD) to prevent 4K overheat/lag
+            width: { min: 640, ideal: 720, max: 1280 },
+            height: { min: 480, ideal: 720, max: 720 } 
+        };
+
+        const scanConfig = { 
+            fps: 5, // Reduced from 10 to 5 to save CPU
             qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0 
-          },
+            aspectRatio: 1.0,
+            disableFlip: false 
+        };
+
+        html5QrcodeScanner.start(
+          cameraConfig,
+          scanConfig,
           handleScan
         ).then(() => {
-            // Hide loader
             document.getElementById("camera-loader").style.display = "none";
             resetStatus();
         }).catch(err => {
             const loader = document.getElementById("camera-loader");
-            loader.innerHTML = '<div style="color:red;text-align:center">Izin kamera ditolak</div>';
-            showStatus("Gagal Memulai Kamera", "error");
+            loader.innerHTML = '<div style="color:#d32f2f; text-align:center">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
         });
       }
 
