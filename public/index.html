@@ -7,7 +7,7 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
     
     <style>
       /* --- GLOBAL RESET & TRANSITIONS --- */
@@ -22,7 +22,7 @@
         overflow: hidden;
       }
 
-      h1 { margin: 1rem 0 0.4rem 0; font-size: 1.5rem; text-align: center; color: #fff; }
+      h1 { margin: 1rem 0 0.4rem 0; font-size: 1.8rem; text-align: center; color: #fff; font-family: 'Playfair Display', serif; font-weight: 500; }
       h2 { margin: 0; font-size: 1rem; color: #888; text-align: center; font-weight: 400; }
 
       /* --- TOPIC SELECTOR --- */
@@ -152,7 +152,7 @@
     </footer>
 
     <script>
-      const html5QrcodeScanner = new Html5Qrcode("reader");
+      let html5QrcodeScanner; // Will be initialized later
       let scanCooldown = false;
       let SCRIPT_MAP = {}; 
       let selectedWeek = null; 
@@ -281,24 +281,23 @@
 
       async function startScanner() {
         if (Object.keys(SCRIPT_MAP).length === 0) await loadScriptMap();
-        
-        // PERFORMANCE FIX: Explicitly limiting resolution and FPS
-        const cameraConfig = { 
-            facingMode: "environment",
-            // Limit resolution to 720p (HD) to prevent 4K overheat/lag
-            width: { min: 640, ideal: 720, max: 1280 },
-            height: { min: 480, ideal: 720, max: 720 } 
-        };
 
         const scanConfig = { 
             fps: 5, // Reduced from 10 to 5 to save CPU
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
-            disableFlip: false 
+            disableFlip: false,
+            // Pass video constraints directly into the config object
+            videoConstraints: {
+                facingMode: "environment",
+                width: { ideal: 720 },
+                height: { ideal: 720 }
+            }
         };
 
+        html5QrcodeScanner = new Html5Qrcode("reader", /* verbose= */ false);
         html5QrcodeScanner.start(
-          cameraConfig,
+          { facingMode: "environment" }, // Request rear camera
           scanConfig,
           handleScan
         ).then(() => {
