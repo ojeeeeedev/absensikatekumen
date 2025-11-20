@@ -11,7 +11,7 @@
 html,
 body {
   margin: 0;
-  padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+  padding: env(safe-area-inset-top) 16px 0;
   width: 100%;
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
@@ -23,6 +23,17 @@ body {
   align-items: center;
   justify-content: flex-start;
   overflow-x: hidden;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 480px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 2rem;
 }
 
 h1 {
@@ -350,15 +361,24 @@ h2 {
 }
 
 footer {
-  font-size: 0.65rem;
-  color: #666;
-  margin-top: auto;
-  padding-bottom: 1rem;
+  font-size: 0.7rem;
+  color: #888;
+  width: 100%;
+  padding: 1.5rem 0 calc(1.5rem + env(safe-area-inset-bottom));
   text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: auto;
 }
 
 footer a {
   color: #72b7ff;
   text-decoration: none;
+}
+
+#reader .scan-region-highlight,
+#reader .scan-region-highlight-svg,
+#reader .scan-region-highlight-foreground,
+#reader .scan-region-highlight-camera {
+  display: none !important;
 }
 

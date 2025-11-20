@@ -16,39 +16,41 @@
   </head>
 
   <body>
-    <h1>Presensi Katekumen</h1>
-    <h2>Gereja Katedral St. Petrus Bandung</h2>
+    <main class="app-shell">
+      <h1>Presensi Katekumen</h1>
+      <h2>Gereja Katedral St. Petrus Bandung</h2>
 
-    <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
-        Pilih Topik...
-    </div>
+      <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
+          Pilih Topik...
+      </div>
 
-    <div id="topic-modal">
-        <div class="modal-content">
-            <h3 style="margin: 0 0 10px 0; text-align: center; color: #fff;">Pilih Topik Absensi</h3>
-            <div id="topic-list-container">
-                <div style="text-align:center; padding:20px; color:#666;">Memuat topik...</div>
-            </div>
-            <div class="modal-close-btn" onclick="closeTopicModal()">Tutup / Selesai</div>
-        </div>
-    </div>
+      <div id="topic-modal">
+          <div class="modal-content">
+              <h3 style="margin: 0 0 10px 0; text-align: center; color: #fff;">Pilih Topik Absensi</h3>
+              <div id="topic-list-container">
+                  <div style="text-align:center; padding:20px; color:#666;">Memuat topik...</div>
+              </div>
+              <div class="modal-close-btn" onclick="closeTopicModal()">Tutup / Selesai</div>
+          </div>
+      </div>
 
-    <div id="reader-container">
-        <div id="camera-loader">
-            <div class="spinner"></div> Sedang Memuat Kamera...
-        </div>
-        
-        <div id="scan-overlay">
-            <div class="scan-corner tl"></div>
-            <div class="scan-corner tr"></div>
-            <div class="scan-corner bl"></div>
-            <div class="scan-corner br"></div>
-        </div>
+      <div id="reader-container">
+          <div id="camera-loader">
+              <div class="spinner"></div> Sedang Memuat Kamera...
+          </div>
+          
+          <div id="scan-overlay">
+              <div class="scan-corner tl"></div>
+              <div class="scan-corner tr"></div>
+              <div class="scan-corner bl"></div>
+              <div class="scan-corner br"></div>
+          </div>
 
-        <div id="reader"></div>
-    </div>
+          <div id="reader"></div>
+      </div>
 
-    <div id="status" class="idle"></div> 
+      <div id="status" class="idle"></div> 
+    </main>
 
     <footer>
       © 2025 Tim TI Katekumen<br>
