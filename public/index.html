@@ -4,265 +4,358 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Absensi Katekumen</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!--link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" /-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <style>
-      * { box-sizing: border-box; }
+      /* --- GLOBAL RESET & TRANSITIONS --- */
+      * { box-sizing: border-box; transition: all 0.2s ease-out; }
+
       html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
         color: #fff;
         font-family: "Inter", sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        display: flex; flex-direction: column; align-items: center;
         overflow: hidden;
-        font-kerning: auto;
       }
-      h1 {
-        margin: 1rem 0 0.4rem 0;
-        font-size: 1.5rem;
-        color: #ffffff;
-        text-align: center;
-        font-kerning: auto;
-      }
-      h2 {
-        margin: 0;
-        font-size: 1rem;
-        color: #a8a8a8;
-        font-kerning: auto;
-        text-align: center;
-        font-weight: 500;
-      }
-      label {
-        font-size: 0.95rem;
-        margin-top: 0.6rem;
-      }
-      select {
-        width: 90%;
-        max-width: 400px;
-        background: #111;
-        color: #fff;
-        font-size: .9rem;
-        text-align: center;
-        padding: 0.6rem;
-        border-radius: 8px;
-        border: 1px solid #333;
-        margin-top: 0.4rem;
-      }
-      #reader {
-        width: 92vw;
-        max-width: 420px;
-        aspect-ratio: 1 / 1;
+
+      h1 { margin: 1rem 0 0.4rem 0; font-size: 1.5rem; text-align: center; }
+      h2 { margin: 0; font-size: 1rem; color: #a8a8a8; text-align: center; font-weight: 500; }
+
+      /* --- TOPIC SELECTOR (BUTTON) --- */
+      .topic-selector-btn {
+        width: 90%; max-width: 400px;
+        background: #1a1a1a; color: #eee;
+        font-size: .95rem; text-align: left;
+        padding: 0.8rem 1rem; 
+        border-radius: 8px; border: 1px solid #333; 
         margin-top: 1rem;
-        border-radius: 14px;
-        overflow: hidden;
+        display: flex; justify-content: space-between; align-items: center;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      }
+      .topic-selector-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      }
+      .topic-selector-btn:after { content: '▼'; font-size: 0.7rem; color: #666; }
+
+      /* --- MODAL & LIST --- */
+      #topic-modal {
+        display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); z-index: 999;
+        flex-direction: column; justify-content: flex-end;
+      }
+      .modal-content {
+        background: #1a1a1a;
+        border-top-left-radius: 16px; border-top-right-radius: 16px;
+        padding: 1rem; max-height: 70vh; overflow-y: auto;
+        display: flex; flex-direction: column; gap: 10px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+      }
+      .topic-option {
+        padding: 1rem; background: #2a2a2a; border-radius: 8px;
+        text-align: left; font-size: 0.9rem; color: #eee;
+        border: 1px solid #333; cursor: pointer;
+      }
+      .topic-option.active {
+        border-color: #72b7ff; background: #22303d; color: #72b7ff;
+        font-weight: 600; transform: scale(1.02);
+      }
+      .modal-close-btn {
+        margin-top: 15px; padding: 1rem; background: #ff4444; color: white;
+        text-align: center; border-radius: 8px; font-weight: bold;
+        cursor: pointer; position: sticky; bottom: 0;
+      }
+
+      /* --- CAMERA CONTAINER --- */
+      #reader-container {
+        position: relative;
+        width: 92vw; max-width: 420px;
+        aspect-ratio: 1 / 1; /* Ensures the container itself is square */
+        margin-top: 1rem; border-radius: 14px;
+        overflow: hidden; 
         background: #000;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.5);
       }
+      #reader { width: 100%; height: 100%; object-fit: cover; }
+
+      /* --- CUSTOM SQUARE SCANNER OVERLAY --- */
+      /* This sits on top of the video to create the square viewfinder */
+      #scan-overlay {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 250px; /* Match the qrbox size in JS */
+        height: 250px;
+        z-index: 5;
+        pointer-events: none; /* Allows clicks to pass through to video */
+      }
+      
+      /* The 4 corners */
+      .scan-corner {
+        position: absolute;
+        width: 40px; height: 40px;
+        border-color: #ffffff;
+        border-style: solid;
+        border-width: 0;
+        box-shadow: 0 0 4px rgba(0,0,0,0.5); /* Small shadow for contrast */
+      }
+      
+      /* Positioning the corners */
+      .tl { top: 0; left: 0; border-top-width: 4px; border-left-width: 4px; }
+      .tr { top: 0; right: 0; border-top-width: 4px; border-right-width: 4px; }
+      .bl { bottom: 0; left: 0; border-bottom-width: 4px; border-left-width: 4px; }
+      .br { bottom: 0; right: 0; border-bottom-width: 4px; border-right-width: 4px; }
+
+      /* --- LOADING SPINNER --- */
+      #camera-loader {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: #1a1a1a;
+        display: flex; justify-content: center; align-items: center;
+        color: #bbb; font-size: 0.9rem;
+        z-index: 10;
+        flex-direction: column; gap: 15px;
+      }
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #72b7ff;
+        border-radius: 50%; width: 40px; height: 40px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+      /* --- STATUS BOX --- */
       #status {
-        margin-top: 1rem;
-        font-size: 0.8rem;
-        font-weight: 400;
-        text-align: center;
-        width: 90%;
-        max-width: 420px;
-        padding: 0.8rem;
-        border-radius: 8px;
-        transition: opacity 0.4s ease;
+        margin-top: 1rem; width: 90%; max-width: 420px;
+        padding: 1rem; border-radius: 12px; min-height: 60px;
+        display: flex; align-items: center; gap: 12px; text-align: left;    
+        transition: all 0.3s ease-out;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       }
-      .success { background: #00c851; color: #fff; }
-      .error { background: #ff4444; color: #fff; }
-      .student-id {
-        font-size: 0.7rem;
-        font-weight: 300;
-        opacity: 0.9;
+      .idle { background: #1a1a1a; color: #aaa; border: 1px dashed #333; justify-content: center; }
+      .success { background: #00c851; color: #fff; border: none; box-shadow: 0 4px 15px rgba(0,200,81,0.3); }
+      .error { background: #ff4444; color: #fff; border: none; box-shadow: 0 4px 15px rgba(255,68,68,0.3); }
+      .processing { 
+        background: #0099CC; color: #fff; justify-content: center; 
+        animation: pulse 1.5s infinite alternate;
       }
-      footer {
-        font-size: 0.65rem;
-        color: #666;
-        margin-top: auto;
-        padding-bottom: 0.6rem;
-        line-height: 1.2;
-        text-align: center;
-      }
-      footer a {
-      color: #72b7ff;   /* light blue */
-      text-decoration: none;
-      }
+      @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.02); opacity: 0.8; } }
 
-      footer a:hover {
-      color: #a8d4ff;   /* even lighter on hover */
-      text-decoration: underline;
-      }
+      .status-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .status-icon svg { fill: currentColor; width: 100%; height: 100%; }
+      .status-icon svg.rotate-icon { animation: spin 2s linear infinite; }
+      
+      .status-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+      .student-name { font-weight: 700; font-size: 1rem; line-height: 1.2; margin-bottom: 4px; word-wrap: break-word; }
+      .student-details { font-size: 0.75rem; opacity: 0.9; font-weight: 400; }
 
+      footer { font-size: 0.65rem; color: #666; margin-top: auto; padding-bottom: 1rem; text-align: center; }
+      footer a { color: #72b7ff; text-decoration: none; }
     </style>
   </head>
 
   <body>
-    <h1>Presensi Katekumen Dewasa</h1>
+    <h1>Presensi Katekumen</h1>
     <h2>Gereja Katedral St. Petrus Bandung</h2>
 
-    <label for="week"><br><b>Pilih Topik:</b></label>
-    <select id="week">
-      <option disabled selected>Memuat daftar topik...</option>
-    </select>
+    <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
+        Pilih Topik...
+    </div>
 
-    <div id="reader"></div>
-    <div id="status"></div>
+    <div id="topic-modal">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 10px 0; text-align: center; color: #fff;">Pilih Topik Absensi</h3>
+            <div id="topic-list-container">
+                <div style="text-align:center; padding:20px; color:#666;">Memuat topik...</div>
+            </div>
+            <div class="modal-close-btn" onclick="closeTopicModal()">Tutup / Selesai</div>
+        </div>
+    </div>
+
+    <div id="reader-container">
+        <div id="camera-loader">
+            <div class="spinner"></div> Sedang Memuat Kamera...
+        </div>
+        
+        <div id="scan-overlay">
+            <div class="scan-corner tl"></div>
+            <div class="scan-corner tr"></div>
+            <div class="scan-corner bl"></div>
+            <div class="scan-corner br"></div>
+        </div>
+
+        <div id="reader"></div>
+    </div>
+
+    <div id="status" class="idle"></div> 
 
     <footer>
-      <b>© 2025 Tim TI Katekumen Dewasa - St. Petrus Katedral Bandung</b><br>
-      Ada kendala/kritik/saran?<br>
-      Kontak: <b>Andar </b>
-      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 432 432"><path fill="#ffffff" d="M364.5 65Q427 127 427 214.5T364.5 364T214 426q-54 0-101-26L0 429l30-109Q2 271 2 214q0-87 62-149T214 3t150.5 62zM214 390q73 0 125-51.5T391 214T339 89.5T214 38T89.5 89.5T38 214q0 51 27 94l4 6l-18 65l67-17l6 3q42 25 90 25zm97-132q9 5 10 7q4 6-3 25q-3 8-15 15.5t-21 9.5q-18 2-33-2q-17-6-30-11q-8-4-15.5-8.5t-14.5-9t-13-9.5t-11.5-10t-10.5-10.5t-8.5-9.5t-7-8.5t-5.5-7t-3.5-5L128 222q-22-29-22-55q0-24 19-44q6-7 14-7q6 0 10 1q8 0 12 9q2 3 6 13l7 17.5l3 8.5q3 5 1 9q-3 7-5 9l-3 3l-3 3.5l-2 2.5q-6 6-3 11q13 22 30 37q13 11 43 26q7 3 11-1q12-15 17-21q4-6 12-3q6 3 36 17z"/></svg> </i>
-      <a href="https://wa.me/6281221752365?text=Halo%20Andar%21%20Saya%20mau%20bertanya%20tentang%20aplikasi%20absensi%20katekumen%2E">0812 2175 2365</a></br></footer>
+      © 2025 Tim TI Katekumen<br>
+      Kontak: <a href="https://wa.me/6281221752365">Andar 0812 2175 2365</a>
     </footer>
 
     <script>
-  const reader = new Html5Qrcode("reader");
-  let scanCooldown = false;
-  let SCRIPT_MAP = {}; 
-  let currentScriptUrl = ""; 
+      // --- SVG ICONS ---
+      const cameraSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm-6.5 1h-2a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h2a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5zM22 6a2 2 0 00-2-2H4a2 2 0 00-2 2v12c0 1.1.9 2 2 2h16a2 2 0 002-2V6zm-2 12H4V6h4.05L9 4.5h6l.95 1.5H20v12z"/></svg>`;
+      const hourglassSvg = `<svg class="rotate-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6z"/></svg>`;
+      const checkSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+      const errorSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
 
-  // Load JSON mapping
-  async function loadScriptMap() {
-    const res = await fetch("/config.json");
-    SCRIPT_MAP = await res.json();
-  }
+      // --- APP STATE ---
+      const html5QrcodeScanner = new Html5Qrcode("reader");
+      let scanCooldown = false;
+      let SCRIPT_MAP = {}; 
+      let selectedWeek = null; 
 
- async function loadTopikList() {
-  const select = document.getElementById("week");
-  select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
+      // --- MODAL FUNCTIONS ---
+      function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
+      function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
 
-  try {
-    // Default class for loading topics
-    const res = await fetch(`/api/absensi?action=topik&classCode=SAB`);
-    const data = await res.json();
+      function selectTopic(week, name, element) {
+        selectedWeek = week;
+        document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
+        document.getElementById('topic-trigger').style.borderColor = "#72b7ff";
+        document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+        setTimeout(closeTopicModal, 200);
+      }
 
-    select.innerHTML = "";
-
-    if (data.status === "ok" && Array.isArray(data.topik)) {
-      data.topik.forEach((item) => {
-        const opt = document.createElement("option");
-        opt.value = item.week;
-        opt.textContent = `${item.week}. ${item.name}`;
-        select.appendChild(opt);
-      });
-    } else {
-      select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
-    }
-  } catch (err) {
-    console.error("Gagal memuat daftar topik:", err);
-    select.innerHTML = `<option disabled>⚠️ Gagal memuat topik</option>`;
-  }
-}
-
-
-  function showStatus(text, type) {
-    const el = document.getElementById("status");
-    el.innerHTML = text;
-    el.className = type;
-    el.style.opacity = "1";
-  }
-
-  function clearStatus() {
-    const el = document.getElementById("status");
-    el.style.opacity = "0";
-    setTimeout(() => {
-      el.innerHTML = "📷 Silakan pindai kode QR berikutnya";
-      el.className = "";
-      el.style.opacity = "1";
-    }, 400);
-  }
-
-  async function handleScan(decodedText) {
-    if (scanCooldown) return;
-    scanCooldown = true;
-
-    const parts = decodedText.split("/");
-const classCode = parts[1]?.toUpperCase();
-
-if (!classCode || !SCRIPT_MAP[classCode]) {
-  showStatus(`❌ Kode kelas tidak valid: ${classCode}`, "error");
-  scanCooldown = false;
-  return;
-}
-
-
-    currentScriptUrl = SCRIPT_MAP[classCode];
-
-    const week = document.getElementById("week").value;
-    showStatus("⏳ Menyimpan presensi...", "");
-
-    fetch("/api/absensi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentId: decodedText,
-        week,
-        classCode
-      }),
-    })
-      .then(async (r) => {
-        const text = await r.text();
-
-        let res;
+      // --- DATA LOADING ---
+      async function loadScriptMap() {
         try {
-          res = JSON.parse(text);
-        } catch {
-          showStatus("⚠️ Server mengirim data tidak valid.", "error");
+          const res = await fetch("/config.json");
+          SCRIPT_MAP = await res.json();
+        } catch (e) { 
+          showStatus("Gagal memuat konfigurasi.", "error");
+        }
+      }
+
+      async function loadTopikList() {
+        const listContainer = document.getElementById("topic-list-container");
+        try {
+          const res = await fetch(`/api/absensi?action=topik&classCode=SAB`);
+          const data = await res.json();
+
+          if (data.status === "ok" && Array.isArray(data.topik)) {
+            listContainer.innerHTML = "";
+            data.topik.forEach((item) => {
+              const div = document.createElement("div");
+              div.className = "topic-option";
+              div.textContent = `${item.week}. ${item.name}`;
+              div.onclick = () => selectTopic(item.week, item.name, div);
+              listContainer.appendChild(div);
+            });
+            if(data.topik.length > 0) {
+                // Auto select latest
+                const lastTopic = data.topik[data.topik.length - 1];
+                selectTopic(lastTopic.week, lastTopic.name, listContainer.lastChild);
+            }
+          } else {
+            listContainer.innerHTML = `<div style="color:#ff4444; text-align:center;">Data topik tidak ditemukan.</div>`;
+          }
+        } catch (err) {
+          listContainer.innerHTML = `<div style="color:#ff4444; text-align:center;">Gagal memuat topik.</div>`;
+        }
+      }
+
+      // --- STATUS HANDLER ---
+      function showStatus(textOrHtml, type) {
+        const el = document.getElementById("status");
+        let iconHtml = cameraSvg;
+        
+        if (type === 'success') iconHtml = checkSvg;
+        else if (type === 'error') iconHtml = errorSvg;
+        else if (type === 'processing') iconHtml = hourglassSvg;
+
+        if(type === 'success') {
+            el.innerHTML = `<div class="status-icon">${checkSvg}</div><div class="status-content">${textOrHtml}</div>`;
+        } else {
+            el.innerHTML = `<div class="status-icon">${iconHtml}</div><div class="status-content"><div class="student-name">${textOrHtml}</div></div>`;
+        }
+        el.className = type;
+      }
+
+      function resetStatus() { showStatus("Silakan pindai kode QR berikutnya", "idle"); }
+
+      // --- SCANNER LOGIC ---
+      async function handleScan(decodedText) {
+        if (scanCooldown) return;
+        if (!selectedWeek) {
+           showStatus("HARAP PILIH TOPIK TERLEBIH DAHULU!", "error");
+           openTopicModal(); return;
+        }
+
+        scanCooldown = true;
+        showStatus("Memproses...", "processing");
+
+        const parts = decodedText.split("/");
+        const classCode = parts[1]?.toUpperCase();
+
+        if (!classCode || !SCRIPT_MAP[classCode]) {
+          showStatus(`Kode Kelas Tidak Valid: ${classCode || 'N/A'}`, "error");
+          setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
           return;
         }
 
-        if (res.status === "ok") {
-          showStatus(
-            `✅ <b>${res.name}</b><br> hadir </br> <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
-            "success"
-          );
-        } else if (res.status === "duplicate") {
-          showStatus(`⚠️ ${res.message}`, "error");
-        } else {
-          showStatus(`❌ ${res.message}`, "error");
+        try {
+          const response = await fetch("/api/absensi", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ studentId: decodedText, week: selectedWeek, classCode }),
+          });
+
+          const text = await response.text();
+          let res = JSON.parse(text);
+
+          if (res.status === "ok") {
+            showStatus(
+              `<div class="student-name">${res.name}</div>
+               <div class="student-details">ID: ${res.studentId} • Topik ${selectedWeek}</div>`, 
+              "success"
+            );
+          } else if (res.status === "duplicate") {
+            showStatus(`Sudah Hadir: ${res.message}`, "error");
+          } else {
+            showStatus(`Gagal: ${res.message}`, "error");
+          }
+        } catch (error) {
+          showStatus("Koneksi Error / Gagal menghubungi server", "error");
+        } finally {
+          setTimeout(() => { scanCooldown = false; resetStatus(); }, 4000);
         }
-      })
-      .catch(() => {
-        showStatus("⚠️ Koneksi error!", "error");
-      })
-      .finally(() => {
-        setTimeout(() => {
-          scanCooldown = false;
-          clearStatus();
-        }, 5000);
-      });
-  }
+      }
 
-  async function startScanner() {
-    await reader.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 350, height: 350 } },
-      handleScan
-    );
-  }
+      async function startScanner() {
+        if (Object.keys(SCRIPT_MAP).length === 0) await loadScriptMap();
+        
+        html5QrcodeScanner.start(
+          { facingMode: "environment" },
+          { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0 
+          },
+          handleScan
+        ).then(() => {
+            // Hide loader
+            document.getElementById("camera-loader").style.display = "none";
+            resetStatus();
+        }).catch(err => {
+            const loader = document.getElementById("camera-loader");
+            loader.innerHTML = '<div style="color:red;text-align:center">Izin kamera ditolak</div>';
+            showStatus("Gagal Memulai Kamera", "error");
+        });
+      }
 
-  window.onload = async () => {
-    await loadScriptMap();
-    await loadTopikList();
-    startScanner();
-  };
-</script>
-
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
-
-<script defer src="/_vercel/speed-insights/script.js"></script>
-
+      window.onload = async () => {
+        showStatus("Memuat sistem...", "processing");
+        await Promise.all([loadScriptMap(), loadTopikList()]);
+        startScanner();
+      };
+    </script>
   </body>
 </html>
