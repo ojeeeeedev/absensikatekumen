@@ -1,3 +1,5 @@
+import jwt from 'jsonwebtoken';
+
 export default async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,11 +10,41 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // --- Authentication Secrets ---
+  const SHARED_SECRET = process.env.AUTH_SECRET || "your-very-secret-password";
+  const JWT_SECRET = process.env.JWT_SECRET || "another-super-secret-key";
+
   // Mapping for your sheets
   const SCRIPT_MAP = {
     SAB: "https://script.google.com/macros/s/AKfycbxB3TcQA-bsX5hgXi4mL1v__-RL4HGzy8D6QJdeWy0-x737yw3sTGxvFbFdEc07zJfepQ/exec",
     ROM: "https://script.google.com/macros/s/AKfycby8cp12Ck9BvHWe4S3kg8kW6D-Trhe2SX9snlwUy17RLUbBHBhRwfNvh0S1dLWJrxcyQA/exec",
   };
+
+  // ============================================================
+  // 0️⃣ HANDLE LOGIN
+  // ============================================================
+  if (req.body.action === 'login') {
+    if (req.body.secret === SHARED_SECRET) {
+      // Secret is correct, issue a token
+      const token = jwt.sign(
+        { authorized: true }, // payload
+        JWT_SECRET,
+        { expiresIn: '8h' } // Token expires in 8 hours
+      );
+      return res.status(200).json({ status: 'ok', token });
+    } else {
+      // Incorrect secret
+      return res.status(401).json({ status: 'error', message: 'Password salah' });
+    }
+  }
+
+  // ============================================================
+  // --- All other requests below this point require a valid token ---
+  // ============================================================
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token || !jwt.verify(token, JWT_SECRET)) {
+    return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
+  }
 
   // ============================================================
   // 1️⃣ HANDLE GET  →  loadTopikList()

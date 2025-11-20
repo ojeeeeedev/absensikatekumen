@@ -3,8 +3,6 @@
   <p>
     Sistem absensi digital berbasis QR code untuk program Katekumenat di Katedral Santo Petrus, Bandung.
   </p>
-  <br />
-  <a href="#english-version">Read in English</a>
 </div>
 
 <br />

@@ -106,13 +106,38 @@
         z-index: 10;
       }
 
-      h1 { margin: 0 0 0.4rem 0; font-size: 1.4rem; text-align: center; color: #fff; font-family: 'Playfair Display', serif; font-weight: 500; }
+      h1 { margin: 0 0 0.4rem 0; font-size: 1.4rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
       h2 { 
         margin: 0; font-size: 0.9rem; color: #888; text-align: center; font-weight: 400; 
         font-family: 'Cinzel', serif;
         text-transform: uppercase;
         letter-spacing: 0.1em;
         padding: 0 1rem; /* Prevent text from touching edges */
+      }
+
+      /* --- LOGIN SCREEN --- */
+      #login-container {
+        display: flex; flex-direction: column;
+        width: 100%;
+        animation: fadeInUp 0.5s ease-out forwards;
+      }
+      #login-input {
+        padding: 1rem;
+        font-size: 1rem;
+        background: #333;
+        border: 1px solid #444;
+        border-radius: 8px;
+        color: #eee;
+        text-align: center;
+      }
+      #login-btn {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #9A2126;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
       }
 
       /* --- TOPIC SELECTOR --- */
@@ -231,32 +256,44 @@
       <div class="liquid-shape shape2"></div>
     </div>
 
-    <main class="glass-container">
-      <div id="mute-btn" class="floating-btn" onclick="toggleMute()">
-        <span id="mute-icon" class="material-icons-outlined">volume_up</span>
+    <main id="app-container" class="glass-container">
+      <div id="login-container">
+        <h1>Login Fasilitator</h1>
+        <input type="password" id="login-input" placeholder="Masukkan password...">
+        <div id="login-btn" onclick="handleLogin()">Masuk</div>
+        <div id="login-status" style="color: #d32f2f; text-align: center; margin-top: 1rem; min-height: 1.2rem;"></div>
+        <div style="text-align: center; margin-top: 1.5rem; font-size: 0.8rem; color: #888;">
+          Lupa Password? Kontak: <a href="https://wa.me/6281221752365" style="color: #9A2126; text-decoration: none;">0812 2175 2365</a>
+        </div>
       </div>
 
-      <h1>Presensi Katekumen Dewasa</h1>
-      <h2>St. Petrus Katedral Bandung</h2>
-
-      <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
-          Pilih Topik...
+      <div id="scanner-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+        <div id="mute-btn" class="floating-btn" onclick="toggleMute()">
+          <span id="mute-icon" class="material-icons-outlined">volume_up</span>
+        </div>
+  
+        <h1>Presensi Katekumen Dewasa</h1>
+        <h2>St. Petrus Katedral Bandung</h2>
+  
+        <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
+            Pilih Topik...
+        </div>
+  
+        <div id="reader-container">
+            <div id="camera-loader">
+                <div class="spinner"></div>
+                <span style="margin-top:10px;">Memuat Kamera...</span>
+            </div>
+            <div id="reader"></div>
+        </div>
+  
+        <div id="status" class="idle"></div> 
+  
+        <footer>
+          © 2025 Tim IT Katekumen Dewasa<br>
+          Kontak: <a href="https://wa.me/6281221752365">Andar 0812 2175 2365</a>
+        </footer>
       </div>
-
-      <div id="reader-container">
-          <div id="camera-loader">
-              <div class="spinner"></div>
-              <span style="margin-top:10px;">Memuat Kamera...</span>
-          </div>
-          <div id="reader"></div>
-      </div>
-
-      <div id="status" class="idle"></div> 
-
-      <footer>
-        © 2025 Tim IT Katekumen Dewasa<br>
-        Kontak: <a href="https://wa.me/6281221752365">Andar 0812 2175 2365</a>
-      </footer>
     </main>
 
     <div id="topic-modal">
@@ -328,6 +365,42 @@
         });
       }
 
+      // --- AUTHENTICATION ---
+      async function handleLogin() {
+        const secret = document.getElementById('login-input').value;
+        const loginStatus = document.getElementById('login-status');
+        const loginBtn = document.getElementById('login-btn');
+
+        if (!secret) {
+          loginStatus.textContent = 'Password tidak boleh kosong.';
+          return;
+        }
+
+        loginBtn.textContent = 'Memverifikasi...';
+        loginStatus.textContent = '';
+
+        try {
+          const response = await fetch("/api/absensi", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: 'login', secret: secret }),
+          });
+          const data = await response.json();
+          if (data.status === 'ok' && data.token) {
+            sessionStorage.setItem('authToken', data.token); // Store token in session storage
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('scanner-ui').style.display = 'flex';
+            initializeApp(); // Load the main app
+          } else {
+            loginStatus.textContent = data.message || 'Login gagal.';
+          }
+        } catch (e) {
+          loginStatus.textContent = 'Error koneksi ke server.';
+        } finally {
+            loginBtn.textContent = 'Masuk';
+        }
+      }
+
       // --- DATA LOADING ---
       async function loadScriptMap() {
         try {
@@ -339,7 +412,10 @@
       async function loadTopikList() {
         const listContainer = document.getElementById("topic-list-container");
         try {
-          const res = await fetch(`/api/absensi?action=topik&classCode=SAB`);
+          const token = sessionStorage.getItem('authToken');
+          const res = await fetch(`/api/absensi?action=topik&classCode=SAB`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
           const data = await res.json();
 
           if (data.status === "ok" && Array.isArray(data.topik)) {
@@ -414,9 +490,10 @@
         }
 
         try {
+          const token = sessionStorage.getItem('authToken');
           const response = await fetch("/api/absensi", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ studentId: decodedText, week: selectedWeek, classCode }),
           });
 
@@ -474,11 +551,20 @@
         });
       }
 
-      window.onload = async () => {
+      async function initializeApp() {
         showStatus("Memuat sistem...", "processing");
         await Promise.all([loadScriptMap(), loadTopikList()]);
         startScanner();
-      };
+      }
+
+      // Check if user is already logged in on page load
+      window.onload = () => {
+        if (sessionStorage.getItem('authToken')) {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('scanner-ui').style.display = 'flex';
+            initializeApp();
+        }
+      }
     </script>
   </body>
 </html>
