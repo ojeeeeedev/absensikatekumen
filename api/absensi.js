@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   // ============================================================
   // 0️⃣ HANDLE LOGIN
   // ============================================================
-  if (req.body.action === 'login') {
+  if (req.method === "POST" && req.body.action === 'login') {
     if (req.body.secret === SHARED_SECRET) {
       // Secret is correct, issue a token
       const token = jwt.sign(
@@ -36,6 +36,7 @@ export default async function handler(req, res) {
       // Incorrect secret
       return res.status(401).json({ status: 'error', message: 'Password salah' });
     }
+    return; // Stop execution after handling login
   }
 
   // ============================================================

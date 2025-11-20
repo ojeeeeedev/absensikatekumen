@@ -33,6 +33,7 @@
         border-radius: 24px;
         box-shadow: 0 16px 64px 0 rgba(0, 0, 0, 0.5);
         padding: 1.5rem; margin: 1rem 0;
+        padding: 1rem; margin: 0.5rem 0;
         width: 95%;
         max-width: 450px;
         display: flex; flex-direction: column; align-items: center;
@@ -115,29 +116,61 @@
         padding: 0 1rem; /* Prevent text from touching edges */
       }
 
+      /* --- LOGIN INPUT WRAPPER --- */
+      .input-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 350px; /* Set a max width to center it */
+        max-width: 350px; /* Set a max width to center it */
+      }
+      .password-toggle-icon {
+        position: absolute;
+        top: 50%; right: 1rem;
+        transform: translateY(-50%);
+        cursor: pointer; color: #888;
+      }
+      #password-toggle {
+        right: 1rem;
+      }
+
       /* --- LOGIN SCREEN --- */
       #login-container {
         display: flex; flex-direction: column;
+        align-items: center; /* Center items */
         width: 100%;
         animation: fadeInUp 0.5s ease-out forwards;
       }
+      #login-container > h1 {
+        margin-bottom: 1rem; /* Add space below title for better vertical alignment */
+        margin-bottom: 1rem; /* Adjust space below title */
+      }
       #login-input {
-        padding: 1rem;
+        width: 100%;
+        padding: 0.8rem; padding-right: 3rem; /* Make space for icon */
         font-size: 1rem;
         background: #333;
         border: 1px solid #444;
         border-radius: 8px;
         color: #eee;
         text-align: center;
+        margin-bottom: 0.2rem;
       }
       #login-btn {
+        width: 100%;
+        max-width: 100px; /* Set a max width to center it */
+        max-width: 100px; /* Set a max width to center it */
         margin-top: 1rem;
-        padding: 1rem;
+        padding: 0.4rem;
         background: #9A2126;
         color: white;
         border-radius: 8px;
         cursor: pointer;
         text-align: center;
+        font-weight: 250;
+        margin-bottom: 0.4rem;
+      }
+      #login-status {
+        color: #d32f2f
       }
 
       /* --- TOPIC SELECTOR --- */
@@ -148,6 +181,8 @@
         padding: 0.8rem 1rem; 
         border-radius: 8px; border: 1px solid #333; 
         margin-top: 1rem;
+        border-radius: 8px; border: 1px solid #333;
+        margin-top: 0.8rem;
         display: flex; justify-content: space-between; align-items: center;
         cursor: pointer;
       }
@@ -203,6 +238,8 @@
         width: 100%;
         aspect-ratio: 1 / 1; 
         margin-top: 1rem; border-radius: 14px;
+        aspect-ratio: 1 / 1;
+        margin-top: 0.8rem; border-radius: 14px;
         overflow: hidden; 
         background: #000;
         border: 1px solid #333; /* Simple border instead of corners */
@@ -229,6 +266,7 @@
       /* --- STATUS BOX (Text Only, No Bold) --- */
       #status {
         margin-top: 1rem; width: 100%;
+        margin-top: 0.8rem; width: 100%;
         padding: 1rem; border-radius: 8px; min-height: 60px;
         display: flex; align-items: center; gap: 12px; text-align: left;    
         font-weight: 400; /* Ensuring normal weight */
@@ -246,6 +284,7 @@
       .sub-text { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
 
       footer { font-size: 0.7rem; color: #555; margin-top: 1.5rem; text-align: center; }
+      footer { font-size: 0.7rem; color: #555; margin-top: 1rem; text-align: center; }
       footer a { color: #9A2126; text-decoration: none; }
     </style>
   </head>
@@ -259,12 +298,12 @@
     <main id="app-container" class="glass-container">
       <div id="login-container">
         <h1>Login Fasilitator</h1>
-        <input type="password" id="login-input" placeholder="Masukkan password...">
-        <div id="login-btn" onclick="handleLogin()">Masuk</div>
-        <div id="login-status" style="color: #d32f2f; text-align: center; margin-top: 1rem; min-height: 1.2rem;"></div>
-        <div style="text-align: center; margin-top: 1.5rem; font-size: 0.8rem; color: #888;">
-          Lupa Password? Kontak: <a href="https://wa.me/6281221752365" style="color: #9A2126; text-decoration: none;">0812 2175 2365</a>
+        <div class="input-wrapper">
+          <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()">
+          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility</span>
         </div>
+        <div id="login-btn" onclick="handleLogin()">Masuk</div>
+        <div id="login-status" style="color: #d32f2f; text-align: center; min-height: 0.7rem;"></div>
       </div>
 
       <div id="scanner-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
@@ -293,6 +332,12 @@
           © 2025 Tim IT Katekumen Dewasa<br>
           Kontak: <a href="https://wa.me/6281221752365">Andar 0812 2175 2365</a>
         </footer>
+      </div>
+      <!-- This footer is only for the login screen -->
+      <div id="login-footer" style="display: block;">
+        <div style="font-size: 0.7rem; color: #555; text-align: center">
+          Lupa Password? Kontak: <a href="https://wa.me/6281221752365" style="color: #9A2126; text-decoration: none;">0812 2175 2365</a>
+        </div>
       </div>
     </main>
 
@@ -365,18 +410,28 @@
         });
       }
 
+      function togglePasswordVisibility() {
+        const input = document.getElementById('login-input');
+        const icon = document.getElementById('password-toggle');
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.textContent = 'visibility_off';
+        } else {
+          input.type = 'password';
+          icon.textContent = 'visibility';
+        }
+      }
+
       // --- AUTHENTICATION ---
       async function handleLogin() {
         const secret = document.getElementById('login-input').value;
         const loginStatus = document.getElementById('login-status');
-        const loginBtn = document.getElementById('login-btn');
 
         if (!secret) {
           loginStatus.textContent = 'Password tidak boleh kosong.';
           return;
         }
 
-        loginBtn.textContent = 'Memverifikasi...';
         loginStatus.textContent = '';
 
         try {
@@ -390,14 +445,13 @@
             sessionStorage.setItem('authToken', data.token); // Store token in session storage
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('scanner-ui').style.display = 'flex';
+            document.getElementById('login-footer').style.display = 'none';
             initializeApp(); // Load the main app
           } else {
             loginStatus.textContent = data.message || 'Login gagal.';
           }
         } catch (e) {
           loginStatus.textContent = 'Error koneksi ke server.';
-        } finally {
-            loginBtn.textContent = 'Masuk';
         }
       }
 
@@ -562,6 +616,7 @@
         if (sessionStorage.getItem('authToken')) {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('scanner-ui').style.display = 'flex';
+            document.getElementById('login-footer').style.display = 'none';
             initializeApp();
         }
       }
