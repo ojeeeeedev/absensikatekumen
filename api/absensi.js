@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -40,14 +40,6 @@ export default async function handler(req, res) {
   }
 
   // ============================================================
-  // --- All other requests below this point require a valid token ---
-  // ============================================================
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token || !jwt.verify(token, JWT_SECRET)) {
-    return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
-  }
-
-  // ============================================================
   // 1️⃣ HANDLE GET  →  loadTopikList()
   // ============================================================
   if (req.method === "GET") {
@@ -55,6 +47,13 @@ export default async function handler(req, res) {
       const { action, classCode } = req.query;
 
       if (action === "topik") {
+        // --- Token validation for this specific action ---
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token || !jwt.verify(token, JWT_SECRET)) {
+          return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
+        }
+        // --- End token validation ---
+
         const scriptURL = SCRIPT_MAP[classCode];
 
         if (!scriptURL) {
@@ -83,10 +82,17 @@ export default async function handler(req, res) {
   // 2️⃣ HANDLE POST  →  Save absensi
   // ============================================================
   if (req.method === "POST") {
+    // This block is now ONLY for attendance posts, not login posts.
     try {
-      const { classCode } = req.body;
+      // --- Token validation for this specific action ---
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token || !jwt.verify(token, JWT_SECRET)) {
+        return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
+      }
+      // --- End token validation ---
 
-      const scriptURL = SCRIPT_MAP[classCode];
+      const { classCode } = req.body;
+      const scriptURL = SCRIPT_MAP[classCode]; // This will now work correctly
       if (!scriptURL) {
         return res.status(400).json({
           status: "error",
