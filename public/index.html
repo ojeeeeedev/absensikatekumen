@@ -59,7 +59,7 @@
       .liquid-background {
         position: fixed;
         top: 0; left: 0;
-        width: 100%; height: 100%;
+        width: 100%; height: 100dvh; /* Use dynamic viewport height for full coverage on mobile */
         z-index: 1;
         overflow: hidden;
       }
@@ -86,6 +86,22 @@
       }
       @keyframes move2 {
         from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); }
+      }
+
+      /* --- FLOATING MUTE BUTTON --- */
+      .floating-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        z-index: 10;
       }
 
       h1 { margin: 0 0 0.4rem 0; font-size: 1.8rem; text-align: center; color: #fff; font-family: 'Playfair Display', serif; font-weight: 500; }
@@ -201,6 +217,10 @@
     </div>
 
     <main class="glass-container">
+      <div id="mute-btn" class="floating-btn" onclick="toggleMute()">
+        <span id="mute-icon" class="material-icons-outlined">volume_up</span>
+      </div>
+
       <h1>Presensi Katekumen</h1>
       <h2>Gereja Katedral St. Petrus Bandung</h2>
 
@@ -235,15 +255,31 @@
         </div>
     </div>
 
+    <!-- Audio element for success sound -->
+    <audio id="success-sound" preload="auto">
+        <source src="data:audio/wav;base64,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" type="audio/wav">
+    </audio>
+
     <script>
       let html5QrcodeScanner; // Will be initialized later
       let scanCooldown = false;
       let SCRIPT_MAP = {}; 
       let selectedWeek = null; 
+      let isMuted = false;
 
       // --- MODAL FUNCTIONS ---
       function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
       function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
+
+      function toggleMute() {
+        isMuted = !isMuted;
+        const muteIcon = document.getElementById('mute-icon');
+        if (isMuted) {
+            muteIcon.textContent = 'volume_off';
+        } else {
+            muteIcon.textContent = 'volume_up';
+        }
+      }
 
       function selectTopic(week, name, element) {
         selectedWeek = week;
@@ -364,6 +400,9 @@
 
           if (res.status === "ok") {
             showStatus(res.name, "success", `ID: ${res.studentId} • Topik ${selectedWeek}`);
+            if (!isMuted) {
+              document.getElementById('success-sound').play().catch(e => console.log("Audio play failed:", e));
+            }
           } else if (res.status === "duplicate") {
             showStatus("Sudah Hadir", "error", res.message);
           } else {
