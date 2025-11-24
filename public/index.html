@@ -183,6 +183,7 @@
       /* Updated styles for the floating error message */
       .login-error-message {
         position: absolute;
+        text-align: center;
         top: 50%;
         left: 0; /* Align to the left edge of the parent */
         right: 0; /* Align to the right edge of the parent */
@@ -477,11 +478,11 @@
           const data = await response.json();
 
           if (data.status === 'ok' && data.token) {
-            // 1. Show green checkmark for 1 second
-            successIcon.style.animation = 'fadeIn 0.3s forwards';
+            // 1. Fade in the green checkmark and keep it for 1 second.
+            successIcon.style.animation = 'fadeIn 0.5s forwards'; // A slightly longer fade-in
             successIcon.style.display = 'block';
 
-            setTimeout(() => {
+            setTimeout(() => { // This timeout ensures the checkmark is visible for 1 second before proceeding
               successIcon.style.display = 'none'; // Hide checkmark
               
               // 2. Show loading spinner for 0.5s
