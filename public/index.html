@@ -50,6 +50,16 @@
         opacity: 0; /* Start hidden */
         animation: fadeInUp 0.6s ease-out forwards;
       }
+      @keyframes fadeOutDown {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(20px); }
+      }
+      @keyframes shake {
+        10%, 90% { transform: translateX(-1px); }
+        20%, 80% { transform: translateX(2px); }
+        30%, 50%, 70% { transform: translateX(-4px); }
+        40%, 60% { transform: translateX(4px); }
+      }
       .glass-container > h1 { animation-delay: 0.1s; }
       .glass-container > h2 { animation-delay: 0.2s; }
       .glass-container > #topic-trigger { animation-delay: 0.3s; }
@@ -89,22 +99,6 @@
       }
       @keyframes move2 {
         from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); }
-      }
-
-      /* --- FLOATING MUTE BUTTON --- */
-      .floating-btn {
-        position: absolute;
-        bottom: 1rem;
-        right: 1rem;
-        width: 40px;
-        height: 40px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        z-index: 10;
       }
 
       h1 { margin: 0 0 0.4rem 0; font-size: 1.4rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
@@ -173,16 +167,24 @@
       #login-status {
         color: #d32f2f
       }
+      /* Updated styles for the floating error message */
       .login-error-message {
         width: 100%;
+        position: absolute;
+        top: 1.5rem; /* Position from the top of the glass-container */
+        left: 1.5rem;
+        right: 1.5rem;
+        z-index: 10; /* Ensure it floats above other login elements */
         padding: 0.8rem;
         margin-bottom: 1rem;
         background: #b71c1c;
+        background: rgba(183, 28, 28, 0.5); /* Translucent red background */
+        backdrop-filter: blur(8px); /* Frosted glass effect */
+        -webkit-backdrop-filter: blur(8px);
         color: #ffebee;
         border: 1px solid #d32f2f;
         border-radius: 8px;
         text-align: center;
-        display: none; /* Controlled by JS */
         animation: fadeInUp 0.3s ease-out forwards;
       }
 
@@ -319,18 +321,17 @@
         <h1>Login Fasilitator</h1>
         <!-- New error container -->
         <div id="login-error-box" class="login-error-message"></div>
+        <div id="login-error-box" class="login-error-message" style="display: none;"></div>
         <div class="input-wrapper">
           <!-- Added oninput to hide error when user types -->
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="document.getElementById('login-error-box').style.display = 'none';">
+          <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
           <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility</span>
         </div>
         <div id="login-btn" onclick="handleLogin()">Masuk</div>
       </div>
 
       <div id="scanner-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
-        <div id="mute-btn" class="floating-btn" onclick="toggleMute()">
-          <span id="mute-icon" class="material-icons-outlined">volume_up</span>
-        </div>
   
         <h1>Presensi Katekumen Dewasa</h1>
         <h2>St. Petrus Katedral Bandung</h2>
@@ -373,17 +374,10 @@
         </div>
     </div>
 
-    <!-- Audio element for success sound -->
-    <audio id="success-sound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVhvT18AAAAAAACgoZ2ilpCagYSAgYCIgJqXlpmZmp2dn6GhoaKjpKWmp6ipqqusra6vsLCys7S1tre4ubq7vL2+v8DBwsPExcbHyMnKy8zNzs/Q0dLT1NXW19jZ2tvc3d7f4OHi4+Tl5ufo6err7O3u7/Dx8vP09fb3+Pn6+/z9/v8AAQACAwEBAQICAgMDAwQEBAUFBQYGBgcHBwgICAkJCQoKCgsLCwwMDA0NDQ4ODg8PDxAQEBERERISEhMTExQUFBUVFRYWFhcXFxgYGBkZGRoaGhsbGxwcHB0dHR4eHh8fHyAgICEhIiIiIyMjJCQkJSUlJiYmJycnKCgoKSkpKioqKyssLC0tLS4uLi8vLzAwMTExMjIyMzMzNDQ0NTU1NjY2Nzc3ODg4OTk5Ojo6Ozw8PD09PT4+Pj8/P0BAQUJBQkNCQ0REREVFRUZGRkdHR0hISElJSUpKSktLS0xMTE1NTU5OTk9PT1BQUFFRUVJSUlNTU1RUVFVVVVZWVldXV1hYWFlZWVpaWltbW1xcXF1dXV5eXl9fX2BgYGFhYWJiYmNjY2RkZGVlZWZmZmdnZ2hoaGlpaWpqamtra2xsbG1tbm5ub29vcHBxcXJycnNzc3R0dHV1dXZ2dnd3d3h4eXl5enp6e3t7fHx8fX19fn5+f39/gICBgYGCgoKDg4OEhISFhYWGhoaHh4eIiIiKioqLi4uMjIyNjY2Ojo6Pj4+QkJCRkZGSkpKTk5OUlJSVlZWWlpaXl5eYmJiZmZmampqbm5ucnJydnZ2enp6fn5+goKChoaGioqKjo6OkpKSlpaWmpqanp6eoqKipqqusra6vsLCys7S1tre4ubq7vL2+v8DBwsPExcbHyMnKy8zNzs/Q0dLT1NXW19jZ2tvc3d7f4OHi4+Tl5ufo6err7O3u7/Dx8vP09fb3+Pn6+/z9/v8AAQACAwEBAQICAgMDAwQEBAUFBQYGBgcHBwgICAkJCQoKCgsLCwwMDA0NDQ4ODg8PDxAQEBERERISEhMTExQUFBUVFRYWFhcXFxgYGBkZGRoaGhsbGxwcHB0dHR4eHh8fHyAgICEhIiIiIyMjJCQkJSUlJiYmJycnKCgoKSkpKioqKyssLC0tLS4uLi8vLzAwMTExMjIyMzMzNDQ0NTU1NjY2Nzc3ODg4OTk5Ojo6Ozw8PD09PT4+Pj8/P0BAQUJBQkNCQ0REREVFRUZGRkdHR0hISElJSUpKSktLS0xMTE1NTU5OTk9PT1BQUFFRUVJSUlNTU1RUVFVVVVZWVldXV1hYWFlZWVpaWltbW1xcXF1dXV5eXl9fX2BgYGFhYWJiYmNjY2RkZGVlZWZmZmdnZ2hoaGlpaWpqamtra2xsbG1tbm5ub29vcHBxcXJycnNzc3R0dHV1dXZ2dnd3d3h4eXl5enp6e3t7fHx8fX19fn5+f39/gICBgYGCgoKDg4OEhISFhYWGhoaHh4eIiIiKioqLi4uMjIyNjY2Ojo6Pj4+QkJCRkZGSkpKTk5OUlJSVlZWWlpaXl5eYmJiZmZmampqbm5ucnJydnZ2enp6fn5+goKChoaGioqKjo6OkpKSlpaWmpqanp6eoqKipqqusra6vsLCys7S1tre4ubq7vL2+v8DBwsPExcbHyMnKy8zNzs/Q0dLT1NXW19jZ2tvc3d7f4OHi4+Tl5ufo6err7O3u7/Dx8vP09fb3+Pn6+/z9/v8AAQACAwEBAQICAgMDAwQEBAUFBQYGBgcHBwgICAkJCQoKCgsLCwwMDA0NDQ4ODg8PDxAQEBERERISEhMTExQUFBUVFRYWFhcXFxgYGBkZGRoaGhsbGxwcHB0dHR4eHh8fHyAgICEhIiIiIyMjJCQkJSUlJiYmJycnKCgoKSkpKioqKyssLC0tLS4uLi8vLzAwMTExMjIyMzMzNDQ0NTU1NjbG5t7i4t7m5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm-=" type="audio/wav">
-    </audio>
-
     <script>
       let html5QrcodeScanner; // Will be initialized later
       let scanCooldown = false;
-      let SCRIPT_MAP = {}; 
       let selectedWeek = null; 
-      let isMuted = false;
 
       // --- SAFARI VIEWPORT FIX ---
       function setViewportHeight() {
@@ -398,16 +392,6 @@
       // --- MODAL FUNCTIONS ---
       function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
       function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
-
-      function toggleMute() {
-        isMuted = !isMuted;
-        const muteIcon = document.getElementById('mute-icon');
-        if (isMuted) {
-            muteIcon.textContent = 'volume_off';
-        } else {
-            muteIcon.textContent = 'volume_up';
-        }
-      }
 
       function selectTopic(week, name, element) {
         selectedWeek = week;
@@ -443,6 +427,18 @@
         }
       }
 
+      function hideLoginError() {
+        const errorBox = document.getElementById('login-error-box');
+        if (errorBox.style.display === 'block') {
+          // Animate out
+          errorBox.style.animation = 'fadeOutDown 0.3s ease-in forwards';
+          setTimeout(() => {
+            errorBox.style.display = 'none';
+            errorBox.style.animation = 'fadeInUp 0.3s ease-out forwards'; // Reset for next time
+          }, 300);
+        }
+      }
+
       // --- AUTHENTICATION ---
       async function handleLogin() {
         const secret = document.getElementById('login-input').value;
@@ -457,6 +453,8 @@
 
         // Hide previous errors
         errorBox.style.display = 'none';
+        // Hide previous errors smoothly
+        hideLoginError();
 
         try {
           const response = await fetch("/api/absensi", {
@@ -470,6 +468,7 @@
             // Correct password: show loading spinner
             loginLoader.style.display = 'flex';
             
+
             setTimeout(() => {
               sessionStorage.setItem('authToken', data.token); // Store token
               document.getElementById('login-container').style.display = 'none';
@@ -477,11 +476,28 @@
               document.getElementById('scanner-ui').style.display = 'flex';
               loginLoader.style.display = 'none'; // Hide loader
               initializeApp(); // Load the main app
+              const loginContainer = document.getElementById('login-container');
+              const loginFooter = document.getElementById('login-footer');
+
+              // 1. Animate login screen out
+              loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
+              loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
+
+              // 2. After fade out, hide it and show scanner UI
+              setTimeout(() => {
+                loginContainer.style.display = 'none';
+                loginFooter.style.display = 'none';
+                loginLoader.style.display = 'none'; // Hide loader
+                document.getElementById('scanner-ui').style.display = 'flex';
+                initializeApp(); // Load the main app
+              }, 400);
             }, 500); // Wait for 0.5 seconds
           } else {
             // Wrong password: show red error box
             errorBox.textContent = data.message || 'Login gagal.';
             errorBox.style.display = 'block';
+            document.getElementById('login-input').style.animation = 'shake 0.5s';
+            setTimeout(() => document.getElementById('login-input').style.animation = '', 500);
           }
         } catch (e) {
           errorBox.textContent = 'Error koneksi ke server.';
@@ -573,9 +589,6 @@
 
           if (res.status === "ok") {
             showStatus(res.name, "success", `ID: ${res.studentId} • Topik ${selectedWeek}`);
-            if (!isMuted) {
-              document.getElementById('success-sound').play().catch(e => console.log("Audio play failed:", e));
-            }
           } else if (res.status === "duplicate") {
             showStatus("Sudah Hadir", "error", res.message);
           } else if (response.status === 400) { // Specifically handle invalid classCode from API
@@ -632,6 +645,7 @@
       window.onload = () => {
         if (sessionStorage.getItem('authToken')) {
             document.getElementById('login-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'none'; // Keep this instant for reloads
             document.getElementById('scanner-ui').style.display = 'flex';
             document.getElementById('login-footer').style.display = 'none';
             initializeApp();
