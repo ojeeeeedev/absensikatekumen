@@ -50,6 +50,10 @@
         opacity: 0; /* Start hidden */
         animation: fadeInUp 0.6s ease-out forwards;
       }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
       @keyframes fadeOutDown {
         from { opacity: 1; transform: translateY(0); }
         to { opacity: 0; transform: translateY(20px); }
@@ -131,7 +135,7 @@
         /* Position it just to the left of the password toggle */
         right: 3rem; 
         color: #4CAF50; /* Green checkmark */
-        animation: fadeInUp 0.3s;
+        animation: fadeIn 0.3s;
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
@@ -180,9 +184,12 @@
       .login-error-message {
         position: absolute;
         top: 50%;
-        left: 50%;
+        left: 0; /* Align to the left edge of the parent */
+        right: 0; /* Align to the right edge of the parent */
+        margin-left: auto; /* These two lines center the element */
+        margin-right: auto;
         transform: translate(-50%, -50%); /* This centers it on the screen */
-        width: 80%;
+        width: 80%; /* Set a width */
         z-index: 1001; /* Make sure it's above the login loader overlay */
         padding: 0.8rem 1.5rem; /* Add horizontal padding */
         background: rgba(183, 28, 28, 0.5); /* Translucent red background */
@@ -191,7 +198,6 @@
         color: #ffebee;
         border: 1px solid #d32f2f;
         border-radius: 8px;
-        text-align: center;
         animation: fadeInUp 0.3s ease-out forwards;
       }
 
@@ -472,6 +478,7 @@
 
           if (data.status === 'ok' && data.token) {
             // 1. Show green checkmark for 1 second
+            successIcon.style.animation = 'fadeIn 0.3s forwards';
             successIcon.style.display = 'block';
 
             setTimeout(() => {
