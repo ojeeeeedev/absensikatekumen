@@ -320,11 +320,9 @@
       <div id="login-container">
         <h1>Login Fasilitator</h1>
         <!-- New error container -->
-        <div id="login-error-box" class="login-error-message"></div>
         <div id="login-error-box" class="login-error-message" style="display: none;"></div>
         <div class="input-wrapper">
           <!-- Added oninput to hide error when user types -->
-          <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="document.getElementById('login-error-box').style.display = 'none';">
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
           <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility</span>
         </div>
@@ -451,8 +449,6 @@
           return;
         }
 
-        // Hide previous errors
-        errorBox.style.display = 'none';
         // Hide previous errors smoothly
         hideLoginError();
 
@@ -467,15 +463,8 @@
           if (data.status === 'ok' && data.token) {
             // Correct password: show loading spinner
             loginLoader.style.display = 'flex';
-            
 
             setTimeout(() => {
-              sessionStorage.setItem('authToken', data.token); // Store token
-              document.getElementById('login-container').style.display = 'none';
-              document.getElementById('login-footer').style.display = 'none';
-              document.getElementById('scanner-ui').style.display = 'flex';
-              loginLoader.style.display = 'none'; // Hide loader
-              initializeApp(); // Load the main app
               const loginContainer = document.getElementById('login-container');
               const loginFooter = document.getElementById('login-footer');
 
@@ -485,6 +474,7 @@
 
               // 2. After fade out, hide it and show scanner UI
               setTimeout(() => {
+                sessionStorage.setItem('authToken', data.token); // Store token
                 loginContainer.style.display = 'none';
                 loginFooter.style.display = 'none';
                 loginLoader.style.display = 'none'; // Hide loader
@@ -645,7 +635,6 @@
       window.onload = () => {
         if (sessionStorage.getItem('authToken')) {
             document.getElementById('login-container').style.display = 'none';
-            document.getElementById('login-container').style.display = 'none'; // Keep this instant for reloads
             document.getElementById('scanner-ui').style.display = 'flex';
             document.getElementById('login-footer').style.display = 'none';
             initializeApp();
