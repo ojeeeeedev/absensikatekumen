@@ -173,6 +173,19 @@
       #login-status {
         color: #d32f2f
       }
+      .login-error-message {
+        width: 100%;
+        padding: 0.8rem;
+        margin-bottom: 1rem;
+        background: #b71c1c;
+        color: #ffebee;
+        border: 1px solid #d32f2f;
+        border-radius: 8px;
+        text-align: center;
+        display: none; /* Controlled by JS */
+        animation: fadeInUp 0.3s ease-out forwards;
+      }
+
 
       /* --- TOPIC SELECTOR --- */
       .topic-selector-btn {
@@ -296,15 +309,22 @@
       <div class="liquid-shape shape2"></div>
     </div>
 
+    <!-- Loading screen for login -->
+    <div id="login-loader" style="display: none; flex-direction: column; align-items: center; justify-content: center; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000;">
+      <div class="spinner"></div>
+    </div>
+
     <main id="app-container" class="glass-container">
       <div id="login-container">
         <h1>Login Fasilitator</h1>
+        <!-- New error container -->
+        <div id="login-error-box" class="login-error-message"></div>
         <div class="input-wrapper">
-          <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()">
+          <!-- Added oninput to hide error when user types -->
+          <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="document.getElementById('login-error-box').style.display = 'none';">
           <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility</span>
         </div>
         <div id="login-btn" onclick="handleLogin()">Masuk</div>
-        <div id="login-status" style="color: #d32f2f; text-align: center; min-height: 0.7rem;"></div>
       </div>
 
       <div id="scanner-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
@@ -416,43 +436,56 @@
         const icon = document.getElementById('password-toggle');
         if (input.type === 'password') {
           input.type = 'text';
-          icon.textContent = 'visibility_off';
+          icon.textContent = 'visibility'; // Show the "visibility" icon when text is visible
         } else {
           input.type = 'password';
-          icon.textContent = 'visibility';
+          icon.textContent = 'visibility_off'; // Show the "visibility_off" icon when text is hidden
         }
       }
 
       // --- AUTHENTICATION ---
       async function handleLogin() {
         const secret = document.getElementById('login-input').value;
-        const loginStatus = document.getElementById('login-status');
+        const errorBox = document.getElementById('login-error-box');
+        const loginLoader = document.getElementById('login-loader');
 
         if (!secret) {
-          loginStatus.textContent = 'Password tidak boleh kosong.';
+          errorBox.textContent = 'Password tidak boleh kosong.';
+          errorBox.style.display = 'block';
           return;
         }
 
-        loginStatus.textContent = '';
+        // Hide previous errors
+        errorBox.style.display = 'none';
 
         try {
           const response = await fetch("/api/absensi", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: 'login', secret: secret }),
+            body: JSON.stringify({ action: 'login', secret }),
           });
           const data = await response.json();
+
           if (data.status === 'ok' && data.token) {
-            sessionStorage.setItem('authToken', data.token); // Store token in session storage
-            document.getElementById('login-container').style.display = 'none';
-            document.getElementById('scanner-ui').style.display = 'flex';
-            document.getElementById('login-footer').style.display = 'none';
-            initializeApp(); // Load the main app
+            // Correct password: show loading spinner
+            loginLoader.style.display = 'flex';
+            
+            setTimeout(() => {
+              sessionStorage.setItem('authToken', data.token); // Store token
+              document.getElementById('login-container').style.display = 'none';
+              document.getElementById('login-footer').style.display = 'none';
+              document.getElementById('scanner-ui').style.display = 'flex';
+              loginLoader.style.display = 'none'; // Hide loader
+              initializeApp(); // Load the main app
+            }, 500); // Wait for 0.5 seconds
           } else {
-            loginStatus.textContent = data.message || 'Login gagal.';
+            // Wrong password: show red error box
+            errorBox.textContent = data.message || 'Login gagal.';
+            errorBox.style.display = 'block';
           }
         } catch (e) {
-          loginStatus.textContent = 'Error koneksi ke server.';
+          errorBox.textContent = 'Error koneksi ke server.';
+          errorBox.style.display = 'block';
         }
       }
 
