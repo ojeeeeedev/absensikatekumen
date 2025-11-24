@@ -1,18 +1,34 @@
+const jwt = require('jsonwebtoken');
+
 export default async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  // Mapping for your sheets
-  const SCRIPT_MAP = {
-    SAB: "https://script.google.com/macros/s/AKfycbxB3TcQA-bsX5hgXi4mL1v__-RL4HGzy8D6QJdeWy0-x737yw3sTGxvFbFdEc07zJfepQ/exec",
-    ROM: "https://script.google.com/macros/s/AKfycby8cp12Ck9BvHWe4S3kg8kW6D-Trhe2SX9snlwUy17RLUbBHBhRwfNvh0S1dLWJrxcyQA/exec",
-  };
+  // --- Authentication Secrets ---
+  const SHARED_SECRET = process.env.AUTH_SECRET || "your-very-secret-password";
+  const JWT_SECRET = process.env.JWT_SECRET || "another-super-secret-key";
+
+  // --- Mapping for your sheets (loaded from environment variable) ---
+  let SCRIPT_MAP = {};
+  try {
+    // In a Vercel environment, the variable MUST exist.
+    if (!process.env.VERCEL_SCRIPT_MAP_JSON) {
+      // This will cause the function to fail if the env var is not set.
+      throw new Error("Server configuration error: VERCEL_SCRIPT_MAP_JSON is not defined.");
+    }
+    SCRIPT_MAP = JSON.parse(process.env.VERCEL_SCRIPT_MAP_JSON);
+  } catch (e) {
+    console.error("Error parsing VERCEL_SCRIPT_MAP_JSON:", e);
+    // Return a generic server error to the client
+    return res.status(500).json({ status: "error", message: "Server configuration error." });
+  }
+  // --- End SCRIPT_MAP loading ---
 
   // ============================================================
   // 1️⃣ HANDLE GET  →  loadTopikList()
@@ -22,6 +38,13 @@ export default async function handler(req, res) {
       const { action, classCode } = req.query;
 
       if (action === "topik") {
+        // --- Token validation for this specific action ---
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token || !jwt.verify(token, JWT_SECRET)) {
+          return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
+        }
+        // --- End token validation ---
+
         const scriptURL = SCRIPT_MAP[classCode];
 
         if (!scriptURL) {
@@ -47,11 +70,36 @@ export default async function handler(req, res) {
   }
 
   // ============================================================
-  // 2️⃣ HANDLE POST  →  Save absensi
+  // 2️⃣ HANDLE POST  →  Save absensi or Login
   // ============================================================
   if (req.method === "POST") {
     try {
-      const { classCode } = req.body;
+      // Check if it's a login action
+      if (req.body.action === 'login') {
+        if (req.body.secret === SHARED_SECRET) {
+          // Secret is correct, issue a token
+          const token = jwt.sign(
+            { authorized: true }, // payload
+            JWT_SECRET,
+            { expiresIn: '8h' } // Token expires in 8 hours
+          );
+          return res.status(200).json({ status: 'ok', token });
+        } else {
+          // Incorrect secret
+          return res.status(401).json({ status: 'error', message: 'Password salah' });
+        }
+      } 
+      
+      // If not login, handle it as an attendance submission
+      // --- Token validation for this specific action is required ---
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token || !jwt.verify(token, JWT_SECRET)) {
+        return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
+      }
+
+      // Extract classCode from the studentId on the backend
+      const { studentId } = req.body;
+      const classCode = studentId?.split('/')[1]?.toUpperCase();
 
       const scriptURL = SCRIPT_MAP[classCode];
       if (!scriptURL) {
@@ -79,5 +127,5 @@ export default async function handler(req, res) {
   // ============================================================
   // Invalid method
   // ============================================================
-  return res.status(405).json({ status: "error", message: "Method not allowed" });
+  return res.status(405).json({ status: "error", message: `Method ${req.method} not allowed` });
 }

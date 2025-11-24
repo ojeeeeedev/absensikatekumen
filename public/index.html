@@ -3,266 +3,673 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Absensi Katekumen</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Presensi Katekumen Dewasa</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!--link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" /-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&family=Inter:wght@300;400;500&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+    
     <style>
-      * { box-sizing: border-box; }
+      /* --- GLOBAL RESET & TRANSITIONS --- */
+      * { box-sizing: border-box; transition: all 0.2s ease-out; }
+
       html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        color: #fff;
+        margin: 0; padding: 0; width: 100%;
+        height: 100vh; height: calc(var(--vh, 1vh) * 100); /* Use JS-powered height */
+        background: linear-gradient(to bottom, #000000 0%, #330B0D 50%, #000000 100%);
+        color: #e0e0e0; /* Slightly softer white for better reading */
         font-family: "Inter", sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        display: flex; justify-content: center; align-items: center;
+        overflow: hidden; /* Prevent scrolling on the body */
+      }
+
+      /* --- FLOATING GLASS CONTAINER --- */
+      .glass-container {
+        background: rgba(25, 25, 25, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px); /* For Safari */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        box-shadow: 0 16px 64px 0 rgba(0, 0, 0, 0.5);
+        padding: 1.5rem; margin: 1rem 0;
+        padding: 1rem; margin: 0.5rem 0;
+        width: 95%;
+        max-width: 450px;
+        display: flex; flex-direction: column; align-items: center;
+        max-height: 95vh;
+        position: relative; z-index: 2;
+      }
+
+      /* --- ON-LOAD ANIMATIONS --- */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .glass-container > * {
+        opacity: 0; /* Start hidden */
+        animation: fadeInUp 0.6s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes fadeOutDown {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(20px); }
+      }
+      @keyframes shake {
+        10%, 90% { transform: translateX(-1px); }
+        20%, 80% { transform: translateX(2px); }
+        30%, 50%, 70% { transform: translateX(-4px); }
+        40%, 60% { transform: translateX(4px); }
+      }
+      .glass-container > h1 { animation-delay: 0.1s; }
+      .glass-container > h2 { animation-delay: 0.2s; }
+      .glass-container > #topic-trigger { animation-delay: 0.3s; }
+      .glass-container > #reader-container { animation-delay: 0.4s; }
+      .glass-container > #status { animation-delay: 0.5s; }
+      .glass-container > footer { animation-delay: 0.6s; }
+
+      /* --- LIQUID GLASS BACKGROUND --- */
+      .liquid-background {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; 
+        height: 100vh; height: calc(var(--vh, 1vh) * 100); /* Fallback and JS-powered height */
+        z-index: 1;
         overflow: hidden;
-        font-kerning: auto;
       }
-      h1 {
-        margin: 1rem 0 0.4rem 0;
-        font-size: 1.5rem;
-        color: #ffffff;
+      .liquid-shape {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(100px);
+        opacity: 0.7;
+      }
+      .shape1 {
+        width: 350px; height: 350px;
+        background: #9A2126;
+        top: -100px; left: -150px;
+        animation: move1 25s infinite alternate;
+      }
+      .shape2 {
+        width: 250px; height: 250px;
+        background: #4a148c; /* A complementary deep purple */
+        bottom: -50px; right: -80px;
+        animation: move2 30s infinite alternate;
+      }
+      @keyframes move1 {
+        from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(200px, 300px) rotate(180deg); }
+      }
+      @keyframes move2 {
+        from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); }
+      }
+
+      h1 { margin: 0 0 0.4rem 0; font-size: 1.4rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
+      h2 { 
+        margin: 0; font-size: 0.9rem; color: #888; text-align: center; font-weight: 400; 
+        font-family: 'Cinzel', serif;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 0 1rem; /* Prevent text from touching edges */
+      }
+
+      /* --- LOGIN INPUT WRAPPER --- */
+      .input-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 350px; /* Set a max width to center it */
+        max-width: 350px; /* Set a max width to center it */
         text-align: center;
-        font-kerning: auto;
       }
-      h2 {
-        margin: 0;
+      .password-toggle-icon {
+        position: absolute;
+        top: 50%; right: 1rem;
+        transform: translateY(-50%);
+        cursor: pointer; color: #888;
+      }
+      #password-toggle {
+        right: 1rem;
+      }
+      #login-success-icon {
+        /* Position it just to the left of the password toggle */
+        right: 3rem; 
+        color: #4CAF50; /* Green checkmark */
+        animation: fadeIn 0.3s;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      /* --- LOGIN SCREEN --- */
+      #login-container {
+        display: flex; flex-direction: column;
+        align-items: center; /* Center items */
+        width: 100%;
+        animation: fadeInUp 0.5s ease-out forwards;
+      }
+      #login-container > h1 {
+        margin-bottom: 1rem; /* Add space below title for better vertical alignment */
+        margin-bottom: 1rem; /* Adjust space below title */
+      }
+      #login-input {
+        width: 100%;
+        padding: 0.8rem 3rem; /* Equal padding on left/right for centering */
         font-size: 1rem;
-        color: #a8a8a8;
-        font-kerning: auto;
-        text-align: center;
-        font-weight: 500;
-      }
-      label {
-        font-size: 0.95rem;
-        margin-top: 0.6rem;
-      }
-      select {
-        width: 90%;
-        max-width: 400px;
-        background: #111;
-        color: #fff;
-        font-size: .9rem;
-        text-align: center;
-        padding: 0.6rem;
+        background: #333;
+        border: 1px solid #444;
         border-radius: 8px;
-        border: 1px solid #333;
-        margin-top: 0.4rem;
+        color: #eee;
+        text-align: center;
+        margin-bottom: 0.2rem;
       }
-      #reader {
-        width: 92vw;
-        max-width: 420px;
+      #login-btn {
+        width: 100%;
+        max-width: 100px; /* Set a max width to center it */
+        max-width: 100px; /* Set a max width to center it */
+        margin-top: 1rem;
+        padding: 0.4rem;
+        background: #9A2126;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        font-weight: 250;
+        margin-bottom: 0.4rem;
+      }
+      #login-status {
+        color: #d32f2f
+      }
+      /* Updated styles for the floating error message */
+      .login-error-message {
+        position: absolute;
+        text-align: center;
+        top: 50%;
+        left: 0; /* Align to the left edge of the parent */
+        right: 0; /* Align to the right edge of the parent */
+        margin-left: auto; /* These two lines center the element */
+        margin-right: auto;
+        transform: translate(-50%, -50%); /* This centers it on the screen */
+        width:70%; /* Set a width */
+        z-index: 1001; /* Make sure it's above the login loader overlay */
+        padding: 0.8rem 1.5rem; /* Add horizontal padding */
+        background: rgba(78, 9, 9, 0.5); /* Translucent red background */
+        backdrop-filter: blur(8px); /* Frosted glass effect */
+        -webkit-backdrop-filter: blur(8px);
+        color: #ffebee;
+        border: 1px solid #661818;
+        border-radius: 8px;
+        animation: fadeInUp 0.3s ease-out forwards;
+      }
+
+
+      /* --- TOPIC SELECTOR --- */
+      .topic-selector-btn {
+        width: 100%;
+        background: #222; color: #ddd;
+        font-size: .95rem; text-align: left;
+        padding: 0.8rem 1rem; 
+        border-radius: 8px; border: 1px solid #333; 
+        margin-top: 1rem;
+        border-radius: 8px; border: 1px solid #333;
+        margin-top: 0.8rem;
+        display: flex; justify-content: space-between; align-items: center;
+        cursor: pointer;
+      }
+      .topic-selector-btn:after { content: '▼'; font-size: 0.7rem; color: #666; }
+
+      /* --- MODAL --- */
+      #topic-modal {
+        display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); z-index: 999;
+        flex-direction: column; justify-content: flex-end;
+      }
+      .modal-content {
+        background: #1a1a1a;
+        border-top-left-radius: 16px; border-top-right-radius: 16px;
+        padding: 1rem; max-height: 70vh;
+        display: flex; flex-direction: column;
+        border-top: 1px solid #333;
+      }
+      .modal-content > h3 {
+        margin: 0 0 10px 0; text-align: center; color: #fff; font-weight:400;
+      }
+      #topic-list-container {
+        overflow-y: auto;
+        display: flex; flex-direction: column; gap: 10px;
+      }
+      #topic-search-input { /* Removed emoji from placeholder */
+        width: 100%; position: sticky; top: 0; z-index: 1;
+        padding: 0.8rem 1rem;
+        margin-bottom: 10px;
+        background: #333;
+        border: 1px solid #444;
+        border-radius: 8px;
+        color: #eee;
+        font-size: 0.9rem;
+      }
+      .topic-option {
+        padding: 1rem; background: #2a2a2a; border-radius: 8px;
+        text-align: left; font-size: 0.9rem; color: #ccc;
+        border: 1px solid #333; cursor: pointer;
+      }
+      .topic-option.active {
+        border-color: #9A2126; background: #332222; color: #E57373;
+      }
+      .modal-close-btn {
+        margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;
+        text-align: center; border-radius: 8px; cursor: pointer;
+        position: sticky; bottom: 0;
+      }
+
+      /* --- CAMERA CONTAINER --- */
+      #reader-container {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1 / 1; 
+        margin-top: 1rem; border-radius: 14px;
         aspect-ratio: 1 / 1;
-        margin-top: 1rem;
-        border-radius: 14px;
-        overflow: hidden;
+        margin-top: 0.8rem; border-radius: 14px;
+        overflow: hidden; 
         background: #000;
+        border: 1px solid #333; /* Simple border instead of corners */
       }
+      #reader { width: 100%; height: 100%; object-fit: cover; }
+
+      /* --- LOADING SPINNER --- */
+      #camera-loader {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: #111;
+        display: flex; justify-content: center; align-items: center;
+        color: #888; font-size: 0.9rem;
+        z-index: 10;
+        flex-direction: column; gap: 15px;
+      }
+      .spinner {
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top: 3px solid #9A2126;
+        border-radius: 50%; width: 30px; height: 30px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+      /* --- STATUS BOX (Text Only, No Bold) --- */
       #status {
-        margin-top: 1rem;
-        font-size: 0.8rem;
-        font-weight: 400;
-        text-align: center;
-        width: 90%;
-        max-width: 420px;
-        padding: 0.8rem;
-        border-radius: 8px;
-        transition: opacity 0.4s ease;
+        margin-top: 1rem; width: 100%;
+        margin-top: 0.8rem; width: 100%;
+        padding: 1rem; border-radius: 8px; min-height: 60px;
+        display: flex; align-items: center; gap: 12px; text-align: left;    
+        font-weight: 400; /* Ensuring normal weight */
       }
-      .success { background: #00c851; color: #fff; }
-      .error { background: #ff4444; color: #fff; }
-      .student-id {
-        font-size: 0.7rem;
-        font-weight: 300;
-        opacity: 0.9;
-      }
-      footer {
-        font-size: 0.65rem;
-        color: #666;
-        margin-top: auto;
-        padding-bottom: 0.6rem;
-        line-height: 1.2;
-        text-align: center;
-      }
-      footer a {
-      color: #72b7ff;   /* light blue */
-      text-decoration: none;
-      }
+      
+      /* Simple Status Colors */
+      .idle { background: #111; color: #aaa; border: 1px dashed #333; justify-content: center; }
+      .success { background: #1b5e20; color: #e8f5e9; border: 1px solid #2e7d32; }
+      .error { background: #b71c1c; color: #ffebee; border: 1px solid #d32f2f; }
+      .processing { background: #332222; color: #E57373; border: 1px solid #9A2126; justify-content: center; }
 
-      footer a:hover {
-      color: #a8d4ff;   /* even lighter on hover */
-      text-decoration: underline;
-      }
+      /* Typography inside status */
+      .status-text-container { display: flex; flex-direction: column; }
+      .main-text { font-size: 1rem; margin-bottom: 4px; font-weight: 400; } /* Not bold */
+      .sub-text { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
 
+      footer { font-size: 0.7rem; color: #555; margin-top: 1.5rem; text-align: center; }
+      footer { font-size: 0.7rem; color: #555; margin-top: 1rem; text-align: center; }
+      footer a { color: #9A2126; text-decoration: none; }
     </style>
   </head>
 
   <body>
-    <h1>Presensi Katekumen Dewasa</h1>
-    <h2>Gereja Katedral St. Petrus Bandung</h2>
+    <div class="liquid-background">
+      <div class="liquid-shape shape1"></div>
+      <div class="liquid-shape shape2"></div>
+    </div>
 
-    <label for="week"><br><b>Pilih Topik:</b></label>
-    <select id="week">
-      <option disabled selected>Memuat daftar topik...</option>
-    </select>
+    <!-- Loading screen for login -->
+    <div id="login-loader" style="display: none; flex-direction: column; align-items: center; justify-content: center; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000;">
+      <div class="spinner"></div>
+    </div>
 
-    <div id="reader"></div>
-    <div id="status"></div>
+    <main id="app-container" class="glass-container">
+      <div id="login-container">
+        <h1>Login Fasilitator</h1>
+        <!-- New error container -->
+        <div id="login-error-box" class="login-error-message" style="display: none;" onmouseover="hideLoginError()"></div>
+        <div class="input-wrapper">
+          <!-- Added oninput to hide error when user types -->
+          <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
+          <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
+          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility</span>
+        </div>
+        <div id="login-btn" onclick="handleLogin()">Masuk</div>
+      </div>
 
-    <footer>
-      <b>© 2025 Tim TI Katekumen Dewasa - St. Petrus Katedral Bandung</b><br>
-      Ada kendala/kritik/saran?<br>
-      Kontak: <b>Andar </b>
-      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 432 432"><path fill="#ffffff" d="M364.5 65Q427 127 427 214.5T364.5 364T214 426q-54 0-101-26L0 429l30-109Q2 271 2 214q0-87 62-149T214 3t150.5 62zM214 390q73 0 125-51.5T391 214T339 89.5T214 38T89.5 89.5T38 214q0 51 27 94l4 6l-18 65l67-17l6 3q42 25 90 25zm97-132q9 5 10 7q4 6-3 25q-3 8-15 15.5t-21 9.5q-18 2-33-2q-17-6-30-11q-8-4-15.5-8.5t-14.5-9t-13-9.5t-11.5-10t-10.5-10.5t-8.5-9.5t-7-8.5t-5.5-7t-3.5-5L128 222q-22-29-22-55q0-24 19-44q6-7 14-7q6 0 10 1q8 0 12 9q2 3 6 13l7 17.5l3 8.5q3 5 1 9q-3 7-5 9l-3 3l-3 3.5l-2 2.5q-6 6-3 11q13 22 30 37q13 11 43 26q7 3 11-1q12-15 17-21q4-6 12-3q6 3 36 17z"/></svg> </i>
-      <a href="https://wa.me/6281221752365?text=Halo%20Andar%21%20Saya%20mau%20bertanya%20tentang%20aplikasi%20absensi%20katekumen%2E">0812 2175 2365</a></br></footer>
-    </footer>
+      <div id="scanner-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+  
+        <h1>Presensi Katekumen Dewasa</h1>
+        <h2>St. Petrus Katedral Bandung</h2>
+  
+        <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
+            Pilih Topik...
+        </div>
+  
+        <div id="reader-container">
+            <div id="camera-loader">
+                <div class="spinner"></div>
+                <span style="margin-top:10px;">Memuat Kamera...</span>
+            </div>
+            <div id="reader"></div>
+        </div>
+  
+        <div id="status" class="idle"></div> 
+  
+        <footer>
+          © 2025 Tim IT Katekumen Dewasa<br>
+          Kontak: <a href="https://wa.me/6281221752365">Andar 0812 2175 2365</a>
+        </footer>
+      </div>
+      <!-- This footer is only for the login screen -->
+      <div id="login-footer" style="display: block;">
+        <div style="font-size: 0.7rem; color: #555; text-align: center">
+          <br>Lupa Password? Kontak: <a href="https://wa.me/6281221752365" style="color: #9A2126; text-decoration: none;">0812 2175 2365</a>
+        </div>
+      </div>
+    </main>
+
+    <div id="topic-modal">
+        <div class="modal-content">
+            <h3>Pilih Topik Absensi</h3>
+            <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="Cari topik...">
+            <div id="topic-list-container">
+                <div style="text-align:center; padding:20px; color:#666;">Memuat topik...</div>
+            </div>
+            <div class="modal-close-btn" onclick="closeTopicModal()">Tutup</div>
+        </div>
+    </div>
 
     <script>
-  const reader = new Html5Qrcode("reader");
-  let scanCooldown = false;
-  let SCRIPT_MAP = {}; 
-  let currentScriptUrl = ""; 
+      let html5QrcodeScanner; // Will be initialized later
+      let scanCooldown = false;
+      let selectedWeek = null; 
 
-  // Load JSON mapping
-  async function loadScriptMap() {
-    const res = await fetch("/config.json");
-    SCRIPT_MAP = await res.json();
-  }
+      // --- SAFARI VIEWPORT FIX ---
+      function setViewportHeight() {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      }
+      // Set on initial load
+      setViewportHeight();
+      // Reset on resize or orientation change
+      window.addEventListener('resize', setViewportHeight);
 
- async function loadTopikList() {
-  const select = document.getElementById("week");
-  select.innerHTML = `<option disabled selected>Memuat daftar topik...</option>`;
+      // --- MODAL FUNCTIONS ---
+      function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
+      function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
 
-  try {
-    // Default class for loading topics
-    const res = await fetch(`/api/absensi?action=topik&classCode=SAB`);
-    const data = await res.json();
+      function selectTopic(week, name, element) {
+        selectedWeek = week;
+        document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
+        document.getElementById('topic-trigger').style.borderColor = "#9A2126";
+        document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+        setTimeout(closeTopicModal, 200);
+      }
 
-    select.innerHTML = "";
+      function filterTopics() {
+        const searchTerm = document.getElementById('topic-search-input').value.toLowerCase();
+        const topics = document.querySelectorAll('.topic-option');
+        topics.forEach(topic => {
+          const topicText = topic.textContent.toLowerCase();
+          if (topicText.includes(searchTerm)) {
+            topic.style.display = 'block';
+          } else {
+            topic.style.display = 'none';
+          }
+        });
+      }
 
-    if (data.status === "ok" && Array.isArray(data.topik)) {
-      data.topik.forEach((item) => {
-        const opt = document.createElement("option");
-        opt.value = item.week;
-        opt.textContent = `${item.week}. ${item.name}`;
-        select.appendChild(opt);
-      });
-    } else {
-      select.innerHTML = `<option disabled>Data topik tidak ditemukan</option>`;
-    }
-  } catch (err) {
-    console.error("Gagal memuat daftar topik:", err);
-    select.innerHTML = `<option disabled>⚠️ Gagal memuat topik</option>`;
-  }
-}
+      function togglePasswordVisibility() {
+        const input = document.getElementById('login-input');
+        const icon = document.getElementById('password-toggle');
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.textContent = 'visibility'; // Show the "visibility" icon when text is visible
+        } else {
+          input.type = 'password';
+          icon.textContent = 'visibility_off'; // Show the "visibility_off" icon when text is hidden
+        }
+      }
 
+      function hideLoginError() {
+        const errorBox = document.getElementById('login-error-box');
+        if (errorBox.style.display === 'block') {
+          // Animate out
+          errorBox.style.animation = 'fadeOutDown 0.3s ease-in forwards';
+          setTimeout(() => {
+            errorBox.style.display = 'none';
+            errorBox.style.animation = 'fadeInUp 0.3s ease-out forwards'; // Reset for next time
+          }, 300);
+        }
+      }
 
-  function showStatus(text, type) {
-    const el = document.getElementById("status");
-    el.innerHTML = text;
-    el.className = type;
-    el.style.opacity = "1";
-  }
+      // --- AUTHENTICATION ---
+      async function handleLogin() {
+        let errorTimeout; // Variable to hold the timeout
+        const secret = document.getElementById('login-input').value;
+        const errorBox = document.getElementById('login-error-box');
+        const successIcon = document.getElementById('login-success-icon');
+        const loginLoader = document.getElementById('login-loader');
 
-  function clearStatus() {
-    const el = document.getElementById("status");
-    el.style.opacity = "0";
-    setTimeout(() => {
-      el.innerHTML = "📷 Silakan pindai kode QR berikutnya";
-      el.className = "";
-      el.style.opacity = "1";
-    }, 400);
-  }
-
-  async function handleScan(decodedText) {
-    if (scanCooldown) return;
-    scanCooldown = true;
-
-    const parts = decodedText.split("/");
-const classCode = parts[1]?.toUpperCase();
-
-if (!classCode || !SCRIPT_MAP[classCode]) {
-  showStatus(`❌ Kode kelas tidak valid: ${classCode}`, "error");
-  scanCooldown = false;
-  return;
-}
-
-
-    currentScriptUrl = SCRIPT_MAP[classCode];
-
-    const week = document.getElementById("week").value;
-    showStatus("⏳ Menyimpan presensi...", "");
-
-    fetch("/api/absensi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentId: decodedText,
-        week,
-        classCode
-      }),
-    })
-      .then(async (r) => {
-        const text = await r.text();
-
-        let res;
-        try {
-          res = JSON.parse(text);
-        } catch {
-          showStatus("⚠️ Server mengirim data tidak valid.", "error");
+        if (!secret) {
+          errorBox.textContent = 'Password tidak boleh kosong.';
+          errorBox.style.display = 'block';
           return;
         }
 
-        if (res.status === "ok") {
-          showStatus(
-            `✅ <b>${res.name}</b><br> hadir </br> <b>Topik ${week}</b><br><span class="student-id">${res.studentId.toUpperCase()}</span>`,
-            "success"
-          );
-        } else if (res.status === "duplicate") {
-          showStatus(`⚠️ ${res.message}`, "error");
-        } else {
-          showStatus(`❌ ${res.message}`, "error");
+        // Hide previous errors smoothly
+        hideLoginError();
+
+        try {
+          const response = await fetch("/api/absensi", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: 'login', secret }),
+          });
+          const data = await response.json();
+
+          if (data.status === 'ok' && data.token) {
+            // 1. Fade in the green checkmark and keep it for 1 second.
+            successIcon.style.animation = 'fadeIn 0.5s forwards'; // A slightly longer fade-in
+            successIcon.style.display = 'block';
+
+            setTimeout(() => { // This timeout ensures the checkmark is visible for 1 second before proceeding
+              successIcon.style.display = 'none'; // Hide checkmark
+              
+              // 2. Show loading spinner for 0.5s
+              loginLoader.style.display = 'flex';
+
+              setTimeout(() => {
+                const loginContainer = document.getElementById('login-container');
+                const loginFooter = document.getElementById('login-footer');
+
+                // 3. Animate login screen out
+                loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
+                loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
+
+                // 4. After fade out, hide it and show scanner UI
+                setTimeout(() => {
+                  sessionStorage.setItem('authToken', data.token); // Store token
+                  loginContainer.style.display = 'none';
+                  loginFooter.style.display = 'none';
+                  loginLoader.style.display = 'none'; // Hide loader
+                  document.getElementById('scanner-ui').style.display = 'flex';
+                  initializeApp(); // Load the main app
+                }, 400);
+              }, 500); // Wait for 0.5 seconds
+            }, 1000); // Wait for 1 second
+          } else {
+            // Wrong password: show red error box
+            errorBox.textContent = data.message || 'Login gagal.';
+            errorBox.style.display = 'block';
+            // Shake the input box
+            document.getElementById('login-input').style.animation = 'shake 0.5s';
+            setTimeout(() => document.getElementById('login-input').style.animation = '', 500);
+            // Set a timeout to hide the error box after 2 seconds
+            errorTimeout = setTimeout(hideLoginError, 2000);
+          }
+        } catch (e) {
+          // Also set timeout for connection errors
+          errorBox.textContent = 'Error koneksi ke server.';
+          errorBox.style.display = 'block';
+          errorTimeout = setTimeout(hideLoginError, 2000);
         }
-      })
-      .catch(() => {
-        showStatus("⚠️ Koneksi error!", "error");
-      })
-      .finally(() => {
-        setTimeout(() => {
-          scanCooldown = false;
-          clearStatus();
-        }, 5000);
-      });
-  }
+      }
 
-  async function startScanner() {
-    await reader.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 350, height: 350 } },
-      handleScan
-    );
-  }
+      async function loadTopikList() {
+        const listContainer = document.getElementById("topic-list-container");
+        try {
+          const token = sessionStorage.getItem('authToken');
+          const res = await fetch(`/api/absensi?action=topik&classCode=SAB`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
 
-  window.onload = async () => {
-    await loadScriptMap();
-    await loadTopikList();
-    startScanner();
-  };
-</script>
+          if (data.status === "ok" && Array.isArray(data.topik)) {
+            listContainer.innerHTML = "";
+            data.topik.forEach((item) => {
+              const div = document.createElement("div");
+              div.className = "topic-option";
+              div.textContent = `${item.week}. ${item.name}`;
+              div.onclick = () => selectTopic(item.week, item.name, div);
+              listContainer.appendChild(div);
+            });
+            if(data.topik.length > 0) {
+                const lastTopic = data.topik[data.topik.length - 1];
+                selectTopic(lastTopic.week, lastTopic.name, listContainer.lastChild);
+            }
+          } else {
+            listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Data topik tidak ditemukan.</div>`;
+          }
+        } catch (err) {
+          listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Gagal memuat topik.</div>`;
+        }
+      }
 
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
+      // --- STATUS HANDLER (Text Only) ---
+      function showStatus(mainText, type, subText = "") {
+        const el = document.getElementById("status");
+        
+        // Using Material Icons for visual indicators
+        let iconName = "";
+        if (type === 'success') iconName = "check_circle_outline";
+        else if (type === 'error') iconName = "error_outline";
+        else if (type === 'processing') iconName = "hourglass_empty";
+        else iconName = "qr_code_scanner"; // Default for idle/camera
 
-<script defer src="/_vercel/speed-insights/script.js"></script>
+        if (subText) {
+            el.innerHTML = `
+                <span class="material-icons-outlined" style="font-size: 1.5rem; margin-right: 10px;">${iconName}</span>
+                <div class="status-text-container">
+                    <div class="main-text">${mainText}</div>
+                    <div class="sub-text">${subText}</div>
+                </div>
+            `;
+        } else {
+            el.innerHTML = `
+                <span class="material-icons-outlined" style="font-size: 1.5rem; margin-right: 10px;">${iconName}</span>
+                <div class="main-text">${mainText}</div>
+            `;
+        }
+        el.className = type;
+      }
 
+      function resetStatus() { showStatus("Silakan pindai kode QR berikutnya", "idle"); }
+
+      // --- SCANNER LOGIC ---
+      async function handleScan(decodedText) {
+        if (scanCooldown) return;
+        if (!selectedWeek) {
+           showStatus("Pilih topik terlebih dahulu!", "error");
+           openTopicModal(); return;
+        }
+
+        scanCooldown = true;
+        showStatus("Memproses...", "processing");
+
+        try {
+          const token = sessionStorage.getItem('authToken');
+          const response = await fetch("/api/absensi", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` }, // The studentId contains the classCode
+            body: JSON.stringify({ studentId: decodedText, week: selectedWeek }),
+          });
+
+          const text = await response.text();
+          let res = JSON.parse(text);
+
+          if (res.status === "ok") {
+            showStatus(res.name, "success", `ID: ${res.studentId} • Topik ${selectedWeek}`);
+          } else if (res.status === "duplicate") {
+            showStatus("Sudah Hadir", "error", res.message);
+          } else if (response.status === 400) { // Specifically handle invalid classCode from API
+            showStatus("Kode QR Tidak Valid", "error", res.message);
+          } else {
+            showStatus("Gagal", "error", res.message);
+          }
+        } catch (error) {
+          showStatus("Error Koneksi", "error", "Gagal menghubungi server");
+        } finally {
+          setTimeout(() => { scanCooldown = false; resetStatus(); }, 4000);
+        }
+      }
+
+      async function startScanner() {
+        const scanConfig = { 
+            fps: 10, // Increased for faster recognition
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            disableFlip: false,
+            experimentalFeatures: {
+                // Use native BarcodeDetector if supported, for faster scans
+                useBarCodeDetectorIfSupported: true
+            },
+            // Pass video constraints directly into the config object
+            videoConstraints: {
+                facingMode: "environment",
+                width: { ideal: 720 },
+                height: { ideal: 720 }
+            }
+        };
+
+        html5QrcodeScanner = new Html5Qrcode("reader", /* verbose= */ false);
+        html5QrcodeScanner.start(
+          { facingMode: "environment" }, // Request rear camera
+          scanConfig,
+          handleScan
+        ).then(() => {
+            document.getElementById("camera-loader").style.display = "none";
+            resetStatus();
+        }).catch(err => {
+            const loader = document.getElementById("camera-loader");
+            loader.innerHTML = '<div style="color:#d32f2f; text-align:center">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
+        });
+      }
+
+      async function initializeApp() {
+        showStatus("Memuat sistem...", "processing");
+        await loadTopikList();
+        startScanner();
+      }
+
+      // Check if user is already logged in on page load
+      window.onload = () => {
+        if (sessionStorage.getItem('authToken')) {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('scanner-ui').style.display = 'flex';
+            document.getElementById('login-footer').style.display = 'none';
+            initializeApp();
+        }
+      }
+    </script>
   </body>
 </html>
