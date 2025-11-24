@@ -128,12 +128,13 @@
         right: 1rem;
       }
       #login-success-icon {
-        position: absolute;
-        top: 50%;
-        left: 1rem;
-        transform: translateY(-50%);
+        /* Position it just to the left of the password toggle */
+        right: 3rem; 
         color: #4CAF50; /* Green checkmark */
         animation: fadeInUp 0.3s;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
       }
 
       /* --- LOGIN SCREEN --- */
@@ -178,11 +179,11 @@
       /* Updated styles for the floating error message */
       .login-error-message {
         position: absolute;
-        top: 50%; /* Position relative to the login-container */
+        top: 50%;
         left: 50%;
-        transform: translate(-50%, -50%); /* Center perfectly */
-        width: 80%; /* Set a width */
-        z-index: 10; /* Ensure it floats above other login elements */
+        transform: translate(-50%, -50%); /* This centers it on the screen */
+        width: 80%;
+        z-index: 1001; /* Make sure it's above the login loader overlay */
         padding: 0.8rem 1.5rem; /* Add horizontal padding */
         background: rgba(183, 28, 28, 0.5); /* Translucent red background */
         backdrop-filter: blur(8px); /* Frosted glass effect */
