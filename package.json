@@ -1,5 +1,4 @@
 {
-  "type": "module",
   "dependencies": {
     "@vercel/speed-insights": "^1.2.0",
     "jsonwebtoken": "^9.0.2"
