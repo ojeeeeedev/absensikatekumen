@@ -169,15 +169,14 @@
       }
       /* Updated styles for the floating error message */
       .login-error-message {
-        width: 100%;
         position: absolute;
         top: 1.5rem; /* Position from the top of the glass-container */
-        left: 1.5rem;
-        right: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%); /* Center the element */
+        width: auto; /* Adjust width to content */
+        max-width: 80%; /* Prevent it from getting too wide */
         z-index: 10; /* Ensure it floats above other login elements */
-        padding: 0.8rem;
-        margin-bottom: 1rem;
-        background: #b71c1c;
+        padding: 0.8rem 1.5rem; /* Add horizontal padding */
         background: rgba(183, 28, 28, 0.5); /* Translucent red background */
         backdrop-filter: blur(8px); /* Frosted glass effect */
         -webkit-backdrop-filter: blur(8px);
@@ -320,7 +319,7 @@
       <div id="login-container">
         <h1>Login Fasilitator</h1>
         <!-- New error container -->
-        <div id="login-error-box" class="login-error-message" style="display: none;"></div>
+        <div id="login-error-box" class="login-error-message" style="display: none;" onmouseover="hideLoginError()"></div>
         <div class="input-wrapper">
           <!-- Added oninput to hide error when user types -->
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
@@ -439,6 +438,7 @@
 
       // --- AUTHENTICATION ---
       async function handleLogin() {
+        let errorTimeout; // Variable to hold the timeout
         const secret = document.getElementById('login-input').value;
         const errorBox = document.getElementById('login-error-box');
         const loginLoader = document.getElementById('login-loader');
@@ -486,12 +486,17 @@
             // Wrong password: show red error box
             errorBox.textContent = data.message || 'Login gagal.';
             errorBox.style.display = 'block';
+            // Shake the input box
             document.getElementById('login-input').style.animation = 'shake 0.5s';
             setTimeout(() => document.getElementById('login-input').style.animation = '', 500);
+            // Set a timeout to hide the error box after 2 seconds
+            errorTimeout = setTimeout(hideLoginError, 2000);
           }
         } catch (e) {
+          // Also set timeout for connection errors
           errorBox.textContent = 'Error koneksi ke server.';
           errorBox.style.display = 'block';
+          errorTimeout = setTimeout(hideLoginError, 2000);
         }
       }
 
