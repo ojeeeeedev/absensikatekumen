@@ -14,11 +14,21 @@ export default async function handler(req, res) {
   const SHARED_SECRET = process.env.AUTH_SECRET || "your-very-secret-password";
   const JWT_SECRET = process.env.JWT_SECRET || "another-super-secret-key";
 
-  // Mapping for your sheets
-  const SCRIPT_MAP = {
-    SAB: "https://script.google.com/macros/s/AKfycbxB3TcQA-bsX5hgXi4mL1v__-RL4HGzy8D6QJdeWy0-x737yw3sTGxvFbFdEc07zJfepQ/exec",
-    ROM: "https://script.google.com/macros/s/AKfycby8cp12Ck9BvHWe4S3kg8kW6D-Trhe2SX9snlwUy17RLUbBHBhRwfNvh0S1dLWJrxcyQA/exec",
-  };
+  // --- Mapping for your sheets (loaded from environment variable) ---
+  let SCRIPT_MAP = {};
+  try {
+    // In a Vercel environment, the variable MUST exist.
+    if (!process.env.VERCEL_SCRIPT_MAP_JSON) {
+      // This will cause the function to fail if the env var is not set.
+      throw new Error("Server configuration error: VERCEL_SCRIPT_MAP_JSON is not defined.");
+    }
+    SCRIPT_MAP = JSON.parse(process.env.VERCEL_SCRIPT_MAP_JSON);
+  } catch (e) {
+    console.error("Error parsing VERCEL_SCRIPT_MAP_JSON:", e);
+    // Return a generic server error to the client
+    return res.status(500).json({ status: "error", message: "Server configuration error." });
+  }
+  // --- End SCRIPT_MAP loading ---
 
   // ============================================================
   // 1️⃣ HANDLE GET  →  loadTopikList()
