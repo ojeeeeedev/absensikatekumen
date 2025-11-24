@@ -60,55 +60,54 @@ export default async function handler(req, res) {
   }
 
   // ============================================================
-  // 2️⃣ HANDLE POST  →  Save absensi
+  // 2️⃣ HANDLE POST  →  Save absensi or Login
   // ============================================================
   if (req.method === "POST") {
-    // Check if it's a login action
-    if (req.body.action === 'login') {
-      if (req.body.secret === SHARED_SECRET) {
-        // Secret is correct, issue a token
-        const token = jwt.sign(
-          { authorized: true }, // payload
-          JWT_SECRET,
-          { expiresIn: '8h' } // Token expires in 8 hours
-        );
-        return res.status(200).json({ status: 'ok', token });
-      } else {
-        // Incorrect secret
-        return res.status(401).json({ status: 'error', message: 'Password salah' });
+    try {
+      // Check if it's a login action
+      if (req.body.action === 'login') {
+        if (req.body.secret === SHARED_SECRET) {
+          // Secret is correct, issue a token
+          const token = jwt.sign(
+            { authorized: true }, // payload
+            JWT_SECRET,
+            { expiresIn: '8h' } // Token expires in 8 hours
+          );
+          return res.status(200).json({ status: 'ok', token });
+        } else {
+          // Incorrect secret
+          return res.status(401).json({ status: 'error', message: 'Password salah' });
+        }
+      } 
+      
+      // If not login, handle it as an attendance submission
+      // --- Token validation for this specific action is required ---
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token || !jwt.verify(token, JWT_SECRET)) {
+        return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
       }
-    } else {
-      // Otherwise, handle it as an attendance submission
-      try {
-        // --- Token validation for this specific action ---
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token || !jwt.verify(token, JWT_SECRET)) {
-          return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
-        }
-        // --- End token validation ---
 
-        const { classCode } = req.body;
-        const scriptURL = SCRIPT_MAP[classCode];
-        if (!scriptURL) {
-          return res.status(400).json({
-            status: "error",
-            message: `Invalid classCode: ${classCode}`,
-          });
-        }
-
-        const response = await fetch(scriptURL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(req.body),
+      const { classCode } = req.body;
+      const scriptURL = SCRIPT_MAP[classCode];
+      if (!scriptURL) {
+        return res.status(400).json({
+          status: "error",
+          message: `Invalid classCode: ${classCode}`,
         });
-
-        const text = await response.text();
-        return res.status(200).send(text);
-
-      } catch (err) {
-        console.error("POST error:", err);
-        return res.status(500).json({ status: "error", message: err.message });
       }
+
+      const response = await fetch(scriptURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+      });
+
+      const text = await response.text();
+      return res.status(200).send(text);
+
+    } catch (err) {
+      console.error("POST error:", err);
+      return res.status(500).json({ status: "error", message: err.message });
     }
   }
 
