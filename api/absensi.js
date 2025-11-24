@@ -97,7 +97,10 @@ export default async function handler(req, res) {
         return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
       }
 
-      const { classCode } = req.body;
+      // Extract classCode from the studentId on the backend
+      const { studentId } = req.body;
+      const classCode = studentId?.split('/')[1]?.toUpperCase();
+
       const scriptURL = SCRIPT_MAP[classCode];
       if (!scriptURL) {
         return res.status(400).json({

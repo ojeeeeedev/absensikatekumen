@@ -456,14 +456,6 @@
         }
       }
 
-      // --- DATA LOADING ---
-      async function loadScriptMap() {
-        try {
-          const res = await fetch("/config.json");
-          SCRIPT_MAP = await res.json();
-        } catch (e) { showStatus("Gagal memuat konfigurasi", "error"); }
-      }
-
       async function loadTopikList() {
         const listContainer = document.getElementById("topic-list-container");
         try {
@@ -535,21 +527,12 @@
         scanCooldown = true;
         showStatus("Memproses...", "processing");
 
-        const parts = decodedText.split("/");
-        const classCode = parts[1]?.toUpperCase();
-
-        if (!classCode || !SCRIPT_MAP[classCode]) {
-          showStatus(`Kode kelas tidak valid: ${classCode || '-'}`, "error");
-          setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
-          return;
-        }
-
         try {
           const token = sessionStorage.getItem('authToken');
           const response = await fetch("/api/absensi", {
             method: "POST",
-            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ studentId: decodedText, week: selectedWeek, classCode }),
+            headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` }, // The studentId contains the classCode
+            body: JSON.stringify({ studentId: decodedText, week: selectedWeek }),
           });
 
           const text = await response.text();
@@ -562,6 +545,8 @@
             }
           } else if (res.status === "duplicate") {
             showStatus("Sudah Hadir", "error", res.message);
+          } else if (response.status === 400) { // Specifically handle invalid classCode from API
+            showStatus("Kode QR Tidak Valid", "error", res.message);
           } else {
             showStatus("Gagal", "error", res.message);
           }
@@ -573,8 +558,6 @@
       }
 
       async function startScanner() {
-        if (Object.keys(SCRIPT_MAP).length === 0) await loadScriptMap();
-
         const scanConfig = { 
             fps: 10, // Increased for faster recognition
             qrbox: { width: 250, height: 250 },
@@ -608,7 +591,7 @@
 
       async function initializeApp() {
         showStatus("Memuat sistem...", "processing");
-        await Promise.all([loadScriptMap(), loadTopikList()]);
+        await loadTopikList();
         startScanner();
       }
 
