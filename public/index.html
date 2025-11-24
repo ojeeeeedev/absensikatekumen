@@ -127,6 +127,14 @@
       #password-toggle {
         right: 1rem;
       }
+      #login-success-icon {
+        position: absolute;
+        top: 50%;
+        left: 1rem;
+        transform: translateY(-50%);
+        color: #4CAF50; /* Green checkmark */
+        animation: fadeInUp 0.3s;
+      }
 
       /* --- LOGIN SCREEN --- */
       #login-container {
@@ -170,11 +178,10 @@
       /* Updated styles for the floating error message */
       .login-error-message {
         position: absolute;
-        top: 1.5rem; /* Position from the top of the glass-container */
+        top: 50%; /* Position relative to the login-container */
         left: 50%;
-        transform: translateX(-50%); /* Center the element */
-        width: auto; /* Adjust width to content */
-        max-width: 80%; /* Prevent it from getting too wide */
+        transform: translate(-50%, -50%); /* Center perfectly */
+        width: 80%; /* Set a width */
         z-index: 10; /* Ensure it floats above other login elements */
         padding: 0.8rem 1.5rem; /* Add horizontal padding */
         background: rgba(183, 28, 28, 0.5); /* Translucent red background */
@@ -323,6 +330,7 @@
         <div class="input-wrapper">
           <!-- Added oninput to hide error when user types -->
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
+          <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
           <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility</span>
         </div>
         <div id="login-btn" onclick="handleLogin()">Masuk</div>
@@ -441,6 +449,7 @@
         let errorTimeout; // Variable to hold the timeout
         const secret = document.getElementById('login-input').value;
         const errorBox = document.getElementById('login-error-box');
+        const successIcon = document.getElementById('login-success-icon');
         const loginLoader = document.getElementById('login-loader');
 
         if (!secret) {
@@ -461,27 +470,34 @@
           const data = await response.json();
 
           if (data.status === 'ok' && data.token) {
-            // Correct password: show loading spinner
-            loginLoader.style.display = 'flex';
+            // 1. Show green checkmark for 1 second
+            successIcon.style.display = 'block';
 
             setTimeout(() => {
-              const loginContainer = document.getElementById('login-container');
-              const loginFooter = document.getElementById('login-footer');
+              successIcon.style.display = 'none'; // Hide checkmark
+              
+              // 2. Show loading spinner for 0.5s
+              loginLoader.style.display = 'flex';
 
-              // 1. Animate login screen out
-              loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-              loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-
-              // 2. After fade out, hide it and show scanner UI
               setTimeout(() => {
-                sessionStorage.setItem('authToken', data.token); // Store token
-                loginContainer.style.display = 'none';
-                loginFooter.style.display = 'none';
-                loginLoader.style.display = 'none'; // Hide loader
-                document.getElementById('scanner-ui').style.display = 'flex';
-                initializeApp(); // Load the main app
-              }, 400);
-            }, 500); // Wait for 0.5 seconds
+                const loginContainer = document.getElementById('login-container');
+                const loginFooter = document.getElementById('login-footer');
+
+                // 3. Animate login screen out
+                loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
+                loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
+
+                // 4. After fade out, hide it and show scanner UI
+                setTimeout(() => {
+                  sessionStorage.setItem('authToken', data.token); // Store token
+                  loginContainer.style.display = 'none';
+                  loginFooter.style.display = 'none';
+                  loginLoader.style.display = 'none'; // Hide loader
+                  document.getElementById('scanner-ui').style.display = 'flex';
+                  initializeApp(); // Load the main app
+                }, 400);
+              }, 500); // Wait for 0.5 seconds
+            }, 1000); // Wait for 1 second
           } else {
             // Wrong password: show red error box
             errorBox.textContent = data.message || 'Login gagal.';
