@@ -1,30 +1,34 @@
-<div align="center">
-  <h1>Absensi Katekumen Digital</h1>
-  <p>
-    Sistem absensi digital berbasis QR code untuk program Katekumenat di Katedral Santo Petrus, Bandung.
-  </p>
-</div>
+# Absensi Katekumen Digital
 
-<br />
+A modern, QR code-based digital attendance system for the Catechumenate program at St. Peter's Cathedral, Bandung.
 
-## 🌟 Fitur Utama
+---
 
-- 📱 **UI Modern & Mobile-First**: Antarmuka responsif dengan desain "liquid glass" yang berfungsi di semua perangkat.
-- 📷 **Pemindaian Kode QR Cepat**: Menggunakan kamera perangkat untuk absensi yang cepat dan efisien.
-- 🔊 **Umpan Balik Instan**: Memberikan konfirmasi visual dan audio untuk pemindaian yang berhasil atau gagal.
-- 📊 **Sinkronisasi Data Real-time**: Kehadiran dicatat langsung ke Google Spreadsheet secara real-time.
-- ⚙️ **Pemilihan Topik Dinamis**: Memilih topik mingguan dengan mudah untuk pencatatan kehadiran yang akurat.
-- 🔍 **Daftar Topik dengan Pencarian**: Menemukan topik dengan cepat menggunakan bilah pencarian yang tetap di atas.
+## 🌟 Key Features
 
-## 🛠️ Tumpukan Teknologi & Arsitektur
+- **Modern Mobile-First UI**: Responsive "liquid glass" interface that works on any device.
+- **Fast QR Code Scanning**: Uses the device's camera for quick and efficient attendance taking.
+- **Instant Feedback**: Provides immediate visual confirmation for successful or failed scans.
+- **Real-time Data Sync**: Attendance is recorded directly to a Google Spreadsheet in real-time.
+- **Dynamic Topic Selection**: Facilitators can easily select the weekly topic for accurate attendance records.
 
-Proyek ini menggunakan arsitektur sederhana namun kuat untuk menghubungkan frontend web ke backend Google Sheet.
+## 🛠️ Tech Stack & Architecture
 
-- **Frontend**: Satu file `index.html` yang dibuat dengan **HTML, CSS, dan JavaScript** murni. Tanpa framework.
-  - **UI/UX**: "Liquid Glass" design with custom fonts (Playfair Display, Cinzel, Inter) and Material Icons.
-  - **Pemindaian QR**: Pustaka `html5-qrcode`.
-- **Backend API**: Fungsi serverless (misalnya, di-deploy di Vercel) yang bertindak sebagai proxy. File `index.html` berkomunikasi dengan ini.
-- **Lapisan Data**: **Google Apps Script** yang di-deploy sebagai Web App. Skrip ini menerima data dari API dan menuliskannya ke **Google Spreadsheet**.
+This project uses a simple and robust serverless architecture to connect a pure HTML/JS frontend to a Google Sheet backend.
+
+- **Frontend**:
+
+  - **HTML5, CSS3, JavaScript (ES6+)**: No frameworks for a lightweight and fast experience.
+  - **html5-qrcode**: For QR code scanning functionality.
+  - **Google Fonts & Material Icons**: For typography and iconography.
+
+- **Backend (Proxy API)**:
+
+  - **Vercel Serverless Functions**: A Node.js proxy API to securely communicate with the Google Apps Script backend.
+
+- **Data Layer**:
+  - **Google Apps Script**: Deployed as a Web App to handle incoming data and write to the spreadsheet.
+  - **Google Sheets**: Acts as the database for storing attendance records.
 
 ```
 ├── README.md
