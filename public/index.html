@@ -339,7 +339,7 @@
           <!-- Added oninput to hide error when user types -->
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
           <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
-          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility</span>
+          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility_off</span>
         </div>
         <div id="login-btn" onclick="handleLogin()">Masuk</div>
       </div>
@@ -433,10 +433,10 @@
         const icon = document.getElementById('password-toggle');
         if (input.type === 'password') {
           input.type = 'text';
-          icon.textContent = 'visibility'; // Show the "visibility" icon when text is visible
+          icon.textContent = 'visibility'; // Icon to hide the password
         } else {
           input.type = 'password';
-          icon.textContent = 'visibility_off'; // Show the "visibility_off" icon when text is hidden
+          icon.textContent = 'visibility_off'; // Icon to show the password
         }
       }
 
