@@ -93,14 +93,14 @@ html, body {
 
 h1 { margin: 0 0 0.4rem 0; font-size: 1.4rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
 h2 { 
-  margin: 0; font-size: 0.75rem; color: #888; text-align: center; font-weight: 400; 
+  margin: 0; font-size: 0.8rem; color: #888; text-align: center; font-weight: 400; 
   font-family: 'Cinzel', serif;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 0 1rem; /* Prevent text from touching edges */
 }
 
-/* --- HEADER WITH LOGO --- */
+/* --- FOOTER WITH LOGO --- */
 .header-container {
   display: flex;
   align-items: center;
