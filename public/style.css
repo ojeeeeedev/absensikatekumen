@@ -123,7 +123,7 @@ h2 {
 /* --- FIXED LOGIN HEADER --- */
 #login-header {
   position: fixed;
-  top: 50px;
+  top: 20px;
   left: 0;
   width: 100%;
   display: flex;
