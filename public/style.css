@@ -100,6 +100,26 @@ h2 {
   padding: 0 1rem; /* Prevent text from touching edges */
 }
 
+/* --- HEADER WITH LOGO --- */
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+.header-logo {
+  height: 48px;
+  width: auto;
+  margin-right: 12px;
+}
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+.header-text h1 { text-align: left; margin: 0 0 4px 0; }
+.header-text h2 { text-align: left; padding: 0; }
+
 /* --- LOGIN INPUT WRAPPER --- */
 .input-wrapper {
   position: relative;
