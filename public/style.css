@@ -91,9 +91,9 @@ html, body {
   from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); }
 }
 
-h1 { margin: 0 0 0.4rem 0; font-size: 1.4rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
+h1 { margin: 0 0 0.4rem 0; font-size: 1.1rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
 h2 { 
-  margin: 0; font-size: 0.8rem; color: #888; text-align: center; font-weight: 400; 
+  margin: 0; font-size: 0.7rem; color: #888; text-align: center; font-weight: 400; 
   font-family: 'Cinzel', serif;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -161,7 +161,7 @@ h2 {
   pointer-events: none;
 }
 #bottom-logo img {
-  height: 65px;
+  height: 72px;
   width: auto;
   margin-right: 15px;
 }
