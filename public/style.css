@@ -133,19 +133,37 @@ h2 {
   pointer-events: none;
 }
 #login-header img {
-  height: 65px;
+  height: 80px;
   width: auto;
-  margin-right: 15px;
+  margin-right: 0;
 }
 .login-header-text {
   text-align: left;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: #ddd;
   line-height: 1.2;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 .login-header-text div:first-child {
   font-weight: bold;
+}
+
+/* --- FIXED BOTTOM LOGO --- */
+#bottom-logo {
+  position: fixed;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+}
+#bottom-logo img {
+  height: 65px;
+  width: auto;
+  margin-right: 15px;
 }
 
 /* --- LOGIN INPUT WRAPPER --- */
