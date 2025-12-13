@@ -120,6 +120,34 @@ h2 {
 .header-text h1 { text-align: left; margin: 0 0 4px 0; }
 .header-text h2 { text-align: left; padding: 0; }
 
+/* --- FIXED LOGIN HEADER --- */
+#login-header {
+  position: fixed;
+  top: 50px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+}
+#login-header img {
+  height: 65px;
+  width: auto;
+  margin-right: 15px;
+}
+.login-header-text {
+  text-align: left;
+  font-size: 0.8rem;
+  color: #ddd;
+  line-height: 1.2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.login-header-text div:first-child {
+  font-weight: bold;
+}
+
 /* --- LOGIN INPUT WRAPPER --- */
 .input-wrapper {
   position: relative;

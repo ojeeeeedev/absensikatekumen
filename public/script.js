@@ -101,16 +101,19 @@ async function handleLogin() {
         setTimeout(() => {
           const loginContainer = document.getElementById('login-container');
           const loginFooter = document.getElementById('login-footer');
+          const loginHeader = document.getElementById('login-header');
 
           // 3. Animate login screen out
           loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
           loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
+          if (loginHeader) loginHeader.style.animation = 'fadeOutDown 0.4s ease-in forwards';
 
           // 4. After fade out, hide it and show scanner UI
           setTimeout(() => {
             sessionStorage.setItem('authToken', data.token); // Store token
             loginContainer.style.display = 'none';
             loginFooter.style.display = 'none';
+            if (loginHeader) loginHeader.style.display = 'none';
             loginLoader.style.display = 'none'; // Hide loader
             document.getElementById('scanner-ui').style.display = 'flex';
             initializeApp(); // Load the main app
@@ -286,6 +289,8 @@ async function initializeApp() {
 window.onload = () => {
   if (sessionStorage.getItem('authToken')) {
       document.getElementById('login-container').style.display = 'none';
+      const loginHeader = document.getElementById('login-header');
+      if (loginHeader) loginHeader.style.display = 'none';
       document.getElementById('scanner-ui').style.display = 'flex';
       document.getElementById('login-footer').style.display = 'none';
       initializeApp();
