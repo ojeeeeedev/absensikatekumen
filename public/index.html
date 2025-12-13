@@ -544,10 +544,6 @@
               div.onclick = () => selectTopic(item.week, item.name, div);
               listContainer.appendChild(div);
             });
-            if(data.topik.length > 0) {
-                const lastTopic = data.topik[data.topik.length - 1];
-                selectTopic(lastTopic.week, lastTopic.name, listContainer.lastChild);
-            }
           } else {
             listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Data topik tidak ditemukan.</div>`;
           }
