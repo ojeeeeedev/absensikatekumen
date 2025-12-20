@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { createClient } = require('@supabase/supabase-js');
 
 export default async function handler(req, res) {
   // CORS
@@ -11,8 +12,14 @@ export default async function handler(req, res) {
   }
 
   // --- Authentication Secrets ---
-  const SHARED_SECRET = process.env.AUTH_SECRET || "your-very-secret-password";
-  const JWT_SECRET = process.env.JWT_SECRET || "another-super-secret-key";
+  const SHARED_SECRET = process.env.AUTH_SECRET;
+  const JWT_SECRET = process.env.JWT_SECRET;
+  
+  // --- Supabase Configuration ---
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const supabase = (SUPABASE_URL && SUPABASE_KEY) 
+    ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
   // --- Mapping for your sheets (loaded from environment variable) ---
   let SCRIPT_MAP = {};
@@ -116,6 +123,32 @@ export default async function handler(req, res) {
       });
 
       const text = await response.text();
+
+      // Attempt to inject Supabase Image URL if successful attendance
+      if (supabase) {
+        try {
+          const data = JSON.parse(text);
+          if (data.status === 'ok' && data.studentId) {
+            // Construct the public URL for the image. 
+            // Assumes bucket is 'profiles' and filename is the studentId with .jpg extension.
+            // Note: studentId might contain slashes (e.g. "A/123"), which Supabase treats as folders.
+            // Naming convention: 2025-SAB-001.png (replacing slashes with dashes)
+            const filename = data.studentId.replace(/\//g, '-') + '.png';
+            const { data: imageData } = supabase.storage
+              .from('pasfoto-sab')
+              .getPublicUrl(filename);
+            
+            if (imageData && imageData.publicUrl) {
+              data.image = imageData.publicUrl;
+            }
+          }
+          return res.status(200).json(data);
+        } catch (e) {
+          // If parsing fails or other error, return original text
+          return res.status(200).send(text);
+        }
+      }
+
       return res.status(200).send(text);
 
     } catch (err) {
