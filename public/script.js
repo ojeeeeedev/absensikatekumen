@@ -28,11 +28,20 @@ function showProfileModal(name, id, imageUrl) {
   document.getElementById('profile-modal').style.display = 'flex';
 
   // Set timeout to close the modal after 2 seconds (2000 milliseconds)
-  profileModalTimeout = setTimeout(closeProfileModal, 2000);
+  profileModalTimeout = setTimeout(closeProfileModal, 3000);
 }
 
 function closeProfileModal() {
-  document.getElementById('profile-modal').style.display = 'none';
+  const profileModal = document.getElementById('profile-modal');
+  const profileCard = profileModal.querySelector('.profile-card');
+
+  profileCard.style.animation = 'fadeOut 0.3s ease-out forwards'; // Apply fade-out animation
+  
+  // After the animation, hide the modal completely
+  setTimeout(() => {
+    profileModal.style.display = 'none';
+    profileCard.style.animation = ''; // Reset animation for next time it opens
+  }, 300); // Match this duration to the CSS animation duration
 }
 
 function selectTopic(week, name, element) {
