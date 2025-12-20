@@ -134,12 +134,20 @@ export default async function handler(req, res) {
             // Note: studentId might contain slashes (e.g. "A/123"), which Supabase treats as folders.
             // Naming convention: 2025-SAB-001.png (replacing slashes with dashes)
             const filename = data.studentId.replace(/\//g, '-') + '.png';
-            const { data: imageData } = supabase.storage
-              .from('pasfoto-sab')
-              .getPublicUrl(filename);
             
-            if (imageData && imageData.publicUrl) {
-              data.image = imageData.publicUrl;
+            // Check if file exists to prevent CORB errors on frontend
+            const { data: files } = await supabase.storage
+              .from('pasfoto-sab')
+              .list('', { limit: 1, search: filename });
+
+            if (files && files.find(f => f.name === filename)) {
+              const { data: imageData } = supabase.storage
+                .from('pasfoto-sab')
+                .getPublicUrl(filename);
+              
+              if (imageData && imageData.publicUrl) {
+                data.image = imageData.publicUrl;
+              }
             }
           }
           return res.status(200).json(data);
