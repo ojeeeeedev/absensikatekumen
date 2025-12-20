@@ -1,6 +1,7 @@
 let html5QrcodeScanner; // Will be initialized later
 let scanCooldown = false;
 let selectedWeek = null; 
+let profileModalTimeout; // To store the timeout ID for auto-closing the profile modal
 
 // --- SAFARI VIEWPORT FIX ---
 function setViewportHeight() {
@@ -17,11 +18,17 @@ function openTopicModal() { document.getElementById('topic-modal').style.display
 function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
 
 function showProfileModal(name, id, imageUrl) {
+  // Clear any existing timeout to prevent premature closing if a new scan happens quickly
+  clearTimeout(profileModalTimeout);
+
   document.getElementById('profile-name').textContent = name;
   document.getElementById('profile-id').textContent = id;
   const img = document.getElementById('profile-image');
   img.src = imageUrl || "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMTUwIDE1MCI+PHJlY3Qgd2lkdGg9IjE1MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiNhYWEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4="; 
   document.getElementById('profile-modal').style.display = 'flex';
+
+  // Set timeout to close the modal after 2 seconds (2000 milliseconds)
+  profileModalTimeout = setTimeout(closeProfileModal, 2000);
 }
 
 function closeProfileModal() {
