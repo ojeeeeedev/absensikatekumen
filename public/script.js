@@ -16,6 +16,18 @@ window.addEventListener('resize', setViewportHeight);
 function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
 function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
 
+function showProfileModal(name, id, imageUrl) {
+  document.getElementById('profile-name').textContent = name;
+  document.getElementById('profile-id').textContent = id;
+  const img = document.getElementById('profile-image');
+  img.src = imageUrl || "https://via.placeholder.com/150?text=No+Image"; 
+  document.getElementById('profile-modal').style.display = 'flex';
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-modal').style.display = 'none';
+}
+
 function selectTopic(week, name, element) {
   selectedWeek = week;
   document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
@@ -236,6 +248,7 @@ async function handleScan(decodedText) {
 
     if (res.status === "ok") {
       showStatus(res.name, "success", `ID: ${res.studentId} • Topik ${selectedWeek}`);
+      showProfileModal(res.name, res.studentId, res.image);
     } else if (res.status === "duplicate") {
       showStatus("Sudah Hadir", "error", res.message);
     } else if (response.status === 400) { // Specifically handle invalid classCode from API
