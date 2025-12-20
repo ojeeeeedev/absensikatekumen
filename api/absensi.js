@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error("Error parsing VERCEL_SCRIPT_MAP_JSON:", e);
     // Return a generic server error to the client
-    return res.status(500).json({ status: "error", message: "Server configuration error." });
+    return res.status(500).json({ status: "error", message: "Server parsing configuration error." });
   }
   // --- End SCRIPT_MAP loading ---
 
