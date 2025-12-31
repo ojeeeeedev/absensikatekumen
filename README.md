@@ -1,154 +1,137 @@
-# Absensi Katekumen Digital
+# Absensi Katekumen Digital (v1.2)
 
-A modern, QR code-based digital attendance system for the Catechumenate program at St. Peter's Cathedral, Bandung.
+A modern, responsive, and secure digital attendance system designed for the Catechumenate program at St. Peter's Cathedral, Bandung. This application streamlines the attendance process using QR codes, real-time data synchronization with Google Sheets, and secure image retrieval from Supabase.
 
 ---
 
 ## 🌟 Key Features
 
-- **Modern Mobile-First UI**: Responsive "liquid glass" interface that works on any device.
-- **Fast QR Code Scanning**: Uses the device's camera for quick and efficient attendance taking.
-- **Instant Feedback**: Provides immediate visual confirmation for successful or failed scans.
-- **Real-time Data Sync**: Attendance is recorded directly to a Google Spreadsheet in real-time.
-- **Dynamic Topic Selection**: Facilitators can easily select the weekly topic for accurate attendance records.
+-   **📱 Modern Mobile-First UI**: "Liquid glass" aesthetic with a fully responsive design optimized for all devices.
+-   **⚡ Fast QR Code Scanning**: Integrated `html5-qrcode` library for rapid and accurate attendance taking via device camera.
+-   **🔐 Secure Facilitator Login**: Shared secret authentication mechanism with JWT (JSON Web Token) session management.
+-   **📊 Real-time Data Sync**: Attendance records are instantly pushed to Google Sheets via a secure proxy.
+-   **🖼️ Dynamic Profile Images**: Automatically fetches and displays student profile photos from Supabase Storage using signed URLs.
+-   **📅 Dynamic Topic Selection**: Facilitators can select weekly topics fetched dynamically from the backend.
+-   **✅ Instant Feedback**: Visual and haptic-like feedback for successful scans, duplicates, or errors.
 
-## 🛠️ Tech Stack & Architecture
+---
 
-This project uses a simple and robust serverless architecture to connect a pure HTML/JS frontend to a Google Sheet backend.
+## 🛠️ Architecture & Tech Stack
 
-- **Frontend**:
+The system employs a serverless architecture to bridge a static frontend with powerful cloud services.
 
-  - **HTML5, CSS3, JavaScript (ES6+)**: No frameworks for a lightweight and fast experience.
-  - **html5-qrcode**: For QR code scanning functionality.
-  - **Google Fonts & Material Icons**: For typography and iconography.
+### **Frontend**
+-   **Core**: Pure HTML5, CSS3, JavaScript (ES6+). No heavy frameworks.
+-   **Libraries**: `html5-qrcode` (Scanning), Google Fonts & Material Icons.
+-   **Hosting**: Vercel (recommended).
 
-- **Backend (Proxy API)**:
+### **Backend (Serverless API)**
+-   **Runtime**: Node.js (Vercel Serverless Functions).
+-   **Function**: Acts as a secure proxy and logic layer.
+    -   **Authentication**: Verifies shared secrets and issues JWTs.
+    -   **Routing**: Routes requests to the correct Google Apps Script endpoint based on class codes.
+    -   **Enrichment**: Injects signed image URLs from Supabase into the response.
 
-  - **Vercel Serverless Functions**: A Node.js proxy API to securely communicate with the Google Apps Script backend.
+### **Data & Storage**
+-   **Database**: Google Sheets (via Google Apps Script Web App).
+-   **Object Storage**: Supabase Storage (for student profile photos).
 
-- **Data Layer**:
-  - **Google Apps Script**: Deployed as a Web App to handle incoming data and write to the spreadsheet.
-  - **Google Sheets**: Acts as the database for storing attendance records.
-
+```mermaid
+graph LR
+    User[Facilitator] -- HTTPS --> Frontend[Frontend (Vercel)]
+    Frontend -- "POST /api/absensi (JWT)" --> API[Serverless API (Node.js)]
+    
+    subgraph "Backend Services"
+    API -- "Validate & Sign" --> Supabase[Supabase Storage]
+    API -- "POST Data" --> GAS[Google Apps Script]
+    end
+    
+    GAS -- "Append Row" --> Sheet[Google Sheets]
+    Supabase -- "Signed Image URL" --> API
+    
+    API -- "JSON Response" --> Frontend
 ```
-├── README.md
-└── api/
-    ├── absensi.js
-└── index.html
-┌────────────────┐   HTTP POST   ┌──────────────────┐   HTTP POST   ┌───────────────────┐   Writes to   ┌──────────────────┐
-│                │──────────────>│                  │──────────────>│                   │──────────────>│                  │
-│   Frontend     │               │  Serverless API  │               │ Google Apps Script│               │ Google Sheet     │
-│ (index.html)   │<──────────────│   (e.g., Vercel) │<──────────────│    (Web App)      │<──────────────│                  │
-│                │   JSON Status │                  │   JSON Status │                   │   (Database)  │                  │
-└────────────────┘               └──────────────────┘               └───────────────────┘               └──────────────────┘
+
+---
+
+## 🚀 Installation & Setup
+
+### Prerequisites
+-   **Google Account** (for Sheets & Apps Script).
+-   **Supabase Account** (for image storage).
+-   **Vercel Account** (for hosting and serverless functions).
+-   **Node.js & NPM** (for local development).
+
+### 1. Google Sheets & Apps Script Setup
+1.  Create a Google Sheet with columns: `Timestamp`, `StudentID`, `Name`, `Week`, `ClassCode`, etc.
+2.  Open **Extensions > Apps Script**.
+3.  Deploy a script (based on your logic) as a **Web App**.
+    -   **Execute as**: `Me`.
+    -   **Access**: `Anyone` (API needs public access to the script URL).
+4.  Copy the **Web App URL**.
+
+### 2. Supabase Setup
+1.  Create a new Supabase project.
+2.  Create a storage bucket named `pasfoto-sab` (or update the code to match yours).
+3.  Upload student photos with filenames matching their IDs (e.g., `2025-SAB-001.png`).
+4.  Get your `SUPABASE_URL` and `SUPABASE_KEY` from Project Settings.
+
+### 3. Environment Variables
+Configure the following environment variables in your Vercel project or local `.env` file:
+
+```env
+AUTH_SECRET=your_shared_login_password
+JWT_SECRET=your_random_jwt_secret_string
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your_supabase_anon_key
+VERCEL_SCRIPT_MAP_JSON={"SAB":"https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"}
+```
+*Note: `VERCEL_SCRIPT_MAP_JSON` maps class codes (e.g., "SAB") to their respective Google Apps Script URLs.*
+
+### 4. Deploying
+**Using Vercel (Recommended):**
+1.  Clone this repository.
+2.  Import the project into Vercel.
+3.  Add the environment variables from Step 3.
+4.  Deploy!
+
+**Local Development:**
+```bash
+npm install
+npm start # or `vercel dev` if using Vercel CLI
 ```
 
-## 🛠️ Prerequisites & Dependencies
+---
 
-## 🚀 Getting Started
+## 📝 Usage Guide
 
-- **Web Browser:** Modern web browser (Chrome, Firefox, Safari, etc.)
-- **Google Apps Script:** A Google account and familiarity with Google Apps Script for configuring the backend.
-- **HTML5 QR Code Library:** Used for QR code scanning functionality, included via CDN: `https://unpkg.com/html5-qrcode`
-- **Google Spreadsheet:** A Google Spreadsheet to record attendance data.
-  Follow these steps to set up and deploy your own instance of the attendance system.
+1.  **Login**: Enter the shared facilitator password to access the scanner.
+2.  **Select Topic**: Tap "Pilih Topik" to choose the current week's subject.
+3.  **Scan**: Point the camera at a student's QR code.
+    -   **Success**: Shows student name, ID, and photo.
+    -   **Duplicate**: Warns if the student has already attended.
+    -   **Error**: Alerts on invalid codes or network issues.
+4.  **Verify**: Confirm the data has appeared in your Google Sheet.
 
-## 🚀 Installation & Setup Instructions
-
-### Step 1: Set up Google Sheets & Apps Script
-
-1.  **Clone the Repository:**
-1.  **Create a Google Sheet**: This will be your database. Create columns like `Timestamp`, `StudentID`, `Name`, `Week`, `ClassCode`, etc.
-1.  **Open Apps Script**: In your sheet, go to `Extensions` > `Apps Script`.
-1.  **Add the Script**: Paste the code from `api/absensi.js` (or your own version) into the script editor. This script should contain a `doPost(e)` function to handle incoming data.
-1.  **Deploy as a Web App**:
-    - Click `Deploy` > `New deployment`.
-    - Select `Web app` as the type.
-    - In the configuration:
-      - **Execute as**: `Me`
-      - **Who has access**: `Anyone` (This is crucial for the API to be able to call it).
-    - Click `Deploy`.
-1.  **Copy the Web App URL**: After deploying, you will get a unique URL. **Save this URL.** This is your Google Apps Script endpoint.
-
-    ```bash
-    git clone https://github.com/ojeeeeedev/absensikatekumen.git
-    cd absensikatekumen
-    ```
-
-### Step 2: Set up the Serverless API (Proxy)
-
-2.  **Set up Google Apps Script:**
-    The frontend cannot directly call the Google Apps Script due to CORS redirect issues. A serverless proxy is needed.
-
-        *   Create a new Google Spreadsheet.
-        *   Open the Script editor in your Google Sheet (Tools > Script editor).
-        *   Create a function that handles incoming POST requests and appends data to the sheet.  You will need to deploy this as a Web App.
-        *   Copy the `scriptURL` from `api/absensi.js` and replace the placeholder with your deployed Web App URL from Google Apps Script.
-
-1.  **Create a Serverless Function**: In your project (e.g., in an `/api` directory if using Vercel), create a file like `absensi.js`.
-1.  **Configure the Proxy**: This function will receive the request from the frontend, forward it to your Google Apps Script URL from Step 1, and then return the response from Google back to the frontend.
-1.  **Deploy**: Deploy your project to a hosting provider with serverless function support, like Vercel or Netlify.
-
-1.  **Configure CORS (if necessary):**
-
-### Step 3: Configure the Frontend
-
-    The provided `api/absensi.js` already includes CORS headers allowing requests from all origins.  Review the `api/absensi.js` file and adjust as needed.
-
-1.  **Update API Endpoint**: In `index.html`, find the `fetch` calls within the JavaScript. Ensure they point to your deployed serverless function endpoint (e.g., `/api/absensi`).
-
-2.  **Deploy `index.html`:**
-
-    ```javascript
-    // Example:
-    const response = await fetch("/api/absensi", {
-      // ...
-    });
-    ```
-
-    - You can directly open `index.html` in your browser from your local file system.
-    - Alternatively, you can host the `index.html` file on a web server (e.g., Netlify, Vercel, GitHub Pages).
-
-3.  **Ready to Go!**: Access the deployed URL of your frontend. The app should now be fully functional.
-
-## 📝 Usage Examples
+---
 
 ## 🤝 Contributing
 
-1.  **Open `index.html` in your browser on a mobile device.**
-    Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+We welcome contributions! Please fork the repository and submit a Pull Request.
 
-2.  **Grant camera permissions when prompted.**
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
 
-3.  **Point the camera at the QR code. The data will be automatically sent to your Google Spreadsheet.**
-
-## ⚙️ Configuration Options
-
-- **`scriptURL` in `api/absensi.js`:** This is the most important configuration. Update this with the URL of your deployed Google Apps Script Web App.
-
-## 🤝 Contributing Guidelines
-
-Contributions are welcome! To contribute:
-
-1.  Fork the repository.
-2.  Create a new branch for your feature or bug fix.
-3.  Make your changes and commit them with descriptive messages.
-4.  Submit a pull request.
-5.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`).
-6.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
-7.  Push to the Branch (`git push origin feature/AmazingFeature`).
-8.  Open a Pull Request.
-
-## ⚖️ License Information
+---
 
 ## ⚖️ License
 
-No license is currently specified for this project. All rights are reserved by the owner.
-This project is unlicensed and all rights are reserved. If you wish to adapt it, please consider forking the project and applying your own license.
+All rights reserved by **Tim Katekumen Dewasa - Paroki St. Petrus Katedral Bandung**.
+For usage inquiries, please contact the maintainers.
 
-## 🙏 Acknowledgments
+---
 
-- Uses the `html5-qrcode` library for QR code scanning.
-- **html5-qrcode**: For the excellent and easy-to-use QR code scanning library.
-- **Google Fonts**: For providing the beautiful typefaces and icons used in the design.
-- **Tim TI Katekumen Dewasa**: For the opportunity and collaboration on this project.
+**Developed with ❤️ by Tim TI Katekumen Dewasa**

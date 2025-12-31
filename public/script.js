@@ -24,7 +24,7 @@ function showProfileModal(name, id, topic, imageUrl) {
   document.getElementById('profile-name').textContent = name;
   document.getElementById('profile-id').innerHTML = `ID: ${id} &bull; Topik ${topic}`;
   const img = document.getElementById('profile-image');
-  img.src = imageUrl || "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMTUwIDE1MCI+PHJlY3Qgd2lkdGg9IjE1MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiNhYWEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L2N2Zz4=";
+  img.src = imageUrl;
   document.getElementById('profile-modal').style.display = 'flex';
 
   // Reset spinner animation to provide visual feedback for the new timeout
