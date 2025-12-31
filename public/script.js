@@ -289,7 +289,7 @@ async function handleScan(decodedText) {
 
 async function startScanner() {
   const scanConfig = { 
-      fps: 10, // Increased for faster recognition
+      fps: 30, // Increased for faster recognition
       qrbox: { width: 250, height: 250 },
       aspectRatio: 1.0,
       disableFlip: false,
