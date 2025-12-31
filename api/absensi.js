@@ -150,13 +150,15 @@ export default async function handler(req, res) {
             }
 
             if (files && files.find(f => f.name === filename)) {
-              const { data: imageData } = supabase.storage
+              const { data: imageData, error: urlError } = await supabase.storage
                 .from(bucketName)
-                .getPublicUrl(filename);
+                .createSignedUrl(filename, 60); // URL valid for 60 seconds
               
-              if (imageData && imageData.publicUrl) {
-                console.log(`[DEBUG] Public URL generated: ${imageData.publicUrl}`);
-                data.image = imageData.publicUrl;
+              if (urlError) {
+                console.error("[DEBUG] Signed URL Error:", urlError);
+              } else if (imageData && imageData.signedUrl) {
+                console.log(`[DEBUG] Signed URL generated: ${imageData.signedUrl}`);
+                data.image = imageData.signedUrl;
               }
             } else {
               console.log(`[DEBUG] File '${filename}' not found in bucket 'pasfoto-sab' root.`);
