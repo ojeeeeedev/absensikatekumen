@@ -17,18 +17,18 @@ window.addEventListener('resize', setViewportHeight);
 function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
 function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
 
-function showProfileModal(name, id, imageUrl) {
+function showProfileModal(name, id, topic, imageUrl) {
   // Clear any existing timeout to prevent premature closing if a new scan happens quickly
   clearTimeout(profileModalTimeout);
 
   document.getElementById('profile-name').textContent = name;
-  document.getElementById('profile-id').textContent = id;
+  document.getElementById('profile-id').innerHTML = `ID: ${id} &bull; Topik ${topic}`;
   const img = document.getElementById('profile-image');
   img.src = imageUrl || "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMTUwIDE1MCI+PHJlY3Qgd2lkdGg9IjE1MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiNhYWEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L2N2Zz4=";
   document.getElementById('profile-modal').style.display = 'flex';
 
   // Reset spinner animation to provide visual feedback for the new timeout
-  const spinner = document.querySelector('.timeout-spinner');
+  const spinner = document.querySelector('.circle-progress');
   if (spinner) {
     spinner.style.animation = 'none';
     spinner.offsetHeight; // Trigger reflow to restart animation
@@ -272,7 +272,7 @@ async function handleScan(decodedText) {
 
     if (res.status === "ok") {
       showStatus(res.name, "success", `ID: ${res.studentId} • Topik ${selectedWeek}`);
-      showProfileModal(res.name, res.studentId, res.image);
+      showProfileModal(res.name, res.studentId, selectedWeek, res.image);
     } else if (res.status === "duplicate") {
       showStatus("Sudah Hadir", "error", res.message);
     } else if (response.status === 400) { // Specifically handle invalid classCode from API
