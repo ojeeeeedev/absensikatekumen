@@ -135,10 +135,18 @@ export default async function handler(req, res) {
             // Naming convention: 2025-SAB-001.png (replacing slashes with dashes)
             const filename = data.studentId.replace(/\//g, '-') + '.png';
             
+            console.log(`[DEBUG] Processing StudentID: ${data.studentId} -> Filename: ${filename}`);
+
             // Check if file exists to prevent CORB errors on frontend
-            const { data: files } = await supabase.storage
+            const { data: files, error: listError } = await supabase.storage
               .from('pasfoto-sab')
               .list('', { limit: 1, search: filename });
+
+            if (listError) {
+              console.error("[DEBUG] Supabase List Error:", listError);
+            } else {
+              console.log(`[DEBUG] Supabase List Result (count: ${files?.length}):`, JSON.stringify(files));
+            }
 
             if (files && files.find(f => f.name === filename)) {
               const { data: imageData } = supabase.storage
@@ -146,12 +154,16 @@ export default async function handler(req, res) {
                 .getPublicUrl(filename);
               
               if (imageData && imageData.publicUrl) {
+                console.log(`[DEBUG] Public URL generated: ${imageData.publicUrl}`);
                 data.image = imageData.publicUrl;
               }
+            } else {
+              console.log(`[DEBUG] File '${filename}' not found in bucket 'pasfoto-sab' root.`);
             }
           }
           return res.status(200).json(data);
         } catch (e) {
+          console.error("[DEBUG] Error injecting image:", e);
           // If parsing fails or other error, return original text
           return res.status(200).send(text);
         }
