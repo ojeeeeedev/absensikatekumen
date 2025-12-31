@@ -38,8 +38,8 @@ The system employs a serverless architecture to bridge a static frontend with po
 
 ```mermaid
 graph LR
-    User[Facilitator] -- HTTPS --> Frontend[Frontend (Vercel)]
-    Frontend -- "POST /api/absensi (JWT)" --> API[Serverless API (Node.js)]
+    User[Facilitator] -- HTTPS --> Frontend["Frontend (Vercel)"]
+    Frontend -- "POST /api/absensi (JWT)" --> API["Serverless API (Node.js)"]
     
     subgraph "Backend Services"
     API -- "Validate & Sign" --> Supabase[Supabase Storage]
