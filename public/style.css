@@ -326,7 +326,7 @@ h2 {
    ========================================= */
 #status {
   margin-top: 0.8rem; width: 100%;
-  padding: 1rem; border-radius: 8px; min-height: 60px;
+  padding: 0.8rem; border-radius: 8px; min-height: 48px;
   display: flex; align-items: center; gap: 12px; text-align: left;    
   font-weight: 400;
 }
@@ -349,11 +349,11 @@ h2 {
   width: 100%; max-width: 600px;
   box-sizing: border-box; padding: 10px 20px;
   display: flex; flex-direction: column; align-items: center; /* Center align everything */
-  font-size: 0.7rem; color: #555; margin-top: 1rem;
+  font-size: 0.7rem; color: #555; margin-top: 0.5rem;
   gap: 15px; /* Add space between button and text */
 }
 
-.footer-text { text-align: center; } /* Center text */
+.footer-text { color: #9A2126; text-align: center; } /* Center text */
 .footer-link { color: #9A2126; text-decoration: none; }
 
 /* Dashboard/Speed button styled as a smaller action button */
