@@ -1,4 +1,4 @@
-# Presensi Katekumen Digital (v1.3.1)
+# Presensi Katekumen Digital (v1.4.3)
 
 A modern, responsive, and secure digital attendance system designed for the Catechumenate program at St. Peter's Cathedral, Bandung. This application streamlines the attendance process using QR codes, real-time data synchronization with Google Sheets, and secure image retrieval from Supabase.
 
@@ -8,11 +8,15 @@ A modern, responsive, and secure digital attendance system designed for the Cate
 
 - **📱 Modern Mobile-First UI**: "Liquid glass" aesthetic with a fully responsive design optimized for all devices.
 - **⚡ Fast QR Code Scanning**: Integrated `html5-qrcode` library for rapid and accurate attendance taking via device camera.
+- **🚀 Optimized Backend**: Implements Server-Side Caching (Google Apps Script `CacheService`) to speed up attendance lookups and reduce sheet read operations.
 - **🔐 Secure Facilitator Login**: Shared secret authentication mechanism with JWT (JSON Web Token) session management.
-- **📊 Real-time Data Sync**: Attendance records are instantly pushed to Google Sheets via a secure proxy.
+- **📊 Real-time Data Sync**: Attendance records are instantly pushed to Google Sheets via a secure Vercel proxy.
 - **🖼️ Dynamic Profile Images**: Automatically fetches and displays student profile photos from Supabase Storage using signed URLs.
-- **📅 Dynamic Topic Selection**: Facilitators can select weekly topics fetched dynamically from the backend.
-- **✅ Instant Feedback**: Visual and haptic-like feedback for successful scans, duplicates, or errors.
+- **📅 Dynamic Topic Selection**: Facilitators can select weekly topics (now statically defined for speed) to mark attendance against specific columns.
+- **✅ Instant Feedback**: 
+    - Visual status indicators.
+    - **Haptic Feedback**: Vibration patterns for success (single) and errors (double) on supported Android devices.
+- **🎛️ Dashboard Access**: Expandable "pill" button for quick access to the Google Sheets dashboard, secured via a server-side redirect.
 
 ---
 
@@ -26,13 +30,18 @@ The system employs a serverless architecture to bridge a static frontend with po
 - **Libraries**: `html5-qrcode` (Scanning), Google Fonts & Material Icons.
 - **Hosting**: Vercel (recommended).
 
-### **Backend (Serverless API)**
+### **Backend (Serverless API & Logic)**
 
-- **Runtime**: Node.js (Vercel Serverless Functions).
-- **Function**: Acts as a secure proxy and logic layer.
+- **Vercel Functions (Node.js)**: Acts as a secure proxy and logic layer.
   - **Authentication**: Verifies shared secrets and issues JWTs.
   - **Routing**: Routes requests to the correct Google Apps Script endpoint based on class codes.
   - **Enrichment**: Injects signed image URLs from Supabase into the response.
+  - **Config**: Securely exposes dashboard URLs via redirects (`/api/dashboard`).
+
+- **Google Apps Script**:
+  - **Business Logic**: Handles attendance rules (duplicates, week matching).
+  - **Caching**: Caches student data (ID -> Row/Name/Image) for 6 hours to minimize Sheet reads.
+  - **Database**: Reads/Writes directly to Google Sheets.
 
 ### **Data & Storage**
 
@@ -47,9 +56,10 @@ graph LR
     subgraph "Backend Services"
     API -- "Validate & Sign" --> Supabase[Supabase Storage]
     API -- "POST Data" --> GAS[Google Apps Script]
+    GAS -- "Cache Read/Write" --> Cache[Apps Script Cache]
     end
 
-    GAS -- "Append Row" --> Sheet[Google Sheets]
+    GAS -- "Append/Update" --> Sheet[Google Sheets]
     Supabase -- "Signed Image URL" --> API
 
     API -- "JSON Response" --> Frontend
@@ -92,6 +102,7 @@ JWT_SECRET=your_random_jwt_secret_string
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_supabase_anon_key
 VERCEL_SCRIPT_MAP_JSON={"SAB":"https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"}
+DASHBOARD_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=sharing
 ```
 
 _Note: `VERCEL_SCRIPT_MAP_JSON` maps class codes (e.g., "SAB") to their respective Google Apps Script URLs._
@@ -122,7 +133,7 @@ npm start # or `vercel dev` if using Vercel CLI
     - **Success**: Shows student name, ID, and photo.
     - **Duplicate**: Warns if the student has already attended.
     - **Error**: Alerts on invalid codes or network issues.
-4.  **Verify**: Confirm the data has appeared in your Google Sheet.
+4.  **Dashboard**: Click the **Dashboard Pill** (table icon) at the bottom to expand it and access the real-time Google Sheet.
 
 ---
 
