@@ -101,52 +101,47 @@ h2 {
 .header-container {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Space between logo/text and button */
+  justify-content: center; /* REVERTED: Centered layout */
   width: 100%;
-  margin-bottom: 0.2rem; /* Tighter margin */
-}
-
-.header-left {
-  display: flex; align-items: center;
+  margin-bottom: 0.5rem; /* Reverted margin */
 }
 
 .header-logo {
-  height: 48px; width: auto; margin-right: 10px;
+  height: 48px; /* Default height */
+  width: auto;
+  margin-right: 12px;
 }
-/* Override for the scanner view logo specifically - SMALLER NOW */
+/* Override for the scanner view logo specifically - REVERTED */
 #scanner-ui .header-logo {
-  height: 42px; /* Reduced from 72px */
+  height: 72px; /* Reverted to 72px */
   width: auto;
 }
 
 .header-text {
-  display: flex; flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
-.header-text h1 { 
-  text-align: left; margin: 0; 
-  font-size: 0.95rem; /* Smaller font */
-  line-height: 1.2;
-}
-.header-text h2 { 
-  text-align: left; padding: 0; margin: 0;
-  font-size: 0.65rem; 
-  line-height: 1.2;
-}
+/* Reverted text styles */
+.header-text h1 { text-align: left; margin: 0 0 4px 0; font-size: 1.1rem; line-height: normal; }
+.header-text h2 { text-align: left; padding: 0; margin: 0; font-size: 0.7rem; line-height: normal; }
+
 
 /* New Header Dashboard Button */
 .header-dashboard-btn {
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ddd;
+  background: #1b5e20; /* GREEN FILL */
+  color: #e8f5e9;
   width: 36px; height: 36px;
   border-radius: 50%;
   text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #2e7d32;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 .header-dashboard-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
+  background: #2e7d32;
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 6px 8px rgba(0,0,0,0.4);
 }
 .header-dashboard-btn .material-icons-outlined {
   font-size: 1.2rem;
@@ -176,10 +171,7 @@ h2 {
 
 #login-container {
   display: flex; flex-direction: column; align-items: center;
-  justify-content: center;
-  height: 100%;
   width: 100%;
-  padding: 1rem; /* Add padding here */
   animation: fadeInUp 0.5s ease-out forwards;
 }
 #login-container > h1 { margin-bottom: 1rem; }
