@@ -11,32 +11,6 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&family=Inter:wght@300;400;500&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <style>
-      .profile-card { position: relative; }
-      .timeout-spinner {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        width: 24px;
-        height: 24px;
-        pointer-events: none;
-      }
-      .timeout-spinner svg {
-        width: 100%; height: 100%; transform: rotate(0deg);
-      }
-      .circle-bg {
-        fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 4;
-      }
-      .circle-progress {
-        fill: none; stroke: #fff; stroke-width: 4;
-        stroke-dasharray: 100, 100;
-        stroke-dashoffset: 0;
-        animation: countdown 4s linear forwards;
-      }
-      @keyframes countdown {
-        to { stroke-dashoffset: 100; }
-      }
-    </style>
   </head>
 
   <body>
@@ -46,7 +20,7 @@
     </div>
 
     <!-- Loading screen for login -->
-    <div id="login-loader" style="display: none; flex-direction: column; align-items: center; justify-content: center; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000;">
+    <div id="login-loader">
       <div class="spinner"></div>
     </div>
 
@@ -57,10 +31,9 @@
     <main id="app-container" class="glass-container">
       <div id="login-container">
         <h1>Login Fasilitator</h1>
-        <!-- New error container -->
+        <!-- Error container -->
         <div id="login-error-box" class="login-error-message" style="display: none;" onmouseover="hideLoginError()"></div>
         <div class="input-wrapper">
-          <!-- Added oninput to hide error when user types -->
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
           <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
           <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility_off</span>
@@ -69,10 +42,10 @@
         <br>
       </div>
 
-      <div id="scanner-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+      <div id="scanner-ui">
   
         <div class="header-container">
-          <img src="pewartaan_invert.png" class="header-logo" alt="Logo" width="72" height="72" style="height: 72px; width: auto;">
+          <img src="pewartaan_invert.png" class="header-logo" alt="Logo">
           <div class="header-text">
             <h1>Presensi Katekumen Dewasa</h1>
             <h2>Paroki St. Petrus - Katedral 
@@ -88,27 +61,29 @@
         <div id="reader-container">
             <div id="camera-loader">
                 <div class="spinner"></div>
-                <span style="margin-top:10px;">Memuat Kamera...</span>
+                <span>Memuat Kamera...</span>
             </div>
-            <div id="reader" style="min-height: 300px;"></div>
+            <div id="reader"></div>
         </div>
   
         <div id="status" class="idle"></div> 
   
-        <footer style="width: 100%; max-width: 600px; box-sizing: border-box; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
-          <div style="text-align: left;">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" style=" color: #9A2126; text-decoration: none;">v1.2</a> © 2026 Tim Katekumen Dewasa<br>
+        <footer class="app-footer">
+          <a href="https://docs.google.com/spreadsheets/d/1R850gMMg-97HQAWNHQ-aId7l_Ta1Ewl9sN5YvoqDo0g/edit?usp=sharing" class="speed-icon-link">
+            <span class="material-icons-outlined">dashboard</span>
+            <span>Akses Dashboard</span>
+          </a>
+          <div class="footer-text">
+            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link">v1.2</a> © 2026 Tim Katekumen Dewasa<br>
             <a href="https://wa.link/rogbpe">Ada kendala?</a>
           </div>
-          <a href="https://docs.google.com/spreadsheets/d/1R850gMMg-97HQAWNHQ-aId7l_Ta1Ewl9sN5YvoqDo0g/edit?usp=sharing" style="width: 40px; height: 40px; background-color: #4CAF50; color: white; display: flex; align-items: center; justify-content: center; border-radius: 12px; text-decoration: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-shrink: 0;">
-            <span class="material-icons-outlined">speed</span>
-          </a>
         </footer>
       </div>
+      
       <!-- This footer is only for the login screen -->
-      <div id="login-footer" style="display: block;">
-        <div style="font-size: 0.8rem; text-align: center">
-          <a href="https://wa.link/3yg0ug" style="color: #9A2126; text-decoration: none;">Lupa password?</a><br>
+      <div id="login-footer">
+        <div>
+          <a href="https://wa.link/3yg0ug">Lupa password?</a><br>
         </div>
       </div>
     </main>
@@ -118,7 +93,7 @@
             <h3>Pilih Topik Absensi</h3>
             <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="Cari topik...">
             <div id="topic-list-container">
-                <div style="text-align:center; padding:20px; color:#666;">Memuat topik...</div>
+                <div class="topic-loading-placeholder">Memuat topik...</div>
             </div>
             <div class="modal-close-btn" onclick="closeTopicModal()">Tutup</div>
         </div>

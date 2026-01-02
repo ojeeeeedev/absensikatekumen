@@ -1,21 +1,76 @@
-/* --- GLOBAL RESET & TRANSITIONS --- */
+/* =========================================
+   GLOBAL RESET & CORE LAYOUT
+   ========================================= */
+/* Applies border-box to all elements and sets a default transition */
 * { box-sizing: border-box; transition: all 0.2s ease-out; }
 
+/* 
+  Main body layout.
+  Uses a vertical gradient background.
+  '--vh' is a custom property set by JS for mobile viewport height fix.
+*/
 html, body {
   margin: 0; padding: 0; width: 100%;
-  height: 100vh; height: calc(var(--vh, 1vh) * 100); /* Use JS-powered height */
+  height: 100vh; height: calc(var(--vh, 1vh) * 100); 
   background: linear-gradient(to bottom, #000000 0%, #330B0D 50%, #000000 100%);
-  color: #e0e0e0; /* Slightly softer white for better reading */
+  color: #e0e0e0; /* Softer white for text */
   font-family: "Inter", sans-serif;
   display: flex; justify-content: center; align-items: center;
-  overflow: hidden; /* Prevent scrolling on the body */
+  overflow: hidden; /* Prevent body scrolling */
 }
 
-/* --- FLOATING GLASS CONTAINER --- */
+/* =========================================
+   BACKGROUND ANIMATION
+   ========================================= */
+/* Fixed container for the animated liquid blobs */
+.liquid-background {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; 
+  height: 100vh; height: calc(var(--vh, 1vh) * 100);
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Common styles for the blobs */
+.liquid-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.7;
+}
+
+/* Red blob animation */
+.shape1 {
+  width: 350px; height: 350px;
+  background: #9A2126;
+  top: -100px; left: -150px;
+  animation: move1 25s infinite alternate;
+}
+
+/* Purple blob animation */
+.shape2 {
+  width: 250px; height: 250px;
+  background: #4a148c;
+  bottom: -50px; right: -80px;
+  animation: move2 30s infinite alternate;
+}
+
+@keyframes move1 {
+  from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(200px, 300px) rotate(180deg); }
+}
+@keyframes move2 {
+  from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); }
+}
+
+/* =========================================
+   MAIN APP CONTAINER (GLASSMORPHISM)
+   ========================================= */
+/* The central card containing the app UI */
 .glass-container {
   background: rgba(25, 25, 25, 0.4);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px); /* For Safari */
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
   box-shadow: 0 16px 64px 0 rgba(0, 0, 0, 0.5);
@@ -27,7 +82,22 @@ html, body {
   position: relative; z-index: 2;
 }
 
-/* --- ON-LOAD ANIMATIONS --- */
+/* =========================================
+   TYPOGRAPHY
+   ========================================= */
+h1 { margin: 0 0 0.4rem 0; font-size: 1.1rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
+h2 { 
+  margin: 0; font-size: 0.7rem; color: #888; text-align: center; font-weight: 400; 
+  font-family: 'Cinzel', serif;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 1rem;
+}
+
+/* =========================================
+   ANIMATIONS & TRANSITIONS
+   ========================================= */
+/* Fade in up effect for container children */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -36,20 +106,8 @@ html, body {
   opacity: 0; /* Start hidden */
   animation: fadeInUp 0.6s ease-out forwards;
 }
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes fadeOutDown {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(20px); }
-}
-@keyframes shake {
-  10%, 90% { transform: translateX(-1px); }
-  20%, 80% { transform: translateX(2px); }
-  30%, 50%, 70% { transform: translateX(-4px); }
-  40%, 60% { transform: translateX(4px); }
-}
+
+/* Staggered animation delays for UI elements */
 .glass-container > h1 { animation-delay: 0.1s; }
 .glass-container > h2 { animation-delay: 0.2s; }
 .glass-container > #topic-trigger { animation-delay: 0.3s; }
@@ -57,50 +115,30 @@ html, body {
 .glass-container > #status { animation-delay: 0.5s; }
 .glass-container > footer { animation-delay: 0.6s; }
 
-/* --- LIQUID GLASS BACKGROUND --- */
-.liquid-background {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; 
-  height: 100vh; height: calc(var(--vh, 1vh) * 100); /* Fallback and JS-powered height */
-  z-index: 1;
-  overflow: hidden;
-}
-.liquid-shape {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.7;
-}
-.shape1 {
-  width: 350px; height: 350px;
-  background: #9A2126;
-  top: -100px; left: -150px;
-  animation: move1 25s infinite alternate;
-}
-.shape2 {
-  width: 250px; height: 250px;
-  background: #4a148c; /* A complementary deep purple */
-  bottom: -50px; right: -80px;
-  animation: move2 30s infinite alternate;
-}
-@keyframes move1 {
-  from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(200px, 300px) rotate(180deg); }
-}
-@keyframes move2 {
-  from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); }
+/* Generic Fade In */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-h1 { margin: 0 0 0.4rem 0; font-size: 1.1rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
-h2 { 
-  margin: 0; font-size: 0.7rem; color: #888; text-align: center; font-weight: 400; 
-  font-family: 'Cinzel', serif;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 0 1rem; /* Prevent text from touching edges */
+/* Generic Fade Out Down (for exit animations) */
+@keyframes fadeOutDown {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(20px); }
 }
 
-/* --- FOOTER WITH LOGO --- */
+/* Shake animation for error feedback */
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+
+/* =========================================
+   HEADER & LOGOS
+   ========================================= */
+/* Header inside the scanner view */
 .header-container {
   display: flex;
   align-items: center;
@@ -108,11 +146,18 @@ h2 {
   width: 100%;
   margin-bottom: 0.5rem;
 }
+
 .header-logo {
-  height: 48px;
+  height: 48px; /* Default height */
   width: auto;
   margin-right: 12px;
 }
+/* Override for the scanner view logo specifically (migrated from inline) */
+#scanner-ui .header-logo {
+  height: 72px;
+  width: auto;
+}
+
 .header-text {
   display: flex;
   flex-direction: column;
@@ -120,145 +165,125 @@ h2 {
 .header-text h1 { text-align: left; margin: 0 0 4px 0; }
 .header-text h2 { text-align: left; padding: 0; }
 
-/* --- FIXED LOGIN HEADER --- */
+/* Fixed logo at the top for login screen (currently commented out in HTML) */
 #login-header {
-  position: fixed;
-  top: 20px;
-  left: 0;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-  pointer-events: none;
+  position: fixed; top: 20px; left: 0;
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  z-index: 1; pointer-events: none;
 }
-#login-header img {
-  height: 80px;
-  width: auto;
-  margin-right: 0;
-}
-.login-header-text {
-  text-align: left;
-  font-size: 0.7rem;
-  color: #ddd;
-  line-height: 1.2;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-}
-.login-header-text div:first-child {
-  font-weight: bold;
-}
+#login-header img { height: 80px; width: auto; }
 
-/* --- FIXED BOTTOM LOGO --- */
+/* Fixed branding at the bottom of the screen */
 #bottom-logo {
-  position: fixed;
-  bottom: 20px;
-  left: 0;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-  pointer-events: none;
+  position: fixed; bottom: 20px; left: 0;
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  z-index: 1; pointer-events: none;
 }
-#bottom-logo img {
-  height: 72px;
-  width: auto;
-  margin-right: 15px;
+#bottom-logo img { height: 72px; width: auto; margin-right: 15px; }
+
+.login-header-text {
+  text-align: left; font-size: 0.7rem; color: #ddd;
+  line-height: 1.2; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.login-header-text div:first-child { font-weight: bold; }
+
+/* =========================================
+   LOGIN SCREEN
+   ========================================= */
+/* Loader overlay for login process (migrated from inline) */
+#login-loader {
+  display: none; /* Toggled by JS */
+  flex-direction: column; align-items: center; justify-content: center;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 1000;
 }
 
-/* --- LOGIN INPUT WRAPPER --- */
-.input-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 350px; /* Set a max width to center it */
-  text-align: center;
-}
-.password-toggle-icon {
-  position: absolute;
-  top: 50%; right: 1rem;
-  transform: translateY(-50%);
-  cursor: pointer; color: #888;
-}
-#password-toggle {
-  right: 1rem;
-}
-#login-success-icon {
-  /* Position it just to the left of the password toggle */
-  right: 3rem; 
-  color: #4CAF50; /* Green checkmark */
-  animation: fadeIn 0.3s;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* --- LOGIN SCREEN --- */
 #login-container {
-  display: flex; flex-direction: column;
-  align-items: center; /* Center items */
+  display: flex; flex-direction: column; align-items: center;
   width: 100%;
   animation: fadeInUp 0.5s ease-out forwards;
 }
-#login-container > h1 {
-  margin-bottom: 1rem; /* Adjust space below title */
+#login-container > h1 { margin-bottom: 1rem; }
+
+.input-wrapper {
+  position: relative; width: 100%; max-width: 350px; text-align: center;
 }
+
+/* Password input field */
 #login-input {
-  width: 100%;
-  padding: 0.8rem 3rem; /* Equal padding on left/right for centering */
-  font-size: 1rem;
-  background: #333;
-  border: 1px solid #444;
-  border-radius: 8px;
-  color: #eee;
-  text-align: center;
-  margin-bottom: 0.2rem;
+  width: 100%; padding: 0.8rem 3rem;
+  font-size: 1rem; background: #333;
+  border: 1px solid #444; border-radius: 8px;
+  color: #eee; text-align: center; margin-bottom: 0.2rem;
 }
+
+/* Password visibility toggle icon */
+.password-toggle-icon {
+  position: absolute; top: 50%; right: 1rem;
+  transform: translateY(-50%);
+  cursor: pointer; color: #888;
+}
+
+/* Success checkmark icon inside input */
+#login-success-icon {
+  right: 3rem; color: #4CAF50;
+  animation: fadeIn 0.3s;
+  position: absolute; top: 50%; transform: translateY(-50%);
+}
+
+/* Login submit button */
 #login-btn {
-  width: 100%;
-  max-width: 100px; /* Set a max width to center it */
-  margin-top: 1rem;
+  width: 100%; max-width: 100px;
+  margin-top: 1rem; margin-bottom: 0.4rem;
   padding: 0.4rem;
-  background: #9A2126;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: center;
-  font-weight: 250;
-  margin-bottom: 0.4rem;
+  background: #9A2126; color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px;
+  cursor: pointer; text-align: center; font-weight: 250;
 }
-#login-status {
-  color: #d32f2f
-}
-/* Updated styles for the floating error message */
+
+/* Error message box floating over login */
 .login-error-message {
-  position: absolute;
-  text-align: center;
-  top: 50%;
-  left: 0; /* Align to the left edge of the parent */
-  right: 0; /* Align to the right edge of the parent */
-  margin-left: auto; /* These two lines center the element */
-  margin-right: auto;
-  transform: translate(-50%, -50%); /* This centers it on the screen */
-  width:70%; /* Set a width */
-  z-index: 1001; /* Make sure it's above the login loader overlay */
-  padding: 0.8rem 1.5rem; /* Add horizontal padding */
-  background: rgba(78, 9, 9, 0.5); /* Translucent red background */
-  backdrop-filter: blur(8px); /* Frosted glass effect */
+  position: absolute; top: 50%; left: 0; right: 0;
+  margin: 0 auto; transform: translate(0, -50%); /* Center horizontally */
+  width: 70%;
+  z-index: 1001;
+  padding: 0.8rem 1.5rem;
+  background: rgba(78, 9, 9, 0.5); backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: #ffebee;
-  border: 1px solid #661818;
-  border-radius: 8px;
+  border: 1px solid #661818; border-radius: 8px;
   animation: fadeInUp 0.3s ease-out forwards;
+  text-align: center;
 }
 
+/* Login Footer */
+#login-footer {
+  display: block;
+}
+#login-footer div {
+  font-size: 0.8rem; text-align: center;
+}
+#login-footer a {
+  color: #9A2126; text-decoration: none;
+}
 
-/* --- TOPIC SELECTOR --- */
+/* =========================================
+   SCANNER UI
+   ========================================= */
+/* Container for the scanner view (migrated from inline) */
+#scanner-ui {
+  display: none; /* Toggled by JS */
+  width: 100%;
+  flex-direction: column; align-items: center;
+}
+
+/* Topic selector dropdown trigger */
 .topic-selector-btn {
   width: 100%;
   background: #222; color: #ddd;
   font-size: .95rem; text-align: left;
-  padding: 0.8rem 1rem; 
+  padding: 0.8rem 1rem;
   border-radius: 8px; border: 1px solid #333;
   margin-top: 0.8rem;
   display: flex; justify-content: space-between; align-items: center;
@@ -266,63 +291,17 @@ h2 {
 }
 .topic-selector-btn:after { content: '▼'; font-size: 0.7rem; color: #666; }
 
-/* --- MODAL --- */
-#topic-modal {
-  display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.9); z-index: 999;
-  flex-direction: column; justify-content: flex-end;
-}
-.modal-content {
-  background: #1a1a1a;
-  border-top-left-radius: 16px; border-top-right-radius: 16px;
-  padding: 1rem; max-height: 70vh;
-  display: flex; flex-direction: column;
-  border-top: 1px solid #333;
-}
-.modal-content > h3 {
-  margin: 0 0 10px 0; text-align: center; color: #fff; font-weight:400;
-}
-#topic-list-container {
-  overflow-y: auto;
-  display: flex; flex-direction: column; gap: 10px;
-}
-#topic-search-input { /* Removed emoji from placeholder */
-  width: 100%; position: sticky; top: 0; z-index: 1;
-  padding: 0.8rem 1rem;
-  margin-bottom: 10px;
-  background: #333;
-  border: 1px solid #444;
-  border-radius: 8px;
-  color: #eee;
-  font-size: 0.9rem;
-}
-.topic-option {
-  padding: 1rem; background: #2a2a2a; border-radius: 8px;
-  text-align: left; font-size: 0.9rem; color: #ccc;
-  border: 1px solid #333; cursor: pointer;
-}
-.topic-option.active {
-  border-color: #9A2126; background: #332222; color: #E57373;
-}
-.modal-close-btn {
-  margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;
-  text-align: center; border-radius: 8px; cursor: pointer;
-  position: sticky; bottom: 0;
-}
-
-/* --- CAMERA CONTAINER --- */
+/* Camera viewport container */
 #reader-container {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
+  position: relative; width: 100%; aspect-ratio: 1 / 1;
   margin-top: 0.8rem; border-radius: 14px;
-  overflow: hidden; 
-  background: #000;
-  border: 1px solid #333; /* Simple border instead of corners */
+  overflow: hidden; background: #000;
+  border: 1px solid #333;
 }
-#reader { width: 100%; height: 100%; object-fit: cover; }
+/* The actual video element container (migrated from inline) */
+#reader { width: 100%; height: 100%; min-height: 300px; object-fit: cover; }
 
-/* --- LOADING SPINNER --- */
+/* Camera loading spinner overlay */
 #camera-loader {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   background: #111;
@@ -331,6 +310,9 @@ h2 {
   z-index: 10;
   flex-direction: column; gap: 15px;
 }
+#camera-loader span { margin-top: 10px; } /* Migrated from inline */
+
+/* General Spinner Animation */
 .spinner {
   border: 3px solid rgba(255, 255, 255, 0.1);
   border-top: 3px solid #9A2126;
@@ -339,31 +321,121 @@ h2 {
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* --- STATUS BOX (Text Only, No Bold) --- */
+/* =========================================
+   STATUS INDICATORS
+   ========================================= */
 #status {
   margin-top: 0.8rem; width: 100%;
   padding: 1rem; border-radius: 8px; min-height: 60px;
   display: flex; align-items: center; gap: 12px; text-align: left;    
-  font-weight: 400; /* Ensuring normal weight */
+  font-weight: 400;
 }
 
-/* Simple Status Colors */
+/* Status variants */
 .idle { background: #111; color: #aaa; border: 1px dashed #333; justify-content: center; }
 .success { background: #1b5e20; color: #e8f5e9; border: 1px solid #2e7d32; }
 .error { background: #b71c1c; color: #ffebee; border: 1px solid #d32f2f; }
 .processing { background: #332222; color: #E57373; border: 1px solid #9A2126; justify-content: center; }
 
-/* Typography inside status */
 .status-text-container { display: flex; flex-direction: column; }
-.main-text { font-size: 1rem; margin-bottom: 4px; font-weight: 400; } /* Not bold */
+.main-text { font-size: 1rem; margin-bottom: 4px; font-weight: 400; }
 .sub-text { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
 
-footer { font-size: 0.7rem; color: #555; margin-top: 1rem; text-align: center; }
-footer a { color: #9A2126; text-decoration: none; }
+/* =========================================
+   APP FOOTER
+   ========================================= */
+/* Main footer in scanner view */
+.app-footer {
+  width: 100%; max-width: 600px;
+  box-sizing: border-box; padding: 10px 20px;
+  display: flex; flex-direction: column; align-items: center; /* Center align everything */
+  font-size: 0.7rem; color: #555; margin-top: 1rem;
+  gap: 15px; /* Add space between button and text */
+}
 
-/* --- SUCCESS PROFILE POPUP --- */
+.footer-text { text-align: center; } /* Center text */
+.footer-link { color: #9A2126; text-decoration: none; }
+
+/* Dashboard/Speed button styled as a full-width action button */
+.speed-icon-link {
+  width: 100%; /* Full width like scanner */
+  padding: 12px;
+  background-color: #1b5e20; /* Darker green */
+  color: #e8f5e9; /* Light green/white text */
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 8px; text-decoration: none;
+  border: 1px solid #2e7d32; /* Green border */
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Drop shadow */
+  font-family: 'Cinzel', serif; /* Matching typography */
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+}
+
+.speed-icon-link:hover {
+  background-color: #2e7d32;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 8px rgba(0,0,0,0.4);
+}
+
+.speed-icon-link .material-icons-outlined {
+  font-size: 1.2rem;
+}
+
+/* =========================================
+   TOPIC MODAL
+   ========================================= */
+#topic-modal {
+  display: none; /* Toggled by JS */
+  position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.9); z-index: 999;
+  flex-direction: column; justify-content: flex-end;
+}
+
+.modal-content {
+  background: #1a1a1a;
+  border-top-left-radius: 16px; border-top-right-radius: 16px;
+  padding: 1rem; max-height: 70vh;
+  display: flex; flex-direction: column;
+  border-top: 1px solid #333;
+}
+.modal-content > h3 { margin: 0 0 10px 0; text-align: center; color: #fff; font-weight:400; }
+
+#topic-list-container {
+  overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+}
+/* Placeholder for loading state (migrated from inline/JS injection) */
+.topic-loading-placeholder {
+  text-align: center; padding: 20px; color: #666;
+}
+
+#topic-search-input {
+  width: 100%; position: sticky; top: 0; z-index: 1;
+  padding: 0.8rem 1rem; margin-bottom: 10px;
+  background: #333; border: 1px solid #444; border-radius: 8px;
+  color: #eee; font-size: 0.9rem;
+}
+
+.topic-option {
+  padding: 1rem; background: #2a2a2a; border-radius: 8px;
+  text-align: left; font-size: 0.9rem; color: #ccc;
+  border: 1px solid #333; cursor: pointer;
+}
+.topic-option.active {
+  border-color: #9A2126; background: #332222; color: #E57373;
+}
+
+.modal-close-btn {
+  margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;
+  text-align: center; border-radius: 8px; cursor: pointer;
+  position: sticky; bottom: 0;
+}
+
+/* =========================================
+   PROFILE MODAL & CARD (Migrated from <style>)
+   ========================================= */
 #profile-modal {
-  display: none; /* Toggled via JS: style.display = 'flex' */
+  display: none; /* Toggled by JS */
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.85);
   z-index: 2000;
@@ -372,51 +444,75 @@ footer a { color: #9A2126; text-decoration: none; }
   -webkit-backdrop-filter: blur(8px);
 }
 
+/* Profile Card Container */
 .profile-card {
-  background: #1b5e20; /* Green background from .success */
-  border: 1px solid #2e7d32; /* Green border from .success */
+  position: relative; /* Migrated */
+  background: #1b5e20;
+  border: 1px solid #2e7d32;
   border-radius: 24px;
   padding: 2.5rem 2rem;
   width: 85%; max-width: 340px;
   display: flex; flex-direction: column; align-items: center;
-  box-shadow: 0 25px 50px -12px rgba(27, 94, 32, 0.5); /* Green shadow */
+  box-shadow: 0 25px 50px -12px rgba(27, 94, 32, 0.5);
   animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Animations for Profile Card */
 @keyframes popIn {
   from { opacity: 0; transform: scale(0.9) translateY(20px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
-
 @keyframes fadeOut {
   from { opacity: 1; transform: scale(1) translateY(0); }
   to { opacity: 0; transform: scale(0.9) translateY(20px); }
 }
 
+/* Countdown Spinner for Profile Modal */
+.timeout-spinner {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 24px; height: 24px;
+  pointer-events: none;
+}
+.timeout-spinner svg {
+  width: 100%; height: 100%; transform: rotate(0deg);
+}
+
+/* SVG Circle Styles */
+.circle-bg {
+  fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 4;
+}
+.circle-progress {
+  fill: none; stroke: #fff; stroke-width: 4;
+  stroke-dasharray: 100, 100;
+  stroke-dashoffset: 0;
+  animation: countdown 4s linear forwards;
+}
+@keyframes countdown {
+  to { stroke-dashoffset: 100; }
+}
+
+/* Profile Image */
 .profile-img-wrapper {
   width: 120px; height: 120px;
-  border-radius: 50%;
-  padding: 4px;
-  background: linear-gradient(135deg, #2e7d32, #1b5e20); /* Green gradient */
+  border-radius: 50%; padding: 4px;
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
   margin-bottom: 1.2rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
-
 .profile-img-wrapper img {
   width: 100%; height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #1a1a1a;
-  background-color: #000;
+  border-radius: 50%; object-fit: cover;
+  border: 3px solid #1a1a1a; background-color: #000;
 }
 
+/* Profile Text */
 .profile-name {
   font-family: 'Cinzel', serif;
   font-size: 1.4rem; color: #fff;
   text-align: center; margin-bottom: 0.4rem;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
-
 .profile-id {
   font-family: "Inter", sans-serif;
   font-size: 0.9rem; color: #aaa;
@@ -424,21 +520,20 @@ footer a { color: #9A2126; text-decoration: none; }
   letter-spacing: 0.05em;
 }
 
+/* Close Button */
 .profile-close-btn {
-  background: #2e7d32; /* Green button */
-  color: #fff;
+  background: #2e7d32; color: #fff;
   border: 1px solid rgba(255,255,255,0.2);
   padding: 0.8rem 2.5rem;
   border-radius: 50px;
   font-size: 0.9rem;
   cursor: pointer;
-  font-weight: 500; /* Keep existing font-weight */
+  font-weight: 500;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3); /* Green shadow */
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
 }
-
 .profile-close-btn:hover {
-  background: #388e3c; /* Darker green on hover */
-  transform: translateY(-2px); /* Keep existing hover effect */
-  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4); /* Green shadow on hover */
+  background: #388e3c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
 }

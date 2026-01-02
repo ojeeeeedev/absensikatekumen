@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 export default async function handler(req, res) {
@@ -38,52 +39,17 @@ export default async function handler(req, res) {
   // --- End SCRIPT_MAP loading ---
 
   // ============================================================
-  // 1️⃣ HANDLE GET  →  loadTopikList()
-  // ============================================================
-  if (req.method === "GET") {
-    try {
-      const { action, classCode } = req.query;
-
-      if (action === "topik") {
-        // --- Token validation for this specific action ---
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token || !jwt.verify(token, JWT_SECRET)) {
-          return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
-        }
-        // --- End token validation ---
-
-        const scriptURL = SCRIPT_MAP[classCode];
-
-        if (!scriptURL) {
-          return res.status(400).json({
-            status: "error",
-            message: "Invalid classCode",
-          });
-        }
-
-        // Forward to App Script as GET
-        const response = await fetch(`${scriptURL}?action=topik`);
-        const text = await response.text();
-
-        // Return whatever the script returns
-        return res.status(200).send(text);
-      }
-
-      return res.status(400).json({ status: "error", message: "Invalid action" });
-    } catch (err) {
-      console.error("GET error:", err);
-      return res.status(500).json({ status: "error", message: err.message });
-    }
-  }
-
-  // ============================================================
   // 2️⃣ HANDLE POST  →  Save absensi or Login
   // ============================================================
   if (req.method === "POST") {
     try {
       // Check if it's a login action
       if (req.body.action === 'login') {
-        if (req.body.secret === SHARED_SECRET) {
+        const providedSecret = Buffer.from(String(req.body.secret || ''));
+        const storedSecret = Buffer.from(String(SHARED_SECRET || ''));
+        
+        if (providedSecret.length === storedSecret.length && 
+            crypto.timingSafeEqual(providedSecret, storedSecret)) {
           // Secret is correct, issue a token
           const token = jwt.sign(
             { authorized: true }, // payload
@@ -100,7 +66,7 @@ export default async function handler(req, res) {
       // If not login, handle it as an attendance submission
       // --- Token validation for this specific action is required ---
       const token = req.headers.authorization?.split(' ')[1];
-      if (!token || !jwt.verify(token, JWT_SECRET)) {
+      if (!token || !jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })) {
         return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
       }
 

@@ -1,8 +1,16 @@
 {
+  "name": "absensikatekumen",
+  "version": "1.2.0",
+  "scripts": {
+    "start": "vercel dev"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.2.0",
     "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "vercel": "latest"
   }
 }

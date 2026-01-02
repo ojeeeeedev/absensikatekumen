@@ -191,11 +191,11 @@ async function loadTopikList() {
         listContainer.appendChild(div);
       });
     } else {
-      listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Data topik tidak ditemukan.</div>`;
+      listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:#d32f2f;">Data topik tidak ditemukan.</div>`;
     }
   } catch (err) {
     console.error(err);
-    listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Gagal memuat topik.</div>`;
+    listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:#d32f2f;">Gagal memuat topik.</div>`;
   }
 }
 
