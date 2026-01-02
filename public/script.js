@@ -267,13 +267,17 @@ async function handleScan(decodedText) {
     let res = JSON.parse(text);
 
     if (res.status === "ok") {
+      if (navigator.vibrate) navigator.vibrate(200); // Success vibration
       showStatus(res.name, "success", `ID: ${res.studentId} • Topik ${selectedWeek}`);
       showProfileModal(res.name, res.studentId, selectedWeek, res.image);
     } else if (res.status === "duplicate") {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Double vibration
       showStatus("Sudah Hadir", "error", res.message);
-    } else if (response.status === 400) { // Specifically handle invalid classCode from API
+    } else if (response.status === 400) { 
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Double vibration
       showStatus("Kode QR Tidak Valid", "error", res.message);
     } else {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Double vibration
       showStatus("Gagal", "error", res.message);
     }
   } catch (error) {
