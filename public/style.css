@@ -210,7 +210,7 @@ h2 {
 #login-footer {
   display: block; padding: 1rem;
 }
-#login-footer div { font-size: 0.8rem; text-align: center; }
+#login-footer div { font-size: 0.9rem; text-align: center; }
 #login-footer a { color: #9A2126; text-decoration: none; }
 
 /* =========================================
@@ -303,7 +303,7 @@ h2 {
 .processing { background: #332222; color: #E57373; border: 1px solid #9A2126; justify-content: center; }
 
 .status-text-container { display: flex; flex-direction: column; }
-.main-text { font-size: 0.8rem; margin-bottom: 4px; font-weight: 400; }
+.main-text { font-size: 0.8rem; font-weight: 400; }
 .sub-text { font-size: 0.6rem; opacity: 0.8; font-weight: 300; }
 
 /* =========================================
@@ -312,31 +312,56 @@ h2 {
 /* Main footer in scanner view */
 .app-footer {
   width: 100%; max-width: 600px;
-  box-sizing: border-box; padding: 5px 10px; /* Minimal padding */
-  display: flex; flex-direction: row; /* Changed to row */
-  align-items: center; justify-content: center;
+  box-sizing: border-box; padding: 5px 10px;
+  display: flex; flex-direction: column; /* Reverted to column */
+  align-items: center;
   font-size: 0.65rem; color: #555; margin-top: 0.5rem;
-  gap: 15px; /* Spacing between button and text */
+  gap: 5px;
 }
 
-.dashboard-footer-btn {
+.footer-text { text-align: center; }
+.footer-link { color: #9A2126; text-decoration: none; }
+
+/* Expandable Dashboard Pill */
+#dashboard-pill {
   display: flex; align-items: center; justify-content: center;
   background: #1b5e20; color: #e8f5e9;
-  width: 36px; height: 36px;
-  border-radius: 50%;
+  height: 40px; min-width: 40px; /* Start as circle/square */
+  border-radius: 20px; /* Fully rounded */
   cursor: pointer;
   border: 1px solid #2e7d32;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  margin-bottom: 0.5rem;
+  padding: 0 10px; /* Initial padding */
+  overflow: hidden;
 }
-.dashboard-footer-btn:hover {
-  transform: scale(1.1);
+
+#dashboard-pill:hover {
+  background: #2e7d32;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+}
+
+/* Text inside the pill */
+.pill-text {
+  max-width: 0; opacity: 0;
+  white-space: nowrap;
+  font-size: 0.85rem; font-weight: 500;
+  transition: all 0.4s ease;
+  margin-left: 0;
+}
+
+/* Expanded State */
+#dashboard-pill.expanded {
+  min-width: 160px; /* Expand width */
   background: #2e7d32;
 }
-.dashboard-footer-btn .material-icons-outlined { font-size: 1.2rem; }
 
-.footer-text { text-align: left; /* Changed to left since it's next to button */ }
-.footer-link { color: #9A2126; text-decoration: none; }
+#dashboard-pill.expanded .pill-text {
+  max-width: 150px; opacity: 1;
+  margin-left: 8px; /* Space between icon and text */
+}
 
 /* =========================================
    TOPIC MODAL

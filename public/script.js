@@ -13,6 +13,25 @@ setViewportHeight();
 // Reset on resize or orientation change
 window.addEventListener('resize', setViewportHeight);
 
+// --- DASHBOARD INTERACTION ---
+function handleDashboardClick(element) {
+  // If already expanded, just open the modal immediately
+  if (element.classList.contains('expanded')) {
+     openDashboardModal();
+     return;
+  }
+
+  // Animate expansion
+  element.classList.add('expanded');
+  
+  // Wait for animation to finish (or partly finish) then open modal
+  setTimeout(() => {
+    openDashboardModal();
+    // Optional: Collapse back after opening?
+    // setTimeout(() => element.classList.remove('expanded'), 1000); 
+  }, 400); 
+}
+
 // --- DASHBOARD MODAL ---
 function openDashboardModal() {
   document.getElementById('dashboard-modal').style.display = 'flex';
