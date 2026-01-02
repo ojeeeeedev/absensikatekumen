@@ -14,40 +14,29 @@ setViewportHeight();
 window.addEventListener('resize', setViewportHeight);
 
 // --- DASHBOARD INTERACTION ---
-function handleDashboardClick(element) {
-  // If already expanded, just open the modal immediately
+function handleDashboardClick(event, element) {
+  event.stopPropagation(); // Prevent document click from immediately closing it
+
+  // If already expanded, navigate to dashboard
   if (element.classList.contains('expanded')) {
-     openDashboardModal();
+     window.open('/api/dashboard', '_blank');
      return;
   }
 
   // Animate expansion
   element.classList.add('expanded');
-  
-  // Wait for animation to finish (or partly finish) then open modal
-  setTimeout(() => {
-    openDashboardModal();
-    // Optional: Collapse back after opening?
-    // setTimeout(() => element.classList.remove('expanded'), 1000); 
-  }, 400); 
 }
 
-// --- DASHBOARD MODAL ---
-function openDashboardModal() {
-  document.getElementById('dashboard-modal').style.display = 'flex';
-}
-
-function closeDashboardModal(event) {
-  // Close only if clicking the background (not the button itself)
-  if (event.target.id === 'dashboard-modal') {
-    const content = document.querySelector('.dashboard-modal-content');
-    content.style.animation = 'fadeOutUp 0.2s ease-in forwards';
-    setTimeout(() => {
-      document.getElementById('dashboard-modal').style.display = 'none';
-      content.style.animation = 'slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'; // Reset animation
-    }, 200);
+// Global click listener to retract dashboard pill
+document.addEventListener('click', (event) => {
+  const pill = document.getElementById('dashboard-pill');
+  if (pill && pill.classList.contains('expanded')) {
+    // If click is outside the pill
+    if (!pill.contains(event.target)) {
+      pill.classList.remove('expanded');
+    }
   }
-}
+});
 
 // --- MODAL FUNCTIONS ---
 function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
