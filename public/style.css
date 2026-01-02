@@ -43,6 +43,7 @@ html, body {
 /* =========================================
    MAIN APP CONTAINER (GLASSMORPHISM)
    ========================================= */
+
 .glass-container {
   background: rgba(25, 25, 25, 0.4);
   backdrop-filter: blur(12px);
@@ -52,7 +53,6 @@ html, body {
   box-shadow: 0 16px 64px 0 rgba(0, 0, 0, 0.5);
   width: 100%;
   max-width: 450px;
-  height: 100%;
   max-height: 95vh; /* Give a little vertical breathing room */
   display: flex;
   flex-direction: column;
@@ -143,6 +143,8 @@ h2 {
 
 #login-container {
   display: flex; flex-direction: column; align-items: center;
+  justify-content: center;
+  height: 100%;
   width: 100%;
   padding: 1rem; /* Add padding here */
   animation: fadeInUp 0.5s ease-out forwards;
