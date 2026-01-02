@@ -180,15 +180,10 @@ async function handleLogin() {
 async function loadTopikList() {
   const listContainer = document.getElementById("topic-list-container");
   try {
-    const token = sessionStorage.getItem('authToken');
-    const res = await fetch(`/api/absensi?action=topik&classCode=SAB`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await res.json();
-
-    if (data.status === "ok" && Array.isArray(data.topik)) {
+    // Use STATIC_TOPICS from topics.js
+    if (typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS)) {
       listContainer.innerHTML = "";
-      data.topik.forEach((item) => {
+      STATIC_TOPICS.forEach((item) => {
         const div = document.createElement("div");
         div.className = "topic-option";
         div.textContent = `${item.week}. ${item.name}`;
@@ -199,6 +194,7 @@ async function loadTopikList() {
       listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Data topik tidak ditemukan.</div>`;
     }
   } catch (err) {
+    console.error(err);
     listContainer.innerHTML = `<div style="text-align:center; color:#d32f2f;">Gagal memuat topik.</div>`;
   }
 }
