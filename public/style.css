@@ -1,72 +1,48 @@
 /* =========================================
    GLOBAL RESET & CORE LAYOUT
    ========================================= */
-/* Applies border-box to all elements and sets a default transition */
 * { box-sizing: border-box; transition: all 0.2s ease-out; }
 
-/* 
-  Main body layout.
-  Uses a vertical gradient background.
-  '--vh' is a custom property set by JS for mobile viewport height fix.
-*/
 html, body {
   margin: 0; padding: 0; width: 100%;
-  min-height: 100vh; /* Allow scrolling */
+  height: 100vh; 
+  height: calc(var(--vh, 1vh) * 100);
   background: linear-gradient(to bottom, #000000 0%, #330B0D 50%, #000000 100%);
-  color: #e0e0e0; /* Softer white for text */
+  color: #e0e0e0;
   font-family: "Inter", sans-serif;
   display: flex; justify-content: center; align-items: center;
-  overflow-y: auto; /* Enable vertical scrolling */
+  overflow: hidden; 
 }
 
 /* =========================================
    BACKGROUND ANIMATION
    ========================================= */
-/* Fixed container for the animated liquid blobs */
 .liquid-background {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; 
-  height: 100vh; height: calc(var(--vh, 1vh) * 100);
-  z-index: 1;
-  overflow: hidden;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 1; overflow: hidden;
 }
 
-/* Common styles for the blobs */
 .liquid-shape {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.7;
+  position: absolute; border-radius: 50%;
+  filter: blur(100px); opacity: 0.7;
 }
 
-/* Red blob animation */
 .shape1 {
-  width: 350px; height: 350px;
-  background: #9A2126;
-  top: -100px; left: -150px;
-  animation: move1 25s infinite alternate;
+  width: 350px; height: 350px; background: #9A2126;
+  top: -100px; left: -150px; animation: move1 25s infinite alternate;
 }
 
-/* Purple blob animation */
 .shape2 {
-  width: 250px; height: 250px;
-  background: #4a148c;
-  bottom: -50px; right: -80px;
-  animation: move2 30s infinite alternate;
+  width: 250px; height: 250px; background: #4a148c;
+  bottom: -50px; right: -80px; animation: move2 30s infinite alternate;
 }
 
-@keyframes move1 {
-  from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(200px, 300px) rotate(180deg); }
-}
-@keyframes move2 {
-  from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); }
-}
+@keyframes move1 { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(200px, 300px) rotate(180deg); } }
+@keyframes move2 { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-250px, -200px) rotate(-180deg); } }
 
 /* =========================================
    MAIN APP CONTAINER (GLASSMORPHISM)
    ========================================= */
-/* The central card containing the app UI */
 .glass-container {
   background: rgba(25, 25, 25, 0.4);
   backdrop-filter: blur(12px);
@@ -74,12 +50,14 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
   box-shadow: 0 16px 64px 0 rgba(0, 0, 0, 0.5);
-  padding: 1rem; margin: 1rem; /* Uniform margin */
-  width: 100%; /* Changed from 95% to work better with margin */
+  width: 100%;
   max-width: 450px;
-  display: flex; flex-direction: column; align-items: center;
-  /* Removed max-height to allow content to grow */
+  height: 100%;
+  max-height: 95vh; /* Give a little vertical breathing room */
+  display: flex;
+  flex-direction: column;
   position: relative; z-index: 2;
+  overflow: hidden; /* Prevent content from spilling out */
 }
 
 /* =========================================
@@ -97,88 +75,56 @@ h2 {
 /* =========================================
    ANIMATIONS & TRANSITIONS
    ========================================= */
-/* Fade in up effect for container children */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.glass-container > * {
-  opacity: 0; /* Start hidden */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Staggered animation is now on scanner-ui children */
+#scanner-ui > * {
   animation: fadeInUp 0.6s ease-out forwards;
 }
+#scanner-ui > .header-container { animation-delay: 0.1s; }
+#scanner-ui > #topic-trigger { animation-delay: 0.2s; }
+#scanner-ui > #reader-container { animation-delay: 0.3s; }
+#scanner-ui > #status { animation-delay: 0.4s; }
+#scanner-ui > .app-footer { animation-delay: 0.5s; }
 
-/* Staggered animation delays for UI elements */
-.glass-container > h1 { animation-delay: 0.1s; }
-.glass-container > h2 { animation-delay: 0.2s; }
-.glass-container > #topic-trigger { animation-delay: 0.3s; }
-.glass-container > #reader-container { animation-delay: 0.4s; }
-.glass-container > #status { animation-delay: 0.5s; }
-.glass-container > footer { animation-delay: 0.6s; }
 
-/* Generic Fade In */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Generic Fade Out Down (for exit animations) */
-@keyframes fadeOutDown {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(20px); }
-}
-
-/* Shake animation for error feedback */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOutDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); } }
 @keyframes shake {
-  10%, 90% { transform: translateX(-1px); }
-  20%, 80% { transform: translateX(2px); }
-  30%, 50%, 70% { transform: translateX(-4px); }
-  40%, 60% { transform: translateX(4px); }
+  10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); }
 }
 
 /* =========================================
    HEADER & LOGOS
    ========================================= */
-/* Header inside the scanner view */
 .header-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   width: 100%;
-  margin-bottom: 0.5rem;
+  padding: 1rem 1rem 0.5rem 1rem; /* Add padding */
+  flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .header-logo {
-  height: 48px; /* Default height */
-  width: auto;
-  margin-right: 12px;
+  height: 48px; width: auto; margin-right: 12px;
 }
-/* Override for the scanner view logo specifically (migrated from inline) */
 #scanner-ui .header-logo {
-  height: 72px;
+  height: 60px; /* Slightly smaller to save space */
   width: auto;
 }
 
-.header-text {
-  display: flex;
-  flex-direction: column;
-}
+.header-text { display: flex; flex-direction: column; }
 .header-text h1 { text-align: left; margin: 0 0 4px 0; }
 .header-text h2 { text-align: left; padding: 0; }
 
-/* Fixed logo at the top for login screen (currently commented out in HTML) */
-#login-header {
-  position: fixed; top: 20px; left: 0;
-  width: 100%; display: flex; align-items: center; justify-content: center;
+#login-header, #bottom-logo {
+  position: fixed; left: 0; width: 100%;
+  display: flex; align-items: center; justify-content: center;
   z-index: 1; pointer-events: none;
 }
+#login-header { top: 20px; }
 #login-header img { height: 80px; width: auto; }
-
-/* Fixed branding at the bottom of the screen */
-#bottom-logo {
-  position: fixed; bottom: 20px; left: 0;
-  width: 100%; display: flex; align-items: center; justify-content: center;
-  z-index: 1; pointer-events: none;
-}
+#bottom-logo { bottom: 20px; }
 #bottom-logo img { height: 72px; width: auto; margin-right: 15px; }
 
 .login-header-text {
@@ -190,18 +136,15 @@ h2 {
 /* =========================================
    LOGIN SCREEN
    ========================================= */
-/* Loader overlay for login process (migrated from inline) */
 #login-loader {
-  display: none; /* Toggled by JS */
-  flex-direction: column; align-items: center; justify-content: center;
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.8);
-  z-index: 1000;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000;
 }
 
 #login-container {
   display: flex; flex-direction: column; align-items: center;
   width: 100%;
+  padding: 1rem; /* Add padding here */
   animation: fadeInUp 0.5s ease-out forwards;
 }
 #login-container > h1 { margin-bottom: 1rem; }
@@ -210,107 +153,109 @@ h2 {
   position: relative; width: 100%; max-width: 350px; text-align: center;
 }
 
-/* Password input field */
 #login-input {
-  width: 100%; padding: 0.8rem 3rem;
-  font-size: 1rem; background: #333;
-  border: 1px solid #444; border-radius: 8px;
+  width: 100%; padding: 0.8rem 3rem; font-size: 1rem;
+  background: #333; border: 1px solid #444; border-radius: 8px;
   color: #eee; text-align: center; margin-bottom: 0.2rem;
 }
 
-/* Password visibility toggle icon */
 .password-toggle-icon {
-  position: absolute; top: 50%; right: 1rem;
-  transform: translateY(-50%);
+  position: absolute; top: 50%; right: 1rem; transform: translateY(-50%);
   cursor: pointer; color: #888;
 }
 
-/* Success checkmark icon inside input */
 #login-success-icon {
-  right: 3rem; color: #4CAF50;
-  animation: fadeIn 0.3s;
+  right: 3rem; color: #4CAF50; animation: fadeIn 0.3s;
   position: absolute; top: 50%; transform: translateY(-50%);
 }
 
-/* Login submit button */
 #login-btn {
-  width: 100%; max-width: 100px;
-  margin-top: 1rem; margin-bottom: 0.4rem;
-  padding: 0.4rem;
-  background: #9A2126; color: white;
+  width: 100%; max-width: 100px; margin-top: 1rem; margin-bottom: 0.4rem;
+  padding: 0.4rem; background: #9A2126; color: white;
   border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px;
   cursor: pointer; text-align: center; font-weight: 250;
 }
 
-/* Error message box floating over login */
 .login-error-message {
   position: absolute; top: 50%; left: 0; right: 0;
-  margin: 0 auto; transform: translate(0, -50%); /* Center horizontally */
-  width: 70%;
-  z-index: 1001;
-  padding: 0.8rem 1.5rem;
+  margin: 0 auto; transform: translate(0, -50%);
+  width: 70%; z-index: 1001; padding: 0.8rem 1.5rem;
   background: rgba(78, 9, 9, 0.5); backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  color: #ffebee;
-  border: 1px solid #661818; border-radius: 8px;
-  animation: fadeInUp 0.3s ease-out forwards;
-  text-align: center;
+  color: #ffebee; border: 1px solid #661818; border-radius: 8px;
+  animation: fadeInUp 0.3s ease-out forwards; text-align: center;
 }
 
-/* Login Footer */
 #login-footer {
-  display: block;
+  display: block; padding: 1rem;
 }
-#login-footer div {
-  font-size: 0.8rem; text-align: center;
-}
-#login-footer a {
-  color: #9A2126; text-decoration: none;
-}
+#login-footer div { font-size: 0.8rem; text-align: center; }
+#login-footer a { color: #9A2126; text-decoration: none; }
 
 /* =========================================
    SCANNER UI
    ========================================= */
-/* Container for the scanner view (migrated from inline) */
 #scanner-ui {
-  display: none; /* Toggled by JS */
+  display: none;
   width: 100%;
-  flex-direction: column; align-items: center;
+  height: 100%; /* Take full height of glass-container */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Vertically center content */
+  padding: 0 1rem; /* Horizontal padding */
+  overflow-y: auto; /* Allow scrolling ONLY if content overflows */
+}
+
+/* This container will hold the main content that might need to scroll */
+.scanner-content-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    /* Let this grow and shrink, but center the whole block */
+    flex-grow: 1;
+    justify-content: center;
 }
 
 /* Topic selector dropdown trigger */
 .topic-selector-btn {
   width: 100%;
-  background: #222; color: #ddd;
-  font-size: .95rem; text-align: left;
-  padding: 0.8rem 1rem;
-  border-radius: 8px; border: 1px solid #333;
-  margin-top: 0.5rem;
+  background: #222; color: #ddd; font-size: .95rem; text-align: left;
+  padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #333;
   display: flex; justify-content: space-between; align-items: center;
   cursor: pointer;
+  margin-bottom: 0.5rem; /* Space below button */
+  flex-shrink: 0;
 }
 .topic-selector-btn:after { content: '▼'; font-size: 0.7rem; color: #666; }
 
 /* Camera viewport container */
 #reader-container {
-  position: relative; width: 100%; aspect-ratio: 1 / 1;
-  margin-top: 0.5rem; border-radius: 14px;
-  overflow: hidden; background: #000;
+  position: relative;
+  width: 100%;
+  max-width: 400px; /* Prevent it from being too large on tablets */
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
   border: 1px solid #333;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0; /* IMPORTANT: Prevent scanner from shrinking */
 }
-/* The actual video element container (migrated from inline) */
-#reader { width: 100%; height: 100%; min-height: 300px; object-fit: cover; }
+#reader {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 /* Camera loading spinner overlay */
 #camera-loader {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: #111;
-  display: flex; justify-content: center; align-items: center;
-  color: #888; font-size: 0.9rem;
-  z-index: 10;
+  background: #111; display: flex; justify-content: center; align-items: center;
+  color: #888; font-size: 0.9rem; z-index: 10;
   flex-direction: column; gap: 15px;
 }
-#camera-loader span { margin-top: 10px; } /* Migrated from inline */
+#camera-loader span { margin-top: 10px; }
 
 /* General Spinner Animation */
 .spinner {
@@ -325,10 +270,12 @@ h2 {
    STATUS INDICATORS
    ========================================= */
 #status {
-  margin-top: 0.8rem; width: 100%;
+  width: 100%;
   padding: 0.8rem; border-radius: 8px; min-height: 48px;
   display: flex; align-items: center; gap: 12px; text-align: left;    
   font-weight: 400;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 
 /* Status variants */
@@ -344,50 +291,40 @@ h2 {
 /* =========================================
    APP FOOTER
    ========================================= */
-/* Main footer in scanner view */
 .app-footer {
-  width: 100%; max-width: 600px;
-  box-sizing: border-box; padding: 10px 20px;
-  display: flex; flex-direction: column; align-items: center; /* Center align everything */
-  font-size: 0.7rem; color: #555; margin-top: 0.5rem;
-  gap: 15px; /* Add space between button and text */
+  width: 100%;
+  padding: 0.5rem 1rem 1rem 1rem; /* Adjust padding */
+  display: flex; flex-direction: column; align-items: center;
+  font-size: 0.7rem; color: #555;
+  gap: 15px;
+  flex-shrink: 0; /* Prevent footer from shrinking */
 }
 
-.footer-text { text-align: center; } /* Center text */
+.footer-text { text-align: center; }
 .footer-link { color: #9A2126; text-decoration: none; }
 
-/* Dashboard/Speed button styled as a smaller action button */
 .speed-icon-link {
-  width: auto; /* Fit content instead of full width */
-  padding: 8px 16px; /* Smaller padding */
-  background-color: #1b5e20; /* Darker green */
-  color: #e8f5e9; /* Light green/white text */
+  width: auto; padding: 8px 16px;
+  background-color: #1b5e20; color: #e8f5e9;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  border-radius: 8px; text-decoration: none;
-  border: 1px solid #2e7d32; /* Green border */
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Drop shadow */
-  font-family: 'Inter', sans-serif; /* Changed to Inter */
-  font-size: 0.85rem; /* Slightly smaller font */
-  letter-spacing: 0.02em;
-  transition: all 0.2s ease;
+  border-radius: 8px; text-decoration: none; border: 1px solid #2e7d32;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  font-family: 'Inter', sans-serif; font-size: 0.85rem;
+  letter-spacing: 0.02em; transition: all 0.2s ease;
 }
 
 .speed-icon-link:hover {
-  background-color: #2e7d32;
-  transform: translateY(-1px);
+  background-color: #2e7d32; transform: translateY(-1px);
   box-shadow: 0 6px 8px rgba(0,0,0,0.4);
 }
 
-.speed-icon-link .material-icons-outlined {
-  font-size: 1.2rem;
-}
+.speed-icon-link .material-icons-outlined { font-size: 1.2rem; }
 
 /* =========================================
    TOPIC MODAL
    ========================================= */
 #topic-modal {
-  display: none; /* Toggled by JS */
-  position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
+  display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.9); z-index: 999;
   flex-direction: column; justify-content: flex-end;
 }
@@ -404,10 +341,7 @@ h2 {
 #topic-list-container {
   overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
 }
-/* Placeholder for loading state (migrated from inline/JS injection) */
-.topic-loading-placeholder {
-  text-align: center; padding: 20px; color: #666;
-}
+.topic-loading-placeholder { text-align: center; padding: 20px; color: #666; }
 
 #topic-search-input {
   width: 100%; position: sticky; top: 0; z-index: 1;
@@ -421,9 +355,7 @@ h2 {
   text-align: left; font-size: 0.9rem; color: #ccc;
   border: 1px solid #333; cursor: pointer;
 }
-.topic-option.active {
-  border-color: #9A2126; background: #332222; color: #E57373;
-}
+.topic-option.active { border-color: #9A2126; background: #332222; color: #E57373; }
 
 .modal-close-btn {
   margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;
@@ -432,108 +364,68 @@ h2 {
 }
 
 /* =========================================
-   PROFILE MODAL & CARD (Migrated from <style>)
+   PROFILE MODAL & CARD
    ========================================= */
 #profile-modal {
-  display: none; /* Toggled by JS */
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  z-index: 2000;
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.85); z-index: 2000;
   justify-content: center; align-items: center;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 
-/* Profile Card Container */
 .profile-card {
-  position: relative; /* Migrated */
-  background: #1b5e20;
-  border: 1px solid #2e7d32;
-  border-radius: 24px;
-  padding: 2.5rem 2rem;
+  position: relative; background: #1b5e20; border: 1px solid #2e7d32;
+  border-radius: 24px; padding: 2.5rem 2rem;
   width: 85%; max-width: 340px;
   display: flex; flex-direction: column; align-items: center;
   box-shadow: 0 25px 50px -12px rgba(27, 94, 32, 0.5);
   animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Animations for Profile Card */
-@keyframes popIn {
-  from { opacity: 0; transform: scale(0.9) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes fadeOut {
-  from { opacity: 1; transform: scale(1) translateY(0); }
-  to { opacity: 0; transform: scale(0.9) translateY(20px); }
-}
+@keyframes popIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes fadeOut { from { opacity: 1; transform: scale(1) translateY(0); } to { opacity: 0; transform: scale(0.9) translateY(20px); } }
 
-/* Countdown Spinner for Profile Modal */
 .timeout-spinner {
-  position: absolute;
-  top: 16px; right: 16px;
-  width: 24px; height: 24px;
-  pointer-events: none;
+  position: absolute; top: 16px; right: 16px;
+  width: 24px; height: 24px; pointer-events: none;
 }
-.timeout-spinner svg {
-  width: 100%; height: 100%; transform: rotate(0deg);
-}
+.timeout-spinner svg { width: 100%; height: 100%; transform: rotate(0deg); }
 
-/* SVG Circle Styles */
-.circle-bg {
-  fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 4;
-}
+.circle-bg { fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 4; }
 .circle-progress {
   fill: none; stroke: #fff; stroke-width: 4;
-  stroke-dasharray: 100, 100;
-  stroke-dashoffset: 0;
+  stroke-dasharray: 100, 100; stroke-dashoffset: 0;
   animation: countdown 4s linear forwards;
 }
-@keyframes countdown {
-  to { stroke-dashoffset: 100; }
-}
+@keyframes countdown { to { stroke-dashoffset: 100; } }
 
-/* Profile Image */
 .profile-img-wrapper {
-  width: 120px; height: 120px;
-  border-radius: 50%; padding: 4px;
+  width: 120px; height: 120px; border-radius: 50%; padding: 4px;
   background: linear-gradient(135deg, #2e7d32, #1b5e20);
-  margin-bottom: 1.2rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  margin-bottom: 1.2rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 .profile-img-wrapper img {
-  width: 100%; height: 100%;
-  border-radius: 50%; object-fit: cover;
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
   border: 3px solid #1a1a1a; background-color: #000;
 }
 
-/* Profile Text */
 .profile-name {
-  font-family: 'Cinzel', serif;
-  font-size: 1.4rem; color: #fff;
+  font-family: 'Cinzel', serif; font-size: 1.4rem; color: #fff;
   text-align: center; margin-bottom: 0.4rem;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 .profile-id {
-  font-family: "Inter", sans-serif;
-  font-size: 0.9rem; color: #aaa;
-  margin-bottom: 2rem;
-  letter-spacing: 0.05em;
+  font-family: "Inter", sans-serif; font-size: 0.9rem; color: #aaa;
+  margin-bottom: 2rem; letter-spacing: 0.05em;
 }
 
-/* Close Button */
 .profile-close-btn {
-  background: #2e7d32; color: #fff;
-  border: 1px solid rgba(255,255,255,0.2);
-  padding: 0.8rem 2.5rem;
-  border-radius: 50px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+  background: #2e7d32; color: #fff; border: 1px solid rgba(255,255,255,0.2);
+  padding: 0.8rem 2.5rem; border-radius: 50px;
+  font-size: 0.9rem; cursor: pointer; font-weight: 500;
+  transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
 }
 .profile-close-btn:hover {
-  background: #388e3c;
-  transform: translateY(-2px);
+  background: #388e3c; transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
 }
