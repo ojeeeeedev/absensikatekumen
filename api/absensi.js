@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const { createClient } = require('@supabase/supabase-js');
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
   // CORS
