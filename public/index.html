@@ -53,9 +53,9 @@
               <br>Bandung
             </h2>
           </div>
-          <a href="/api/dashboard" class="header-dashboard-btn" target="_blank" aria-label="Dashboard" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);">
-            <span class="material-icons-outlined">table_chart</span>
-          </a>
+          <div class="header-dashboard-btn" onclick="openDashboardModal()" aria-label="Dashboard" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); cursor: pointer;">
+            <span class="material-icons-outlined">dashboard</span>
+          </div>
         </div>
   
         <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
@@ -85,7 +85,16 @@
       <!-- This footer is only for the login screen -->
       <div id="login-footer">
         <div>
-          <a href="https://wa.link/3yg0ug">Lupa password?</a><br>
+          <a href="https://wa.link/3yg0ug">Lupa password?</a><br><br>
+        </div>
+        <div class="login-branding" style="display: flex; align-items: center; justify-content: center; margin-top: 1rem;">
+            <img src="pewartaan_invert.png" alt="Logo" width="56" height="56" style="margin-right: 12px;">
+            <div class="login-header-text" style="text-align: left; font-size: 0.65rem; color: #ccc; line-height: 1.2;">
+                <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
+                <div>Bidang Pewartaan</div>
+                <div>Paroki St. Petrus - Katedral</div>
+                <div>Keuskupan Bandung</div>
+            </div>
         </div>
       </div>
     </main>
@@ -119,14 +128,14 @@
         </div>
     </div>
 
-    <div id="bottom-logo">
-      <img src="pewartaan_invert.png" alt="Logo" width="64" height="64">
-      <div class="login-header-text">
-        <div>Subseksi Katekumen Dewasa</div>
-        <div>Bidang Pewartaan</div>
-        <div>Paroki St. Petrus - Katedral</div>
-        <div>Keuskupan Bandung</div>
-      </div>
+    <!-- Dashboard Modal -->
+    <div id="dashboard-modal" onclick="closeDashboardModal(event)">
+        <div class="dashboard-modal-content">
+            <a href="/api/dashboard" target="_blank" class="dashboard-action-btn">
+                <span class="material-icons-outlined">table_chart</span>
+                <span>Akses Dashboard</span>
+            </a>
+        </div>
     </div>
 
     <script src="topics.js"></script>

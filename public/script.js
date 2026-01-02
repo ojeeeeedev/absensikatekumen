@@ -13,6 +13,23 @@ setViewportHeight();
 // Reset on resize or orientation change
 window.addEventListener('resize', setViewportHeight);
 
+// --- DASHBOARD MODAL ---
+function openDashboardModal() {
+  document.getElementById('dashboard-modal').style.display = 'flex';
+}
+
+function closeDashboardModal(event) {
+  // Close only if clicking the background (not the button itself)
+  if (event.target.id === 'dashboard-modal') {
+    const content = document.querySelector('.dashboard-modal-content');
+    content.style.animation = 'fadeOutUp 0.2s ease-in forwards';
+    setTimeout(() => {
+      document.getElementById('dashboard-modal').style.display = 'none';
+      content.style.animation = 'slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'; // Reset animation
+    }, 200);
+  }
+}
+
 // --- MODAL FUNCTIONS ---
 function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
 function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
