@@ -353,7 +353,7 @@ h2 {
   gap: 15px; /* Add space between button and text */
 }
 
-.footer-text { color: #9A2126; text-align: center; } /* Center text */
+.footer-text { text-align: center; } /* Center text */
 .footer-link { color: #9A2126; text-decoration: none; }
 
 /* Dashboard/Speed button styled as a smaller action button */
