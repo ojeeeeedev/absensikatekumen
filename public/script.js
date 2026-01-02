@@ -155,13 +155,13 @@ async function handleLogin() {
           const loginContainer = document.getElementById('login-container');
           const loginFooter = document.getElementById('login-footer');
           const loginHeader = document.getElementById('login-header');
-          const bottomLogo = document.getElementById('bottom-logo');
+          const bottomBranding = document.getElementById('bottom-branding');
 
           // 3. Animate login screen out
           loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
           loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
           if (loginHeader) loginHeader.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          if (bottomLogo) bottomLogo.style.animation = 'fadeOutDown 0.4s ease-in forwards';
+          if (bottomBranding) bottomBranding.style.animation = 'fadeOutDown 0.4s ease-in forwards';
 
           // 4. After fade out, hide it and show scanner UI
           setTimeout(() => {
@@ -169,7 +169,7 @@ async function handleLogin() {
             loginContainer.style.display = 'none';
             loginFooter.style.display = 'none';
             if (loginHeader) loginHeader.style.display = 'none';
-            if (bottomLogo) bottomLogo.style.display = 'none';
+            if (bottomBranding) bottomBranding.style.display = 'none';
             loginLoader.style.display = 'none'; // Hide loader
             document.getElementById('scanner-ui').style.display = 'flex';
             initializeApp(); // Load the main app
@@ -348,8 +348,8 @@ window.onload = () => {
       document.getElementById('login-container').style.display = 'none';
       const loginHeader = document.getElementById('login-header');
       if (loginHeader) loginHeader.style.display = 'none';
-      const bottomLogo = document.getElementById('bottom-logo');
-      if (bottomLogo) bottomLogo.style.display = 'none';
+      const bottomBranding = document.getElementById('bottom-branding');
+      if (bottomBranding) bottomBranding.style.display = 'none';
       document.getElementById('scanner-ui').style.display = 'flex';
       document.getElementById('login-footer').style.display = 'none';
       initializeApp();

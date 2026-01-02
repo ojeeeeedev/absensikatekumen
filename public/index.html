@@ -53,9 +53,6 @@
               <br>Bandung
             </h2>
           </div>
-          <div class="header-dashboard-btn" onclick="openDashboardModal()" aria-label="Dashboard" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); cursor: pointer;">
-            <span class="material-icons-outlined">dashboard</span>
-          </div>
         </div>
   
         <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
@@ -73,9 +70,12 @@
         <div id="status" class="idle"></div> 
   
         <footer class="app-footer">
+          <div class="dashboard-footer-btn" onclick="openDashboardModal()">
+            <span class="material-icons-outlined">table_chart</span>
+          </div>
           <div class="footer-text">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link">v1.4.1</a> © 2026 Tim Katekumen
-            <br><a href="https://wa.link/rogbpe" style="opacity: 0.7; font-size: 0.9em;">Bantuan?</a>
+            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link">v1.4.2</a> © 2026 Tim Katekumen
+            <br><a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
           </div>
         </footer>
           
@@ -85,19 +85,21 @@
       <!-- This footer is only for the login screen -->
       <div id="login-footer">
         <div>
-          <a href="https://wa.link/3yg0ug">Lupa password?</a><br><br>
-        </div>
-        <div class="login-branding" style="display: flex; align-items: center; justify-content: center; margin-top: 1rem;">
-            <img src="pewartaan_invert.png" alt="Logo" width="56" height="56" style="margin-right: 12px;">
-            <div class="login-header-text" style="text-align: left; font-size: 0.65rem; color: #ccc; line-height: 1.2;">
-                <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
-                <div>Bidang Pewartaan</div>
-                <div>Paroki St. Petrus - Katedral</div>
-                <div>Keuskupan Bandung</div>
-            </div>
+          <a href="https://wa.link/3yg0ug">Lupa password?</a><br>
         </div>
       </div>
     </main>
+
+    <!-- Bottom Branding (Fixed Footer) -->
+    <div id="bottom-branding" style="position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 1;">
+        <img src="pewartaan_invert.png" alt="Logo" width="56" height="56" style="margin-right: 12px;">
+        <div style="text-align: left; font-size: 0.65rem; color: #ccc; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
+            <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
+            <div>Bidang Pewartaan</div>
+            <div>Paroki St. Petrus - Katedral</div>
+            <div>Keuskupan Bandung</div>
+        </div>
+    </div>
 
     <div id="topic-modal">
         <div class="modal-content">

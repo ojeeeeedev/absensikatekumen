@@ -313,12 +313,29 @@ h2 {
 .app-footer {
   width: 100%; max-width: 600px;
   box-sizing: border-box; padding: 5px 10px; /* Minimal padding */
-  display: flex; flex-direction: column; align-items: center;
-  font-size: 0.65rem; color: #555; margin-top: 0.3rem; /* Minimal top margin */
-  gap: 5px;
+  display: flex; flex-direction: row; /* Changed to row */
+  align-items: center; justify-content: center;
+  font-size: 0.65rem; color: #555; margin-top: 0.5rem;
+  gap: 15px; /* Spacing between button and text */
 }
 
-.footer-text { text-align: center; }
+.dashboard-footer-btn {
+  display: flex; align-items: center; justify-content: center;
+  background: #1b5e20; color: #e8f5e9;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid #2e7d32;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.dashboard-footer-btn:hover {
+  transform: scale(1.1);
+  background: #2e7d32;
+}
+.dashboard-footer-btn .material-icons-outlined { font-size: 1.2rem; }
+
+.footer-text { text-align: left; /* Changed to left since it's next to button */ }
 .footer-link { color: #9A2126; text-decoration: none; }
 
 /* =========================================
@@ -370,8 +387,8 @@ h2 {
 #dashboard-modal {
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.6); z-index: 3000;
-  justify-content: center; align-items: flex-start; /* Align top for "below button" feel */
-  padding-top: 80px; /* Offset from top */
+  justify-content: center; align-items: center; /* Centered */
+  padding-top: 0; /* Remove offset */
   backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
   animation: fadeIn 0.2s ease-out;
 }
