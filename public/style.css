@@ -122,8 +122,8 @@ h2 {
   flex-direction: column;
 }
 /* Reverted text styles */
-.header-text h1 { text-align: left; margin: 0 0 4px 0; font-size: 1.1rem; line-height: normal; }
-.header-text h2 { text-align: left; padding: 0; margin: 0; font-size: 0.7rem; line-height: normal; }
+.header-text h1 { text-align: left; margin: 0 0 4px 0; font-size: 0.8rem; line-height: normal; }
+.header-text h2 { text-align: left; padding: 0; margin: 0; font-size: 0.6rem; line-height: normal; }
 
 
 /* New Header Dashboard Button */
@@ -303,8 +303,8 @@ h2 {
 .processing { background: #332222; color: #E57373; border: 1px solid #9A2126; justify-content: center; }
 
 .status-text-container { display: flex; flex-direction: column; }
-.main-text { font-size: 1rem; margin-bottom: 4px; font-weight: 400; }
-.sub-text { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
+.main-text { font-size: 0.8rem; margin-bottom: 4px; font-weight: 400; }
+.sub-text { font-size: 0.6rem; opacity: 0.8; font-weight: 300; }
 
 /* =========================================
    APP FOOTER
