@@ -49,15 +49,14 @@ html, body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
+  border-radius: 20px; /* Slightly reduced radius */
   box-shadow: 0 16px 64px 0 rgba(0, 0, 0, 0.5);
-  width: 100%;
+  padding: 0.8rem; margin: 0.5rem; /* Very tight margins */
+  width: 100%; /* Changed from 95% to work better with margin */
   max-width: 450px;
-  max-height: 95vh; /* Give a little vertical breathing room */
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column; align-items: center;
+  /* Removed max-height to allow content to grow */
   position: relative; z-index: 2;
-  overflow: hidden; /* Prevent content from spilling out */
 }
 
 /* =========================================
@@ -98,34 +97,68 @@ h2 {
 /* =========================================
    HEADER & LOGOS
    ========================================= */
+/* Header inside the scanner view */
 .header-container {
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Space between logo/text and button */
   width: 100%;
-  padding: 1rem 1rem 0.5rem 1rem; /* Add padding */
-  flex-shrink: 0; /* Prevent header from shrinking */
+  margin-bottom: 0.2rem; /* Tighter margin */
+}
+
+.header-left {
+  display: flex; align-items: center;
 }
 
 .header-logo {
-  height: 48px; width: auto; margin-right: 12px;
+  height: 48px; width: auto; margin-right: 10px;
 }
+/* Override for the scanner view logo specifically - SMALLER NOW */
 #scanner-ui .header-logo {
-  height: 60px; /* Slightly smaller to save space */
+  height: 42px; /* Reduced from 72px */
   width: auto;
 }
 
-.header-text { display: flex; flex-direction: column; }
-.header-text h1 { text-align: left; margin: 0 0 4px 0; }
-.header-text h2 { text-align: left; padding: 0; }
+.header-text {
+  display: flex; flex-direction: column;
+}
+.header-text h1 { 
+  text-align: left; margin: 0; 
+  font-size: 0.95rem; /* Smaller font */
+  line-height: 1.2;
+}
+.header-text h2 { 
+  text-align: left; padding: 0; margin: 0;
+  font-size: 0.65rem; 
+  line-height: 1.2;
+}
 
-#login-header, #bottom-logo {
-  position: fixed; left: 0; width: 100%;
+/* New Header Dashboard Button */
+.header-dashboard-btn {
   display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ddd;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+.header-dashboard-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+.header-dashboard-btn .material-icons-outlined {
+  font-size: 1.2rem;
+}
+
+/* Fixed logo at the top for login screen (currently commented out in HTML) */
+#login-header {
+  position: fixed; top: 20px; left: 0;
+  width: 100%; display: flex; align-items: center; justify-content: center;
   z-index: 1; pointer-events: none;
 }
-#login-header { top: 20px; }
 #login-header img { height: 80px; width: auto; }
-#bottom-logo { bottom: 20px; }
-#bottom-logo img { height: 72px; width: auto; margin-right: 15px; }
 
 .login-header-text {
   text-align: left; font-size: 0.7rem; color: #ddd;
@@ -222,27 +255,23 @@ h2 {
 /* Topic selector dropdown trigger */
 .topic-selector-btn {
   width: 100%;
-  background: #222; color: #ddd; font-size: .95rem; text-align: left;
-  padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #333;
+  background: #222; color: #ddd;
+  font-size: .9rem; /* Smaller font */
+  text-align: left;
+  padding: 0.6rem 0.8rem; /* Smaller padding */
+  border-radius: 8px; border: 1px solid #333;
+  margin-top: 0.3rem; /* Tighter */
   display: flex; justify-content: space-between; align-items: center;
   cursor: pointer;
-  margin-bottom: 0.5rem; /* Space below button */
-  flex-shrink: 0;
 }
 .topic-selector-btn:after { content: '▼'; font-size: 0.7rem; color: #666; }
 
 /* Camera viewport container */
 #reader-container {
-  position: relative;
-  width: 100%;
-  max-width: 400px; /* Prevent it from being too large on tablets */
-  aspect-ratio: 1 / 1;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #000;
+  position: relative; width: 100%; aspect-ratio: 1 / 1;
+  margin-top: 0.3rem; border-radius: 12px;
+  overflow: hidden; background: #000;
   border: 1px solid #333;
-  margin-bottom: 0.5rem;
-  flex-shrink: 0; /* IMPORTANT: Prevent scanner from shrinking */
 }
 #reader {
   width: 100%;
@@ -278,6 +307,7 @@ h2 {
   font-weight: 400;
   margin-bottom: 0.5rem;
   flex-shrink: 0;
+  margin-top: 0.3rem; /* Reduced top margin */
 }
 
 /* Status variants */
@@ -293,34 +323,17 @@ h2 {
 /* =========================================
    APP FOOTER
    ========================================= */
+/* Main footer in scanner view */
 .app-footer {
-  width: 100%;
-  padding: 0.5rem 1rem 1rem 1rem; /* Adjust padding */
+  width: 100%; max-width: 600px;
+  box-sizing: border-box; padding: 5px 10px; /* Minimal padding */
   display: flex; flex-direction: column; align-items: center;
-  font-size: 0.7rem; color: #555;
-  gap: 15px;
-  flex-shrink: 0; /* Prevent footer from shrinking */
+  font-size: 0.65rem; color: #555; margin-top: 0.3rem; /* Minimal top margin */
+  gap: 5px;
 }
 
 .footer-text { text-align: center; }
 .footer-link { color: #9A2126; text-decoration: none; }
-
-.speed-icon-link {
-  width: auto; padding: 8px 16px;
-  background-color: #1b5e20; color: #e8f5e9;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  border-radius: 8px; text-decoration: none; border: 1px solid #2e7d32;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-  font-family: 'Inter', sans-serif; font-size: 0.85rem;
-  letter-spacing: 0.02em; transition: all 0.2s ease;
-}
-
-.speed-icon-link:hover {
-  background-color: #2e7d32; transform: translateY(-1px);
-  box-shadow: 0 6px 8px rgba(0,0,0,0.4);
-}
-
-.speed-icon-link .material-icons-outlined { font-size: 1.2rem; }
 
 /* =========================================
    TOPIC MODAL
