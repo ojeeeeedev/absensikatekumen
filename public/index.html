@@ -69,8 +69,8 @@
         <div id="status" class="idle"></div> 
   
         <!-- Expandable Dashboard Button -->
-        <div id="dashboard-pill" onclick="handleDashboardClick(this)">
-            <span class="material-icons-outlined">table_chart</span>
+        <div id="dashboard-pill" onclick="handleDashboardClick(event, this)">
+            <span class="material-icons-outlined">dashboard</span>
             <span class="pill-text">Akses Dashboard</span>
         </div>
 
@@ -129,16 +129,6 @@
             <div id="profile-name" class="profile-name"></div>
             <div id="profile-id" class="profile-id"></div>
             <div class="profile-close-btn" onclick="closeProfileModal()">Tutup</div>
-        </div>
-    </div>
-
-    <!-- Dashboard Modal -->
-    <div id="dashboard-modal" onclick="closeDashboardModal(event)">
-        <div class="dashboard-modal-content">
-            <a href="/api/dashboard" target="_blank" class="dashboard-action-btn">
-                <span class="material-icons-outlined">table_chart</span>
-                <span>Akses Dashboard</span>
-            </a>
         </div>
     </div>
 
