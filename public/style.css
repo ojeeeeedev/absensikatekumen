@@ -63,6 +63,16 @@ html, body {
    TYPOGRAPHY
    ========================================= */
 h1 { margin: 0 0 0.4rem 0; font-size: 1.1rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
+
+.login-header-title {
+  margin: 0 0 1rem 0; /* Slightly more bottom margin for login title */
+  font-size: 1.5rem;
+  text-align: center;
+  color: #fff;
+  font-family: 'Cinzel', serif;
+  font-weight: 500;
+}
+
 h2 { 
   margin: 0; font-size: 0.7rem; color: #888; text-align: center; font-weight: 400; 
   font-family: 'Cinzel', serif;
@@ -103,7 +113,7 @@ h2 {
   align-items: center;
   justify-content: center; /* REVERTED: Centered layout */
   width: 100%;
-  margin-bottom: 0.5rem; /* Reverted margin */
+  margin: 0; /* Handled by gap */
 }
 
 .header-logo {
@@ -208,7 +218,7 @@ h2 {
 }
 
 #login-footer {
-  display: block; padding: 1rem;
+  display: block; padding: 0.5rem;
 }
 #login-footer div { font-size: 0.9rem; text-align: center; }
 #login-footer a { color: #9A2126; text-decoration: none; }
@@ -236,17 +246,18 @@ h2 {
     /* Let this grow and shrink, but center the whole block */
     flex-grow: 1;
     justify-content: center;
+    gap: 12px; /* UNIFIED SPACING */
 }
 
 /* Topic selector dropdown trigger */
 .topic-selector-btn {
   width: 100%;
   background: #222; color: #ddd;
-  font-size: .9rem; /* Smaller font */
+  font-size: .9rem; 
   text-align: left;
-  padding: 0.6rem 0.8rem; /* Smaller padding */
+  padding: 0.8rem 1rem; /* Restored comfortable padding */
   border-radius: 8px; border: 1px solid #333;
-  margin-top: 0.3rem; /* Tighter */
+  margin: 0; /* Handled by gap */
   display: flex; justify-content: space-between; align-items: center;
   cursor: pointer;
 }
@@ -255,7 +266,8 @@ h2 {
 /* Camera viewport container */
 #reader-container {
   position: relative; width: 100%; aspect-ratio: 1 / 1;
-  margin-top: 0.3rem; border-radius: 12px;
+  margin: 0; /* Handled by gap */
+  border-radius: 12px;
   overflow: hidden; background: #000;
   border: 1px solid #333;
 }
@@ -291,9 +303,8 @@ h2 {
   padding: 0.8rem; border-radius: 8px; min-height: 48px;
   display: flex; align-items: center; gap: 12px; text-align: left;    
   font-weight: 400;
-  margin-bottom: 0.5rem;
+  margin: 0; /* Handled by gap */
   flex-shrink: 0;
-  margin-top: 0.3rem; /* Reduced top margin */
 }
 
 /* Status variants */
@@ -303,8 +314,8 @@ h2 {
 .processing { background: #332222; color: #E57373; border: 1px solid #9A2126; justify-content: center; }
 
 .status-text-container { display: flex; flex-direction: column; }
-.main-text { font-size: 0.8rem; font-weight: 400; }
-.sub-text { font-size: 0.6rem; opacity: 0.8; font-weight: 300; }
+.main-text { font-size: 1rem; margin-bottom: 4px; font-weight: 400; }
+.sub-text { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
 
 /* =========================================
    APP FOOTER
@@ -312,10 +323,11 @@ h2 {
 /* Main footer in scanner view */
 .app-footer {
   width: 100%; max-width: 600px;
-  box-sizing: border-box; padding: 5px 10px;
+  box-sizing: border-box; padding: 0; /* Handled by gap */
   display: flex; flex-direction: column; /* Reverted to column */
   align-items: center;
-  font-size: 0.65rem; color: #555; margin-top: 0.5rem;
+  font-size: 0.65rem; color: #555;
+  margin: 0; /* Handled by gap */
   gap: 5px;
 }
 
@@ -332,7 +344,7 @@ h2 {
   border: 1px solid #2e7d32;
   box-shadow: 0 4px 6px rgba(0,0,0,0.3);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  margin-bottom: 0.5rem; margin-top: 0.5rem; /* Added margin-top for uniformity */
+  margin: 0; /* Handled by gap */
   padding: 0 10px; /* Initial padding */
   overflow: hidden;
 }
