@@ -62,7 +62,7 @@ html, body {
 /* =========================================
    TYPOGRAPHY
    ========================================= */
-h1 { margin: 0 0 0.4rem 0; font-size: 0.9rem; text-align: center; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
+h1 { margin: 0 0 0.4rem 0; font-size: 0.9rem; color: #fff; font-family: 'Cinzel', serif; font-weight: 500; }
 h2 { 
   margin: 0; font-size: 0.7rem; color: #888; text-align: center; font-weight: 400; 
   font-family: 'Cinzel', serif;
@@ -103,7 +103,6 @@ h2 {
   align-items: center;
   justify-content: center; /* REVERTED: Centered layout */
   width: 100%;
-  margin-bottom: 0.5rem; /* Reverted margin */
 }
 
 .header-logo {
@@ -168,7 +167,10 @@ h2 {
   width: 100%;
   animation: fadeInUp 0.5s ease-out forwards;
 }
-#login-container > h1 { margin-bottom: 1rem; }
+.login-header-title {
+  margin-bottom: 1rem;
+  text-align: center;
+}
 
 .input-wrapper {
   position: relative; width: 100%; max-width: 350px; text-align: center;
@@ -236,6 +238,7 @@ h2 {
     /* Let this grow and shrink, but center the whole block */
     flex-grow: 1;
     justify-content: center;
+    gap: 0.8rem;
 }
 
 /* Topic selector dropdown trigger */
@@ -246,7 +249,6 @@ h2 {
   text-align: left;
   padding: 0.6rem 0.8rem; /* Smaller padding */
   border-radius: 8px; border: 1px solid #333;
-  margin-top: 0.3rem; /* Tighter */
   display: flex; justify-content: space-between; align-items: center;
   cursor: pointer;
 }
@@ -255,7 +257,7 @@ h2 {
 /* Camera viewport container */
 #reader-container {
   position: relative; width: 100%; aspect-ratio: 1 / 1;
-  margin-top: 0.3rem; border-radius: 12px;
+  border-radius: 12px;
   overflow: hidden; background: #000;
   border: 1px solid #333;
 }
@@ -291,9 +293,7 @@ h2 {
   padding: 0.8rem; border-radius: 8px; min-height: 48px;
   display: flex; align-items: center; gap: 12px; text-align: left;    
   font-weight: 400;
-  margin-bottom: 0.5rem;
   flex-shrink: 0;
-  margin-top: 0.3rem; /* Reduced top margin */
 }
 
 /* Status variants */
@@ -315,51 +315,41 @@ h2 {
   box-sizing: border-box; padding: 5px 10px;
   display: flex; flex-direction: column; /* Reverted to column */
   align-items: center;
-  font-size: 0.65rem; color: #555; margin-top: 0.5rem;
+  font-size: 0.65rem; color: #555;
   gap: 5px;
 }
 
 .footer-text { text-align: center; }
 .footer-link { color: #9A2126; text-decoration: none; }
 
-/* Expandable Dashboard Pill */
+/* Dashboard Pill Button */
 #dashboard-pill {
-  display: flex; align-items: center; justify-content: center;
-  background: #1b5e20; color: #e8f5e9;
-  height: 40px; min-width: 40px; /* Start as circle/square */
-  border-radius: 20px; /* Fully rounded */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1b5e20;
+  color: #e8f5e9;
+  height: 40px;
+  border-radius: 20px; /* Fully rounded for pill shape */
   cursor: pointer;
   border: 1px solid #2e7d32;
   box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  margin-bottom: 0.5rem; margin-top: 0.5rem; /* Added margin-top for uniformity */
-  padding: 0 10px; /* Initial padding */
-  overflow: hidden;
+  transition: all 0.2s ease; /* Simple transition */
+  padding: 0 20px; /* Generous padding for pill shape */
+  text-decoration: none; /* Remove underline if it's an anchor */
 }
 
 #dashboard-pill:hover {
   background: #2e7d32;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+  transform: translateY(-1px); /* Subtle hover effect */
+  box-shadow: 0 6px 8px rgba(0,0,0,0.4);
 }
 
 /* Text inside the pill */
 .pill-text {
-  max-width: 0; opacity: 0;
   white-space: nowrap;
-  font-size: 0.85rem; font-weight: 500;
-  transition: all 0.4s ease;
-  margin-left: 0;
-}
-
-/* Expanded State */
-#dashboard-pill.expanded {
-  min-width: 160px; /* Expand width */
-  background: #2e7d32;
-}
-
-#dashboard-pill.expanded .pill-text {
-  max-width: 150px; opacity: 1;
+  font-size: 0.85rem;
+  font-weight: 500;
   margin-left: 8px; /* Space between icon and text */
 }
 
