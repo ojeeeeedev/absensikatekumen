@@ -168,8 +168,9 @@ h2 {
   animation: fadeInUp 0.5s ease-out forwards;
 }
 .login-header-title {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem; margin-top: 0rem;
   text-align: center;
+  font-size: 1.4rem;
 }
 
 .input-wrapper {
@@ -210,7 +211,7 @@ h2 {
 }
 
 #login-footer {
-  display: block; padding: 1rem;
+  display: block; padding: 0.5rem;
 }
 #login-footer div { font-size: 0.9rem; text-align: center; }
 #login-footer a { color: #9A2126; text-decoration: none; }
