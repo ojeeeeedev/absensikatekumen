@@ -334,19 +334,20 @@ h2 {
 .footer-text { text-align: center; }
 .footer-link { color: #9A2126; text-decoration: none; }
 
-/* Expandable Dashboard Pill */
+/* Static Dashboard Pill */
 #dashboard-pill {
   display: flex; align-items: center; justify-content: center;
   background: #1b5e20; color: #e8f5e9;
-  height: 40px; min-width: 40px; /* Start as circle/square */
-  border-radius: 20px; /* Fully rounded */
+  height: 40px; 
+  width: auto;
+  min-width: 160px;
+  border-radius: 20px;
   cursor: pointer;
   border: 1px solid #2e7d32;
   box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   margin: 0; /* Handled by gap */
-  padding: 0 10px; /* Initial padding */
-  overflow: hidden;
+  padding: 0 15px;
 }
 
 #dashboard-pill:hover {
@@ -357,22 +358,10 @@ h2 {
 
 /* Text inside the pill */
 .pill-text {
-  max-width: 0; opacity: 0;
+  opacity: 1;
   white-space: nowrap;
   font-size: 0.85rem; font-weight: 500;
-  transition: all 0.4s ease;
-  margin-left: 0;
-}
-
-/* Expanded State */
-#dashboard-pill.expanded {
-  min-width: 160px; /* Expand width */
-  background: #2e7d32;
-}
-
-#dashboard-pill.expanded .pill-text {
-  max-width: 150px; opacity: 1;
-  margin-left: 8px; /* Space between icon and text */
+  margin-left: 8px;
 }
 
 /* =========================================

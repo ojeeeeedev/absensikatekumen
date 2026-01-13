@@ -15,28 +15,9 @@ window.addEventListener('resize', setViewportHeight);
 
 // --- DASHBOARD INTERACTION ---
 function handleDashboardClick(event, element) {
-  event.stopPropagation(); // Prevent document click from immediately closing it
-
-  // If already expanded, navigate to dashboard
-  if (element.classList.contains('expanded')) {
-     window.open('/api/dashboard', '_blank');
-     return;
-  }
-
-  // Animate expansion
-  element.classList.add('expanded');
+  event.stopPropagation(); 
+  window.open('/api/dashboard', '_blank');
 }
-
-// Global click listener to retract dashboard pill
-document.addEventListener('click', (event) => {
-  const pill = document.getElementById('dashboard-pill');
-  if (pill && pill.classList.contains('expanded')) {
-    // If click is outside the pill
-    if (!pill.contains(event.target)) {
-      pill.classList.remove('expanded');
-    }
-  }
-});
 
 // --- MODAL FUNCTIONS ---
 function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }

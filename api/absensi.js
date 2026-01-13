@@ -30,7 +30,15 @@ export default async function handler(req, res) {
       // This will cause the function to fail if the env var is not set.
       throw new Error("Server configuration error: VERCEL_SCRIPT_MAP_JSON is not defined.");
     }
-    SCRIPT_MAP = JSON.parse(process.env.VERCEL_SCRIPT_MAP_JSON);
+    
+    try {
+      SCRIPT_MAP = JSON.parse(process.env.VERCEL_SCRIPT_MAP_JSON);
+    } catch (jsonError) {
+      // Fallback for lenient parsing (e.g. if single quotes were used)
+      console.warn("Standard JSON parse failed, attempting lenient parse for VERCEL_SCRIPT_MAP_JSON");
+      // SCRIPT_MAP = eval(`(${process.env.VERCEL_SCRIPT_MAP_JSON})`); // Alternative if Function is restricted
+      SCRIPT_MAP = (new Function(`return ${process.env.VERCEL_SCRIPT_MAP_JSON}`))();
+    }
   } catch (e) {
     console.error("Error parsing VERCEL_SCRIPT_MAP_JSON:", e);
     // Return a generic server error to the client
