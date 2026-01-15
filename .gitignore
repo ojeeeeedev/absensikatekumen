@@ -11,5 +11,16 @@ node_modules/
 dist/
 build/
 .next/
-.DS_Store
 *.log
+coverage/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
