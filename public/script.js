@@ -40,8 +40,8 @@ function showProfileModal(name, id, topic, imageUrl) {
     spinner.style.animation = '';
   }
 
-  // Set timeout to close the modal after 4 seconds (4000 milliseconds)
-  profileModalTimeout = setTimeout(closeProfileModal, 4000);
+  // Set timeout to close the modal after 3 seconds (3000 milliseconds)
+  profileModalTimeout = setTimeout(closeProfileModal, 3000);
 }
 
 function closeProfileModal() {
@@ -135,8 +135,8 @@ async function handleLogin() {
 
       setTimeout(() => { // This timeout ensures the checkmark is visible for 1 second before proceeding
         successIcon.style.display = 'none'; // Hide checkmark
-        
-        // 2. Show loading spinner for 0.5s
+
+        // 2. Show loading spinner for 0.25s
         loginLoader.style.display = 'flex';
 
         setTimeout(() => {
@@ -162,7 +162,7 @@ async function handleLogin() {
             document.getElementById('scanner-ui').style.display = 'flex';
             initializeApp(); // Load the main app
           }, 400);
-        }, 500); // Wait for 0.5 seconds
+        }, 250); // Wait for 0.25 seconds
       }, 1000); // Wait for 1 second
     } else {
       // Wrong password: show red error box
