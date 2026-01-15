@@ -1,4 +1,4 @@
-[
+const STATIC_TOPICS = [
   { "week": "0", "name": "Pembukaan Kelas" },
   { "week": "1", "name": "Perkenalan" },
   { "week": "2", "name": "Motivasi Menjadi Katolik (P)" },
