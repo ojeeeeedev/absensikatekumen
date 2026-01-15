@@ -402,7 +402,32 @@ h2 {
   text-align: left; font-size: 0.9rem; color: #ccc;
   border: 1px solid #333; cursor: pointer;
 }
+
+.topic-option.topic-p {
+  background: #FFC107;
+  color: #000;
+  border-color: #FFA000;
+}
+
+.topic-option.topic-ki {
+  background: #1565C0;
+  color: #fff;
+  border-color: #0D47A1;
+}
+
 .topic-option.active { border-color: #9A2126; background: #332222; color: #E57373; }
+
+.topic-option.topic-p.active {
+  background: #FFC107;
+  color: #000;
+  border: 2px solid #D32F2F; /* Red border to indicate selection, matching the theme */
+}
+
+.topic-option.topic-ki.active {
+  background: #1565C0;
+  color: #fff;
+  border: 2px solid #D32F2F; /* Red border to indicate selection */
+}
 
 .modal-close-btn {
   margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;

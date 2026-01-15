@@ -191,6 +191,11 @@ async function loadTopikList() {
       STATIC_TOPICS.forEach((item) => {
         const div = document.createElement("div");
         div.className = "topic-option";
+        if (item.name.includes("(P)")) {
+          div.classList.add("topic-p");
+        } else if (item.name.includes("(KI)")) {
+          div.classList.add("topic-ki");
+        }
         div.textContent = `${item.week}. ${item.name}`;
         div.onclick = () => selectTopic(item.week, item.name, div);
         listContainer.appendChild(div);
