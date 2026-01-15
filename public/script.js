@@ -196,6 +196,9 @@ async function loadTopikList() {
         } else if (item.name.includes("(KI)")) {
           div.classList.add("topic-ki");
         }
+        if (item.week === "R1" || item.week === "R2") {
+          div.classList.add("topic-rekoleksi");
+        }
         div.textContent = `${item.week}. ${item.name}`;
         div.onclick = () => selectTopic(item.week, item.name, div);
         listContainer.appendChild(div);

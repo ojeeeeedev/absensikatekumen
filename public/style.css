@@ -429,6 +429,19 @@ h2 {
   border: 2px solid #D32F2F; /* Red border to indicate selection */
 }
 
+.topic-option.topic-rekoleksi {
+  background: #ffffff;
+  color: #111111;
+  border: 1px solid #ffffff;
+  font-weight: 600;
+}
+
+.topic-option.topic-rekoleksi.active {
+  background: #e0e0e0;
+  color: #9A2126;
+  border: 2px solid #D32F2F;
+}
+
 .modal-close-btn {
   margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;
   text-align: center; border-radius: 8px; cursor: pointer;
