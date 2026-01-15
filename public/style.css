@@ -15,6 +15,19 @@ html, body {
 }
 
 /* =========================================
+   ACCESSIBILITY & UTILITIES
+   ========================================= */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
+}
+
+/* Button Reset for converted divs */
+button {
+  font-family: inherit;
+}
+
+/* =========================================
    BACKGROUND ANIMATION
    ========================================= */
 .liquid-background {
@@ -398,10 +411,6 @@ h2 {
 }
 
 /* =========================================
-   TOPIC MODAL
-   ========================================= */
-
-/* =========================================
    PROFILE MODAL & CARD
    ========================================= */
 #profile-modal {
@@ -466,4 +475,8 @@ h2 {
 .profile-close-btn:hover {
   background: #388e3c; transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
+}
+
+.fixed-bottom-branding {
+  position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 1;
 }
