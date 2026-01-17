@@ -99,7 +99,7 @@ export default async function handler(req, res) {
             // Assumes bucket is 'profiles' and filename is the studentId with .jpg extension.
             // Note: studentId might contain slashes (e.g. "A/123"), which Supabase treats as folders.
             // Naming convention: 2025-SAB-001.png (replacing slashes with dashes)
-            const filename = data.studentId.replace(/\//g, '-') + '.png';
+            const filename = data.studentId.replace(/\//g, '-') + '.jpg';
             const bucketName = 'pasfoto-sab'; // ⚠️ CHECK: Must match Supabase Bucket ID exactly
             
             console.log(`[DEBUG] Processing StudentID: ${data.studentId} -> Filename: ${filename}`);
