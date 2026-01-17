@@ -1,4 +1,4 @@
-# Presensi Katekumen Digital (v1.4.3)
+# Presensi Katekumen Digital (v1.5)
 
 A modern, responsive, and secure digital attendance system designed for the Catechumenate program at St. Peter's Cathedral, Bandung. This application streamlines the attendance process using QR codes, real-time data synchronization with Google Sheets, and secure image retrieval from Supabase.
 
