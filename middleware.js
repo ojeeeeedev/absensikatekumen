@@ -4,7 +4,7 @@ export default function middleware(req) {
   if (url.pathname === '/dashboard') {
 
     const token = req.cookies.get('auth_token');
-     if (!token) return Response.redirect(new URL('/login', req.url));
+     if (!token) return Response.redirect(new URL('/(.*)', req.url));
 
     const internalPath = process.env.DASHBOARD_PATH || '/api/dashboard';
     
