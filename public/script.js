@@ -15,7 +15,8 @@ window.addEventListener('resize', setViewportHeight);
 
 // --- DASHBOARD INTERACTION ---
 function handleDashboardClick(event, element) {
-  window.open('/api/dashboard', '_blank');
+  // Use the public alias. The middleware will handle the internal routing.
+  window.open('/dashboard', '_blank');
 }
 
 // --- MODAL FUNCTIONS ---
