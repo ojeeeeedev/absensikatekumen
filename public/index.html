@@ -2,9 +2,9 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sistem Presensi Katekumen Dewasa</title>
-    <link rel="icon" href="favicon.png" type="image/png" />
+    <link rel="icon" href="assets/favicon.png" type="image/png" />
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +25,7 @@
     </div>
 
     <!-- <div id="login-header">
-      <img src="katedral_invert.png" alt="Logo">
+      <img src="assets/katedral_invert.png" alt="Logo Paroki Katedral Bandung">
     </div> -->
 
     <main id="app-container" class="glass-container">
@@ -34,18 +34,19 @@
         <!-- Error container -->
         <div id="login-error-box" class="login-error-message" style="display: none;" onmouseover="hideLoginError()"></div>
         <div class="input-wrapper">
+          <label for="login-input" class="sr-only">Password</label>
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
           <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
           <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility_off</span>
         </div>
-        <div id="login-btn" onclick="handleLogin()"><b>Masuk</b></div>
+        <button id="login-btn" onclick="handleLogin()"><b>Masuk</b></button>
       </div>
 
       <div id="scanner-ui">
         <div class="scanner-content-body">
   
         <div class="header-container" style="position: relative;">
-          <img src="pewartaan_invert.png" class="header-logo" alt="Logo">
+          <img src="assets/pewartaan_invert.png" class="header-logo" alt="Logo Pewartaan">
           <div class="header-text">
             <h1>Sistem Presensi<br>
 Katekumen Dewasa
@@ -56,9 +57,9 @@ Katekumen Dewasa
           </div>
         </div>
   
-        <div id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
+        <button id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
             Pilih Topik...
-        </div>
+        </button>
   
         <div id="reader-container">
             <div id="camera-loader">
@@ -96,8 +97,8 @@ Katekumen Dewasa
     </main>
 
     <!-- Bottom Branding (Fixed Footer) -->
-    <div id="bottom-branding" style="position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 1;">
-        <img src="pewartaan_invert.png" alt="Logo" width="56" height="56" style="margin-right: 12px;">
+    <div id="bottom-branding" class="fixed-bottom-branding">
+        <img src="assets/pewartaan_invert.png" alt="Logo Pewartaan" width="56" height="56" style="margin-right: 12px;">
         <div style="text-align: left; font-size: 0.65rem; color: #ccc; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
             <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
             <div>Bidang Pewartaan</div>
@@ -127,7 +128,7 @@ Katekumen Dewasa
               </svg>
             </div>
             <div class="profile-img-wrapper">
-                <img id="profile-image">
+                <img id="profile-image" alt="Foto Profil">
             </div>
             <div id="profile-name" class="profile-name"></div>
             <div id="profile-id" class="profile-id"></div>

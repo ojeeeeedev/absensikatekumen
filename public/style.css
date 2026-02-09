@@ -15,6 +15,19 @@ html, body {
 }
 
 /* =========================================
+   ACCESSIBILITY & UTILITIES
+   ========================================= */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
+}
+
+/* Button Reset for converted divs */
+button {
+  font-family: inherit;
+}
+
+/* =========================================
    BACKGROUND ANIMATION
    ========================================= */
 .liquid-background {
@@ -389,17 +402,51 @@ h2 {
   text-align: left; font-size: 0.9rem; color: #ccc;
   border: 1px solid #333; cursor: pointer;
 }
+
+.topic-option.topic-p {
+  background: #FFC107;
+  color: #000;
+  border-color: #FFA000;
+}
+
+.topic-option.topic-ki {
+  background: #1565C0;
+  color: #fff;
+  border-color: #0D47A1;
+}
+
 .topic-option.active { border-color: #9A2126; background: #332222; color: #E57373; }
+
+.topic-option.topic-p.active {
+  background: #FFC107;
+  color: #000;
+  border: 2px solid #D32F2F; /* Red border to indicate selection, matching the theme */
+}
+
+.topic-option.topic-ki.active {
+  background: #1565C0;
+  color: #fff;
+  border: 2px solid #D32F2F; /* Red border to indicate selection */
+}
+
+.topic-option.topic-rekoleksi {
+  background: #ffffff;
+  color: #111111;
+  border: 1px solid #ffffff;
+  font-weight: 600;
+}
+
+.topic-option.topic-rekoleksi.active {
+  background: #e0e0e0;
+  color: #9A2126;
+  border: 2px solid #D32F2F;
+}
 
 .modal-close-btn {
   margin-top: 15px; padding: 1rem; background: #d32f2f; color: white;
   text-align: center; border-radius: 8px; cursor: pointer;
   position: sticky; bottom: 0;
 }
-
-/* =========================================
-   TOPIC MODAL
-   ========================================= */
 
 /* =========================================
    PROFILE MODAL & CARD
@@ -466,4 +513,8 @@ h2 {
 .profile-close-btn:hover {
   background: #388e3c; transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
+}
+
+.fixed-bottom-branding {
+  position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; align-items: center; z-index: 1;
 }
