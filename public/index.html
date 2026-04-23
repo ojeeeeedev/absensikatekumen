@@ -11,118 +11,107 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://your-project.supabase.co">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&family=Inter:wght@300;400;500&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://your-project.supabase.co">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
 
   <body>
-    <div class="liquid-background">
-      <div class="liquid-shape shape1"></div>
-      <div class="liquid-shape shape2"></div>
-    </div>
-
-    <!-- Loading screen for login -->
+    <!-- Full-screen loader -->
     <div id="login-loader">
       <div class="spinner"></div>
     </div>
 
-    <!-- <div id="login-header">
-      <img src="assets/katedral_invert.png" alt="Logo Paroki Katedral Bandung">
-    </div> -->
-
-    <main id="app-container" class="glass-container">
-      <div id="login-container">
-        <h1 class="login-header-title">Login Fasilitator</h1>
-        <!-- Error container -->
+    <main id="app-container">
+      <div id="login-container" class="module">
+        <div class="label-caps">Authentication Required</div>
+        <h1 class="login-header-title">LOGIN_FASILITATOR</h1>
+        
         <div id="login-error-box" class="login-error-message" style="display: none;" onmouseover="hideLoginError()"></div>
-        <div class="input-wrapper">
-          <label for="login-input" class="sr-only">Password</label>
-          <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
-          <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
-          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility_off</span>
+        
+        <div class="input-module">
+          <label for="login-input" class="label-caps">SYSTEM_ACCESS_KEY</label>
+          <div class="input-wrapper">
+            <input type="password" id="login-input" placeholder="Enter password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
+            <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
+            <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility_off</span>
+          </div>
         </div>
-        <button id="login-btn" onclick="handleLogin()"><b>Masuk</b></button>
+        
+        <button id="login-btn" class="btn-primary" onclick="handleLogin()">EXECUTE_LOGIN</button>
+
+        <div id="login-footer">
+          <a href="https://wa.link/3yg0ug" class="data-mono">RECOVER_ACCESS</a>
+        </div>
       </div>
 
       <div id="scanner-ui">
-        <div class="scanner-content-body">
+        <div class="scanner-content-body module">
   
-        <div class="header-container" style="position: relative;">
-          <img src="assets/pewartaan_invert.png" class="header-logo" alt="Logo Pewartaan">
-          <div class="header-text">
-            <h1>Sistem Presensi<br>
-Katekumen Dewasa
-</h1>
-            <h2>Paroki St. Petrus - Katedral 
-              <br>Keuskupan Bandung
-            </h2>
-          </div>
-        </div>
-  
-        <button id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
-            Pilih Topik...
-        </button>
-  
-        <div id="reader-container">
-            <div id="camera-loader">
-                <div class="spinner"></div>
-                <span>Memuat Kamera...</span>
+          <div class="header-container">
+            <div class="header-text">
+              <div class="label-caps">Attendance System</div>
+              <h1>PRESENSI_KATEKUMEN</h1>
+              <div class="data-mono">ST_PETRUS_KATEDRAL_BDG</div>
             </div>
-            <div id="reader"></div>
-        </div>
-  
-        <div id="status" class="idle"></div> 
-  
-        <!-- Expandable Dashboard Button -->
-        <!--<div id="dashboard-pill" onclick="handleDashboardClick(event, this)">
-            <span class="material-icons-outlined">dashboard</span>
-            <span class="pill-text">Akses Dashboard</span>
-        </div>
-        !-->
-
-        <footer class="app-footer">
-          <div class="footer-text">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link">v1.6.1</a> © 2026 Tim Katekumen Dewasa
-            <br><a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
+            <img src="assets/pewartaan_invert.png" class="header-logo" alt="Logo">
           </div>
-        </footer>
-          
-        </div>
-      </div>
-      
-      <!-- This footer is only for the login screen -->
-      <div id="login-footer">
-        <div>
-          <a href="https://wa.link/3yg0ug">Lupa password?</a>
+    
+          <div class="control-module">
+            <div class="label-caps">Selected_Session</div>
+            <button id="topic-trigger" class="btn-secondary" onclick="openTopicModal()">
+                SELECT_TOPIC...
+            </button>
+          </div>
+    
+          <div id="reader-container" class="module">
+              <div id="camera-loader">
+                  <div class="spinner"></div>
+                  <span class="label-caps">INITIALIZING_OPTICS...</span>
+              </div>
+              <div id="reader"></div>
+          </div>
+    
+          <div id="status" class="idle data-mono"></div> 
+
+          <footer class="app-footer">
+            <div class="footer-text data-mono">
+              <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link">VER_1.6.1</a> 
+              <span>// 2026_TIM_KATEKUMEN</span>
+              <br><a href="https://wa.link/rogbpe" class="footer-link">SYSTEM_SUPPORT</a>
+            </div>
+          </footer>
         </div>
       </div>
     </main>
 
-    <!-- Bottom Branding (Fixed Footer) -->
-    <div id="bottom-branding" class="fixed-bottom-branding">
-        <img src="assets/pewartaan_invert.png" alt="Logo Pewartaan" width="56" height="56" style="margin-right: 12px;">
-        <div style="text-align: left; font-size: 0.65rem; color: #ccc; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
-            <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
-            <div>Bidang Pewartaan</div>
-            <div>Paroki St. Petrus - Katedral</div>
-            <div>Keuskupan Bandung</div>
+    <div id="bottom-branding" class="fixed-bottom-branding data-mono">
+        <img src="assets/pewartaan_invert.png" alt="Logo" width="48" height="48" style="margin-right: 12px;">
+        <div style="text-align: left; line-height: 1.2;">
+            <div style="font-weight: bold;">SUB_SEKSI_KATEKUMEN</div>
+            <div>BIDANG_PEWARTAAN</div>
+            <div>KATEDRAL_BANDUNG</div>
         </div>
     </div>
 
     <div id="topic-modal">
-        <div class="modal-content">
-            <h3>Pilih Topik Pertemuan</h3>
-            <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="Cari topik...">
-            <div id="topic-list-container">
-                <div class="topic-loading-placeholder">Memuat topik...</div>
+        <div class="modal-content module">
+            <div class="label-caps">System_Session_Archive</div>
+            <h3>SELECT_MEETING_TOPIC</h3>
+            <input type="text" id="topic-search-input" class="data-mono" oninput="filterTopics()" placeholder="SEARCH_DATABASE...">
+            <div id="topic-list-container" class="data-mono">
+                <div class="topic-loading-placeholder">LOADING_ARCHIVE...</div>
             </div>
-            <div class="modal-close-btn" onclick="closeTopicModal()">Tutup</div>
+            <button class="btn-secondary" style="width: 100%; margin-top: 16px;" onclick="closeTopicModal()">ABORT_SELECTION</button>
         </div>
     </div>
 
     <!-- Profile Modal -->
     <div id="profile-modal">
-        <div class="profile-card">
+        <div class="profile-card module">
             <div class="timeout-spinner">
               <svg viewBox="0 0 36 36">
                 <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -130,11 +119,12 @@ Katekumen Dewasa
               </svg>
             </div>
             <div class="profile-img-wrapper">
-                <img id="profile-image" alt="Foto Profil">
+                <img id="profile-image" alt="Profile">
             </div>
+            <div class="label-caps" style="margin-bottom: 4px; opacity: 0.6;">IDENTIFIED_PERSONNEL</div>
             <div id="profile-name" class="profile-name"></div>
-            <div id="profile-id" class="profile-id"></div>
-            <div class="profile-close-btn" onclick="closeProfileModal()">Tutup</div>
+            <div id="profile-id" class="profile-id data-mono"></div>
+            <button class="btn-primary" style="width: 100%; margin-top: 24px;" onclick="closeProfileModal()">ACKNOWLEDGE</button>
         </div>
     </div>
 

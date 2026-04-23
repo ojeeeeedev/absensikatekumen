@@ -27,43 +27,33 @@ function showProfileModal(name, id, topic, imageUrl) {
   clearTimeout(profileModalTimeout);
 
   document.getElementById('profile-name').textContent = name;
-  document.getElementById('profile-id').innerHTML = `ID: ${id} &bull; Topik ${topic}`;
+  document.getElementById('profile-id').innerHTML = `CODE: ${id} // TOPIC: ${topic}`;
   const img = document.getElementById('profile-image');
   img.src = imageUrl;
   document.getElementById('profile-modal').style.display = 'flex';
 
-  // Reset spinner animation to provide visual feedback for the new timeout
+  // Reset spinner animation
   const spinner = document.querySelector('.circle-progress');
   if (spinner) {
     spinner.style.animation = 'none';
-    spinner.offsetHeight; // Trigger reflow to restart animation
-    spinner.style.animation = '';
+    spinner.offsetHeight; // Trigger reflow
+    spinner.style.animation = 'countdown 4s linear forwards';
   }
 
-  // Set timeout to close the modal after 4 seconds (4000 milliseconds)
+  // Set timeout to close the modal after 4 seconds
   profileModalTimeout = setTimeout(closeProfileModal, 4000);
 }
 
 function closeProfileModal() {
-  const profileModal = document.getElementById('profile-modal');
-  const profileCard = profileModal.querySelector('.profile-card');
-
-  profileCard.style.animation = 'fadeOut 0.3s ease-out forwards'; // Apply fade-out animation
-  
-  // After the animation, hide the modal completely
-  setTimeout(() => {
-    profileModal.style.display = 'none';
-    profileCard.style.animation = ''; // Reset animation for next time it opens
-  }, 300); // Match this duration to the CSS animation duration
+  document.getElementById('profile-modal').style.display = 'none';
 }
 
 function selectTopic(week, name, element) {
   selectedWeek = week;
-  document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
-  document.getElementById('topic-trigger').style.borderColor = "#9A2126";
+  document.getElementById('topic-trigger').innerHTML = `<span>${week}. ${name}</span><span class="material-icons-outlined">expand_more</span>`;
   document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
   element.classList.add('active');
-  setTimeout(closeTopicModal, 200);
+  setTimeout(closeTopicModal, 100);
 }
 
 function filterTopics() {
@@ -129,56 +119,35 @@ async function handleLogin() {
     const data = await response.json();
 
     if (data.status === 'ok' && data.token) {
-      // 1. Fade in the green checkmark and keep it for 1 second.
-      successIcon.style.animation = 'fadeIn 0.5s forwards'; // A slightly longer fade-in
+      // 1. Show success immediately
       successIcon.style.display = 'block';
 
-      setTimeout(() => { // This timeout ensures the checkmark is visible for 1 second before proceeding
-        successIcon.style.display = 'none'; // Hide checkmark
-
-        // 2. Show loading spinner for 0.25s
-        loginLoader.style.display = 'flex';
-
-        setTimeout(() => {
-          const loginContainer = document.getElementById('login-container');
-          const loginFooter = document.getElementById('login-footer');
-          const loginHeader = document.getElementById('login-header');
-          const bottomBranding = document.getElementById('bottom-branding');
-
-          // 3. Animate login screen out
-          loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          if (loginHeader) loginHeader.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          if (bottomBranding) bottomBranding.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-
-          // 4. After fade out, hide it and show scanner UI
-          setTimeout(() => {
-            sessionStorage.setItem('authToken', data.token); // Store token
-            loginContainer.style.display = 'none';
-            loginFooter.style.display = 'none';
-            if (loginHeader) loginHeader.style.display = 'none';
-            if (bottomBranding) bottomBranding.style.display = 'none';
-            loginLoader.style.display = 'none'; // Hide loader
-            document.getElementById('scanner-ui').style.display = 'flex';
-            initializeApp(); // Load the main app
-          }, 400);
-        }, 250); // Wait for 0.25 seconds
-      }, 1000); // Wait for 1 second
+      setTimeout(() => {
+        sessionStorage.setItem('authToken', data.token); // Store token
+        document.getElementById('login-container').style.display = 'none';
+        document.getElementById('login-footer').style.display = 'none';
+        const loginHeader = document.getElementById('login-header');
+        if (loginHeader) loginHeader.style.display = 'none';
+        const bottomBranding = document.getElementById('bottom-branding');
+        if (bottomBranding) bottomBranding.style.display = 'none';
+        
+        document.getElementById('scanner-ui').style.display = 'flex';
+        initializeApp(); // Load the main app
+      }, 500);
     } else {
-      // Wrong password: show red error box
-      errorBox.textContent = data.message || 'Login gagal.';
+      // Wrong password
+      errorBox.textContent = `ACCESS_DENIED: ${data.message || 'INVALID_KEY'}`;
       errorBox.style.display = 'block';
-      // Shake the input box
-      document.getElementById('login-input').style.animation = 'shake 0.5s';
-      setTimeout(() => document.getElementById('login-input').style.animation = '', 500);
-      // Set a timeout to hide the error box after 2 seconds
-      errorTimeout = setTimeout(hideLoginError, 2000);
+      // Shake effect
+      const input = document.getElementById('login-input');
+      input.style.borderColor = '#f00';
+      setTimeout(() => input.style.borderColor = '', 1000);
+      errorTimeout = setTimeout(hideLoginError, 3000);
     }
   } catch (e) {
-    // Also set timeout for connection errors
-    errorBox.textContent = 'Error koneksi ke server.';
+    errorBox.textContent = 'SYSTEM_ERROR: CONNECTION_FAILED';
     errorBox.style.display = 'block';
-    errorTimeout = setTimeout(hideLoginError, 2000);
+    errorTimeout = setTimeout(hideLoginError, 3000);
   }
 }
 
@@ -216,28 +185,18 @@ async function loadTopikList() {
 function showStatus(mainText, type, subText = "") {
   const el = document.getElementById("status");
   
-  // Using Material Icons for visual indicators
   let iconName = "";
-  if (type === 'success') iconName = "check_circle_outline";
-  else if (type === 'error') iconName = "error_outline";
-  else if (type === 'processing') iconName = "hourglass_empty";
-  else iconName = "qr_code_scanner"; // Default for idle/camera
+  if (type === 'success') iconName = "check_box";
+  else if (type === 'error') iconName = "indeterminate_check_box";
+  else if (type === 'processing') iconName = "sync";
+  else iconName = "qr_code_2";
 
-  if (subText) {
-      el.innerHTML = `
-          <span class="material-icons-outlined" style="font-size: 1.5rem;">${iconName}</span>
-          <div class="status-text-container">
-              <div class="main-text">${mainText}</div>
-              <div class="sub-text">${subText}</div>
-          </div>
-      `;
-  } else {
-      el.innerHTML = `
-          <span class="material-icons-outlined" style="font-size: 1.5rem;">${iconName}</span>
-          <div class="main-text">${mainText}</div>
-      `;
-  }
-  el.className = type;
+  const statusContent = subText 
+    ? `<span>[${iconName.toUpperCase()}]</span> <span>${mainText} // ${subText}</span>`
+    : `<span>[${iconName.toUpperCase()}]</span> <span>${mainText}</span>`;
+
+  el.innerHTML = statusContent;
+  el.className = `data-mono ${type}`;
 }
 
 function resetStatus() { showStatus("Silakan pindai kode QR berikutnya", "idle"); }
