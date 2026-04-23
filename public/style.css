@@ -305,18 +305,19 @@ h2 {
 #status {
   width: 100%;
   padding: 0.8rem; border-radius: 8px; min-height: 48px;
-  display: flex; align-items: center; gap: 12px; text-align: left;    
+  display: flex; align-items: center; justify-content: center; gap: 12px; text-align: center;
   font-weight: 400;
   flex-shrink: 0;
 }
 
 /* Status variants */
-.idle { background: #111; color: #aaa; border: 1px dashed #333; justify-content: center; }
+.idle { background: #111; color: #aaa; border: 1px dashed #333; }
 .success { background: #1b5e20; color: #e8f5e9; border: 1px solid #2e7d32; }
 .error { background: #b71c1c; color: #ffebee; border: 1px solid #d32f2f; }
-.processing { background: #332222; color: #E57373; border: 1px solid #9A2126; justify-content: center; }
+.processing { background: #332222; color: #E57373; border: 1px solid #9A2126; }
 
-.status-text-container { display: flex; flex-direction: column; }
+.status-text-container { display: flex; flex-direction: column; align-items: center; }
+
 .main-text { font-size: 0.8rem; font-weight: 400; }
 .sub-text { font-size: 0.6rem; opacity: 0.8; font-weight: 300; }
 

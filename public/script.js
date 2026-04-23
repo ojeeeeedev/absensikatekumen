@@ -225,7 +225,7 @@ function showStatus(mainText, type, subText = "") {
 
   if (subText) {
       el.innerHTML = `
-          <span class="material-icons-outlined" style="font-size: 1.5rem; margin-right: 10px;">${iconName}</span>
+          <span class="material-icons-outlined" style="font-size: 1.5rem;">${iconName}</span>
           <div class="status-text-container">
               <div class="main-text">${mainText}</div>
               <div class="sub-text">${subText}</div>
@@ -233,7 +233,7 @@ function showStatus(mainText, type, subText = "") {
       `;
   } else {
       el.innerHTML = `
-          <span class="material-icons-outlined" style="font-size: 1.5rem; margin-right: 10px;">${iconName}</span>
+          <span class="material-icons-outlined" style="font-size: 1.5rem;">${iconName}</span>
           <div class="main-text">${mainText}</div>
       `;
   }
