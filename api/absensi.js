@@ -82,21 +82,48 @@ export default async function handler(req, res) {
       }
 
       // --- OPTIMIZATION: Parallelize GAS fetch and Supabase Image preparation ---
-      const filename = studentId.replace(/\//g, '-') + '.jpg';
-      
-      // Determine bucket name based on class code
+      const baseFilename = studentId.replace(/\//g, '-');
       const bucketName = `pasfoto-${classCode.toLowerCase()}`;
 
-      const [gasResponse, supabaseUrlResult] = await Promise.all([
-        fetch(scriptURL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(req.body),
-        }),
-        supabase 
-          ? supabase.storage.from(bucketName).createSignedUrl(filename, 60)
-          : Promise.resolve({ data: null, error: null })
-      ]);
+      // Start GAS fetch
+      const gasPromise = fetch(scriptURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+      });
+
+      // Start Supabase Image preparation (Search then Sign)
+      const imagePromise = (async () => {
+        if (!supabase) return null;
+        try {
+          const { data: files, error: listError } = await supabase.storage
+            .from(bucketName)
+            .list('', { search: baseFilename });
+
+          if (listError || !files || files.length === 0) return null;
+
+          // Find exact match with allowed extensions
+          const match = files.find(f => {
+            const parts = f.name.split('.');
+            const ext = parts.pop().toLowerCase();
+            const nameWithoutExt = parts.join('.');
+            return nameWithoutExt === baseFilename && ['jpg', 'jpeg', 'png'].includes(ext);
+          });
+
+          if (!match) return null;
+
+          const { data: sigData, error: sigError } = await supabase.storage
+            .from(bucketName)
+            .createSignedUrl(match.name, 60);
+
+          return sigError ? null : sigData?.signedUrl;
+        } catch (e) {
+          console.error("[DEBUG] Image preparation error:", e);
+          return null;
+        }
+      })();
+
+      const [gasResponse, signedUrl] = await Promise.all([gasPromise, imagePromise]);
 
       const text = await gasResponse.text();
       let data;
@@ -107,8 +134,8 @@ export default async function handler(req, res) {
       }
 
       // Inject image if we got a URL and GAS was successful
-      if (data.status === 'ok' && supabaseUrlResult?.data?.signedUrl) {
-        data.image = supabaseUrlResult.data.signedUrl;
+      if (data.status === 'ok' && signedUrl) {
+        data.image = signedUrl;
       }
 
       return res.status(200).json(data);
