@@ -83,7 +83,9 @@ export default async function handler(req, res) {
 
       // --- OPTIMIZATION: Parallelize GAS fetch and Supabase Image preparation ---
       const filename = studentId.replace(/\//g, '-') + '.jpg';
-      const bucketName = 'pasfoto-sab';
+      
+      // Determine bucket name based on class code
+      const bucketName = `pasfoto-${classCode.toLowerCase()}`;
 
       const [gasResponse, supabaseUrlResult] = await Promise.all([
         fetch(scriptURL, {
