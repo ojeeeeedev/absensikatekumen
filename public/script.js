@@ -266,37 +266,38 @@ async function handleScan(decodedText) {
   }
 
   scanCooldown = true;
-  showStatus("Memproses...", "processing");
+  
+  // OPTIMISTIC UI: Give immediate feedback
+  if (navigator.vibrate) navigator.vibrate(100); 
+  showStatus("Memproses...", "processing", `ID: ${originalStudentId}`);
 
   try {
     const token = sessionStorage.getItem('authToken');
     const response = await fetch("/api/absensi", {
-      method: "POST", // Use the DECODED student ID in the request body
-      headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` }, // The studentId contains the classCode
+      method: "POST", 
+      headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` }, 
       body: JSON.stringify({ studentId: originalStudentId, week: selectedWeek }),
     });
 
-    const text = await response.text();
-    let res = JSON.parse(text);
+    const data = await response.json();
 
-    if (res.status === "ok") {
-      if (navigator.vibrate) navigator.vibrate(200); // Success vibration
-      showStatus(res.name, "success", `ID: ${res.studentId} • Topik ${selectedWeek}`);
-      showProfileModal(res.name, res.studentId, selectedWeek, res.image);
-    } else if (res.status === "duplicate") {
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Double vibration
-      showStatus("Sudah Hadir", "error", res.message);
-    } else if (response.status === 400) { 
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Double vibration
-      showStatus("Kode QR Tidak Valid", "error", res.message);
+    if (data.status === "ok") {
+      // Haptic feedback for server confirmation
+      if (navigator.vibrate) navigator.vibrate(200); 
+      showStatus(data.name, "success", `ID: ${data.studentId} • Topik ${selectedWeek}`);
+      showProfileModal(data.name, data.studentId, selectedWeek, data.image);
+    } else if (data.status === "duplicate") {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
+      showStatus("Sudah Hadir", "error", data.message);
     } else {
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Double vibration
-      showStatus("Gagal", "error", res.message);
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
+      showStatus("Gagal", "error", data.message || "Terjadi kesalahan");
     }
   } catch (error) {
     showStatus("Error Koneksi", "error", "Gagal menghubungi server");
   } finally {
-    setTimeout(() => { scanCooldown = false; resetStatus(); }, 4000);
+    // Shorter cooldown for better UX
+    setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
   }
 }
 

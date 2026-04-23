@@ -70,7 +70,6 @@ export default async function handler(req, res) {
         return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
       }
 
-      // Extract classCode from the studentId on the backend
       const { studentId } = req.body;
       const classCode = studentId?.split('/')[1]?.toUpperCase();
 
@@ -82,63 +81,35 @@ export default async function handler(req, res) {
         });
       }
 
-      const response = await fetch(scriptURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body),
-      });
+      // --- OPTIMIZATION: Parallelize GAS fetch and Supabase Image preparation ---
+      const filename = studentId.replace(/\//g, '-') + '.jpg';
+      const bucketName = 'pasfoto-sab';
 
-      const text = await response.text();
+      const [gasResponse, supabaseUrlResult] = await Promise.all([
+        fetch(scriptURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(req.body),
+        }),
+        supabase 
+          ? supabase.storage.from(bucketName).createSignedUrl(filename, 60)
+          : Promise.resolve({ data: null, error: null })
+      ]);
 
-      // Attempt to inject Supabase Image URL if successful attendance
-      if (supabase) {
-        try {
-          const data = JSON.parse(text);
-          if (data.status === 'ok' && data.studentId) {
-            // Construct the public URL for the image. 
-            // Assumes bucket is 'profiles' and filename is the studentId with .jpg extension.
-            // Note: studentId might contain slashes (e.g. "A/123"), which Supabase treats as folders.
-            // Naming convention: 2025-SAB-001.png (replacing slashes with dashes)
-            const filename = data.studentId.replace(/\//g, '-') + '.jpg';
-            const bucketName = 'pasfoto-sab'; // ⚠️ CHECK: Must match Supabase Bucket ID exactly
-            
-            console.log(`[DEBUG] Processing StudentID: ${data.studentId} -> Filename: ${filename}`);
-
-            // Check if file exists to prevent CORB errors on frontend
-            const { data: files, error: listError } = await supabase.storage
-              .from(bucketName)
-              .list('', { limit: 1, search: filename });
-
-            if (listError) {
-              console.error("[DEBUG] Supabase List Error:", listError);
-            } else {
-              console.log(`[DEBUG] Supabase List Result (count: ${files?.length}):`, JSON.stringify(files));
-            }
-
-            if (files && files.find(f => f.name === filename)) {
-              const { data: imageData, error: urlError } = await supabase.storage
-                .from(bucketName)
-                .createSignedUrl(filename, 60); // URL valid for 60 seconds
-              
-              if (urlError) {
-                console.error("[DEBUG] Signed URL Error:", urlError);
-              } else if (imageData && imageData.signedUrl) {
-                console.log(`[DEBUG] Signed URL generated: ${imageData.signedUrl}`);
-                data.image = imageData.signedUrl;
-              }
-            } else {
-              console.log(`[DEBUG] File '${filename}' not found in bucket 'pasfoto-sab' root.`);
-            }
-          }
-          return res.status(200).json(data);
-        } catch (e) {
-          console.error("[DEBUG] Error injecting image:", e);
-          // If parsing fails or other error, return original text
-          return res.status(200).send(text);
-        }
+      const text = await gasResponse.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        return res.status(200).send(text);
       }
 
-      return res.status(200).send(text);
+      // Inject image if we got a URL and GAS was successful
+      if (data.status === 'ok' && supabaseUrlResult?.data?.signedUrl) {
+        data.image = supabaseUrlResult.data.signedUrl;
+      }
+
+      return res.status(200).json(data);
 
     } catch (err) {
       console.error("POST error:", err);
