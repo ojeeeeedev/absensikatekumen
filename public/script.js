@@ -40,8 +40,8 @@ function showProfileModal(name, id, topic, imageUrl) {
     spinner.style.animation = '';
   }
 
-  // Set timeout to close the modal after 3 seconds (3000 milliseconds)
-  profileModalTimeout = setTimeout(closeProfileModal, 3000);
+  // Set timeout to close the modal after 4 seconds (4000 milliseconds)
+  profileModalTimeout = setTimeout(closeProfileModal, 4000);
 }
 
 function closeProfileModal() {
