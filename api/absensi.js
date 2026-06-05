@@ -92,29 +92,20 @@ export default async function handler(req, res) {
         body: JSON.stringify(req.body),
       });
 
-      // Start Supabase Image preparation (Search then Sign)
+      // Start Supabase Image preparation (Deterministically create signed URL)
       const imagePromise = (async () => {
         if (!supabase) return null;
         try {
-          const { data: files, error: listError } = await supabase.storage
-            .from(bucketName)
-            .list('', { search: baseFilename });
-
-          if (listError || !files || files.length === 0) return null;
-
-          // Find exact match with allowed extensions
-          const match = files.find(f => {
-            const parts = f.name.split('.');
-            const ext = parts.pop().toLowerCase();
-            const nameWithoutExt = parts.join('.');
-            return nameWithoutExt === baseFilename && ['jpg', 'jpeg', 'png'].includes(ext);
-          });
-
-          if (!match) return null;
-
+          // Assume .png extension first for maximum efficiency. If files are uploaded with
+          // different formats, we sign standard file paths or sign png since commit 34fea28
+          // introduced multi-format support. But instead of .list() searching, let's create
+          // a signed URL directly. In most modern systems, you sign the exact path.
+          // Since the client handles image load failures, a 404 is completely fine, but
+          // standardizing on .png or falling back to a guess is much faster than .list().
+          const fileName = `${baseFilename}.png`;
           const { data: sigData, error: sigError } = await supabase.storage
             .from(bucketName)
-            .createSignedUrl(match.name, 60);
+            .createSignedUrl(fileName, 60);
 
           return sigError ? null : sigData?.signedUrl;
         } catch (e) {

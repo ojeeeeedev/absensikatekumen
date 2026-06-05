@@ -29,7 +29,15 @@ function showProfileModal(name, id, topic, imageUrl) {
   document.getElementById('profile-name').textContent = name;
   document.getElementById('profile-id').innerHTML = `ID: ${id} &bull; Topik ${topic}`;
   const img = document.getElementById('profile-image');
-  img.src = imageUrl;
+
+  // Set placeholder/loading image first in case network is slow
+  img.src = imageUrl || '/assets/favicon.png';
+
+  // Handle image load error gracefully (e.g. if the image doesn't exist on Supabase bucket)
+  img.onerror = () => {
+    img.src = '/assets/favicon.png'; // Fallback avatar/placeholder
+  };
+
   document.getElementById('profile-modal').style.display = 'flex';
 
   // Reset spinner animation to provide visual feedback for the new timeout

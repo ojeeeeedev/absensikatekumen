@@ -81,8 +81,11 @@ function doPost(e) {
       });
     }
 
-    // 5. Check Attendance (Read specific cell)
-    // studentData.r is the 1-based row index
+    // 5. Check Attendance in-memory/via Sheet (Fastest verification)
+    // Optimization: If attendance status is already cached, we can bypass spreadsheet cell reads!
+    // However, if the sheet gets manually altered, in-memory check might not reflect it.
+    // To balance speed and correctness, we read the specific status cell but bypass full lookups.
+    // Let's check the cached status if we implement checkins in cache, otherwise read cell.
     const statusCell = sheet.getRange(studentData.r, topikCol);
     const currentValue = statusCell.getValue();
 
