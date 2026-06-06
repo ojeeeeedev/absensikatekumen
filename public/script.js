@@ -183,6 +183,7 @@ async function handleLogin() {
       errorTimeout = setTimeout(hideLoginError, 2000);
     }
   } catch (e) {
+    console.error("Login request failed:", e);
     // Also set timeout for connection errors
     errorBox.textContent = 'Error koneksi ke server.';
     errorBox.style.display = 'block';
@@ -250,6 +251,22 @@ function showStatus(mainText, type, subText = "") {
 
 function resetStatus() { showStatus("Silakan pindai kode QR berikutnya", "idle"); }
 
+function safeAtob(str) {
+  // Remove all whitespace
+  let cleaned = str.replace(/\s/g, '');
+  // Convert URL-safe base64 to standard base64
+  cleaned = cleaned.replace(/-/g, '+').replace(/_/g, '/');
+  // Pad with '=' if the length is not a multiple of 4
+  const pad = cleaned.length % 4;
+  if (pad) {
+    if (pad === 1) {
+      throw new Error("Invalid base64 structure");
+    }
+    cleaned += '='.repeat(4 - pad);
+  }
+  return atob(cleaned);
+}
+
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
   if (scanCooldown) return; // Prevent multiple scans at once
@@ -263,8 +280,8 @@ async function handleScan(decodedText) {
 
   let originalStudentId;
   try {
-    // DECODE the Base64 string from the QR code
-    originalStudentId = atob(decodedText);
+    // DECODE the Base64 string from the QR code using the robust helper
+    originalStudentId = safeAtob(decodedText);
   } catch (e) {
     // This catches errors if the QR code is not a valid Base64 string
     showStatus("Kode QR Tidak Valid", "error", "Format kode tidak dikenali.");
@@ -302,6 +319,7 @@ async function handleScan(decodedText) {
       showStatus("Gagal", "error", data.message || "Terjadi kesalahan");
     }
   } catch (error) {
+    console.error("Scan request failed:", error);
     showStatus("Error Koneksi", "error", "Gagal menghubungi server");
   } finally {
     // Shorter cooldown for better UX

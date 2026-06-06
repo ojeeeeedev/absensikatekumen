@@ -6,7 +6,7 @@
       "destination": "/api/register"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/public/$1"
     }
   ]

@@ -3,7 +3,8 @@
   "version": "1.6.1",
   "type": "module",
   "scripts": {
-    "start": "vercel dev"
+    "start": "vercel dev",
+    "build": "echo 'No build step needed'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
