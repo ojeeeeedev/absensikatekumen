@@ -309,7 +309,12 @@ async function handleScan(decodedText) {
       let errMsg = `HTTP ${response.status}`;
       try {
         const errJson = JSON.parse(responseText);
-        if (errJson.message) errMsg += `: ${errJson.message}`;
+        if (errJson.message) {
+          errMsg += `: ${errJson.message}`;
+          if (errJson.details) {
+            errMsg += ` (${errJson.details})`;
+          }
+        }
       } catch (jsonErr) {
         errMsg += `: ${responseText.substring(0, 80)}`;
       }
