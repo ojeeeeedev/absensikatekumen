@@ -130,7 +130,12 @@ export default async function handler(req, res) {
       try {
         data = JSON.parse(text);
       } catch (e) {
-        return res.status(200).send(text);
+        console.error("GAS response is not JSON:", text);
+        return res.status(502).json({
+          status: "error",
+          message: "Google Apps Script returned invalid JSON (HTML or plain text instead)",
+          details: text.substring(0, 150)
+        });
       }
 
       // Inject image if we got a URL and GAS was successful
