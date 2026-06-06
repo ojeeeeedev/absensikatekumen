@@ -304,6 +304,18 @@ async function handleScan(decodedText) {
       body: JSON.stringify({ studentId: originalStudentId, week: selectedWeek }),
     });
 
+    if (!response.ok) {
+      const responseText = await response.text();
+      let errMsg = `HTTP ${response.status}`;
+      try {
+        const errJson = JSON.parse(responseText);
+        if (errJson.message) errMsg += `: ${errJson.message}`;
+      } catch (jsonErr) {
+        errMsg += `: ${responseText.substring(0, 80)}`;
+      }
+      throw new Error(errMsg);
+    }
+
     const data = await response.json();
 
     if (data.status === "ok") {
@@ -320,7 +332,7 @@ async function handleScan(decodedText) {
     }
   } catch (error) {
     console.error("Scan request failed:", error);
-    showStatus("Error Koneksi", "error", "Gagal menghubungi server");
+    showStatus("Error Koneksi", "error", error.message || "Gagal menghubungi server");
   } finally {
     // Shorter cooldown for better UX
     setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
