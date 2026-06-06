@@ -130,11 +130,11 @@ export default async function handler(req, res) {
       try {
         data = JSON.parse(text);
       } catch (e) {
-        console.error("GAS response is not JSON:", text);
+        console.error(`GAS response for class ${classCode} (${scriptURL}) is not JSON:`, text);
         return res.status(502).json({
           status: "error",
-          message: "Google Apps Script returned invalid JSON (HTML or plain text instead)",
-          details: text.substring(0, 150)
+          message: `Google Apps Script for class "${classCode}" returned invalid JSON (HTML or plain text instead)`,
+          details: `URL: ${scriptURL}. Response: ${text.substring(0, 100)}`
         });
       }
 
