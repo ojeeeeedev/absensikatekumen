@@ -1,119 +1,110 @@
-let html5QrcodeScanner; // Will be initialized later
-let scanCooldown = false;
-let selectedWeek = null; 
-let profileModalTimeout; // To store the timeout ID for auto-closing the profile modal
+let html5QrcodeScanner = null;
+let selectedWeek = null;
+let profileModalTimeout = null;
+
+// --- STATE MANAGEMENT ---
+// State 0: Auth, State 1: Selection, State 2: Scanning
+function setAppState(state) {
+  const container = document.getElementById('app-container');
+  container.className = 'glass-container';
+  
+  if (state === 0) {
+    container.classList.add('state-auth');
+    stopScanner();
+  } else if (state === 1) {
+    container.classList.add('state-selection');
+    stopScanner();
+  } else if (state === 2) {
+    container.classList.add('state-scanning');
+    // Set active topic name text
+    const topicTrigger = document.getElementById('topic-trigger-large');
+    const activeTopicText = document.getElementById('active-topic-name');
+    if (activeTopicText && topicTrigger) {
+      activeTopicText.textContent = topicTrigger.textContent.replace('arrow_drop_down', '').trim();
+    }
+    startScanner();
+  }
+}
+
+// --- THEME MANAGEMENT ---
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeToggleIcon(savedTheme);
+}
+
+// Global toggle theme function (referenced in HTML button)
+window.toggleTheme = function() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateThemeToggleIcon(newTheme);
+}
+
+function updateThemeToggleIcon(theme) {
+  const icon = document.querySelector('#theme-toggle span');
+  if (icon) {
+    icon.textContent = theme === 'light' ? 'dark_mode' : 'light_mode';
+  }
+}
 
 // --- SAFARI VIEWPORT FIX ---
 function setViewportHeight() {
   let vh = window.innerHeight * 0.01;
   document.documentElement.style.setProperty('--vh', `${vh}px`);
 }
-// Set on initial load
 setViewportHeight();
-// Reset on resize or orientation change
 window.addEventListener('resize', setViewportHeight);
 
-// --- DASHBOARD INTERACTION ---
-function handleDashboardClick(event, element) {
-  window.open('/api/dashboard', '_blank');
-}
-
 // --- MODAL FUNCTIONS ---
-function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
-function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
+window.openTopicModal = function() { document.getElementById('topic-modal').style.display = 'flex'; }
+window.closeTopicModal = function() { document.getElementById('topic-modal').style.display = 'none'; }
 
-function showProfileModal(name, id, topic, imageUrl) {
-  // Clear any existing timeout to prevent premature closing if a new scan happens quickly
-  clearTimeout(profileModalTimeout);
-
-  document.getElementById('profile-name').textContent = name;
-  document.getElementById('profile-id').innerHTML = `ID: ${id} &bull; Topik ${topic}`;
-  const img = document.getElementById('profile-image');
-
-  // Set placeholder/loading image first in case network is slow
-  img.src = imageUrl || '/assets/favicon.png';
-
-  // Handle image load error gracefully (e.g. if the image doesn't exist on Supabase bucket)
-  img.onerror = () => {
-    img.src = '/assets/favicon.png'; // Fallback avatar/placeholder
-  };
-
-  document.getElementById('profile-modal').style.display = 'flex';
-
-  // Reset spinner animation to provide visual feedback for the new timeout
-  const spinner = document.querySelector('.circle-progress');
-  if (spinner) {
-    spinner.style.animation = 'none';
-    spinner.offsetHeight; // Trigger reflow to restart animation
-    spinner.style.animation = '';
-  }
-
-  // Set timeout to close the modal after 4 seconds (4000 milliseconds)
-  profileModalTimeout = setTimeout(closeProfileModal, 4000);
-}
-
-function closeProfileModal() {
-  const profileModal = document.getElementById('profile-modal');
-  const profileCard = profileModal.querySelector('.profile-card');
-
-  profileCard.style.animation = 'fadeOut 0.3s ease-out forwards'; // Apply fade-out animation
-  
-  // After the animation, hide the modal completely
-  setTimeout(() => {
-    profileModal.style.display = 'none';
-    profileCard.style.animation = ''; // Reset animation for next time it opens
-  }, 300); // Match this duration to the CSS animation duration
-}
-
-function selectTopic(week, name, element) {
+window.selectTopic = function(week, name, element) {
   selectedWeek = week;
-  document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
-  document.getElementById('topic-trigger').style.borderColor = "#9A2126";
+  const btn = document.getElementById('topic-trigger-large');
+  if (btn) {
+    btn.innerHTML = `<span>${week}. ${name}</span><span class="material-icons-outlined">arrow_drop_down</span>`;
+  }
   document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
   element.classList.add('active');
-  setTimeout(closeTopicModal, 200);
+  setTimeout(() => {
+    window.closeTopicModal();
+    setAppState(2); // Go straight to scanner state on selection
+  }, 200);
 }
 
-function filterTopics() {
+window.filterTopics = function() {
   const searchTerm = document.getElementById('topic-search-input').value.toLowerCase();
   const topics = document.querySelectorAll('.topic-option');
   topics.forEach(topic => {
     const topicText = topic.textContent.toLowerCase();
-    if (topicText.includes(searchTerm)) {
-      topic.style.display = 'block';
-    } else {
-      topic.style.display = 'none';
-    }
+    topic.style.display = topicText.includes(searchTerm) ? 'block' : 'none';
   });
 }
 
-function togglePasswordVisibility() {
+window.togglePasswordVisibility = function() {
   const input = document.getElementById('login-input');
   const icon = document.getElementById('password-toggle');
   if (input.type === 'password') {
     input.type = 'text';
-    icon.textContent = 'visibility'; // Icon to hide the password
+    icon.textContent = 'visibility';
   } else {
     input.type = 'password';
-    icon.textContent = 'visibility_off'; // Icon to show the password
+    icon.textContent = 'visibility_off';
   }
 }
 
-function hideLoginError() {
+window.hideLoginError = function() {
   const errorBox = document.getElementById('login-error-box');
-  if (errorBox.style.display === 'block') {
-    // Animate out
-    errorBox.style.animation = 'fadeOutDown 0.3s ease-in forwards';
-    setTimeout(() => {
-      errorBox.style.display = 'none';
-      errorBox.style.animation = 'fadeInUp 0.3s ease-out forwards'; // Reset for next time
-    }, 300);
+  if (errorBox) {
+    errorBox.style.display = 'none';
   }
 }
 
 // --- AUTHENTICATION ---
-async function handleLogin() {
-  let errorTimeout; // Variable to hold the timeout
+window.handleLogin = async function() {
   const secret = document.getElementById('login-input').value;
   const errorBox = document.getElementById('login-error-box');
   const successIcon = document.getElementById('login-success-icon');
@@ -125,8 +116,7 @@ async function handleLogin() {
     return;
   }
 
-  // Hide previous errors smoothly
-  hideLoginError();
+  window.hideLoginError();
 
   try {
     const response = await fetch("/api/absensi", {
@@ -137,57 +127,31 @@ async function handleLogin() {
     const data = await response.json();
 
     if (data.status === 'ok' && data.token) {
-      // 1. Fade in the green checkmark and keep it for 1 second.
-      successIcon.style.animation = 'fadeIn 0.5s forwards'; // A slightly longer fade-in
       successIcon.style.display = 'block';
-
-      setTimeout(() => { // This timeout ensures the checkmark is visible for 1 second before proceeding
-        successIcon.style.display = 'none'; // Hide checkmark
-
-        // 2. Show loading spinner for 0.25s
+      
+      setTimeout(() => {
+        successIcon.style.display = 'none';
         loginLoader.style.display = 'flex';
 
         setTimeout(() => {
-          const loginContainer = document.getElementById('login-container');
-          const loginFooter = document.getElementById('login-footer');
-          const loginHeader = document.getElementById('login-header');
-          const bottomBranding = document.getElementById('bottom-branding');
-
-          // 3. Animate login screen out
-          loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          if (loginHeader) loginHeader.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          if (bottomBranding) bottomBranding.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-
-          // 4. After fade out, hide it and show scanner UI
-          setTimeout(() => {
-            sessionStorage.setItem('authToken', data.token); // Store token
-            loginContainer.style.display = 'none';
-            loginFooter.style.display = 'none';
-            if (loginHeader) loginHeader.style.display = 'none';
-            if (bottomBranding) bottomBranding.style.display = 'none';
-            loginLoader.style.display = 'none'; // Hide loader
-            document.getElementById('scanner-ui').style.display = 'flex';
-            initializeApp(); // Load the main app
-          }, 400);
-        }, 250); // Wait for 0.25 seconds
-      }, 1000); // Wait for 1 second
+          sessionStorage.setItem('authToken', data.token);
+          loginLoader.style.display = 'none';
+          
+          // Switch to Selection State
+          setAppState(1);
+          initializeApp();
+        }, 250);
+      }, 800);
     } else {
-      // Wrong password: show red error box
       errorBox.textContent = data.message || 'Login gagal.';
       errorBox.style.display = 'block';
-      // Shake the input box
-      document.getElementById('login-input').style.animation = 'shake 0.5s';
-      setTimeout(() => document.getElementById('login-input').style.animation = '', 500);
-      // Set a timeout to hide the error box after 2 seconds
-      errorTimeout = setTimeout(hideLoginError, 2000);
+      document.getElementById('login-input').style.animation = 'shake 0.4s';
+      setTimeout(() => document.getElementById('login-input').style.animation = '', 400);
     }
   } catch (e) {
     console.error("Login request failed:", e);
-    // Also set timeout for connection errors
     errorBox.textContent = 'Error koneksi ke server.';
     errorBox.style.display = 'block';
-    errorTimeout = setTimeout(hideLoginError, 2000);
   }
 }
 
