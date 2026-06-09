@@ -189,13 +189,31 @@ async function loadTopikList() {
 // --- BACKGROUND SCAN QUEUE ENGINE ---
 class ScanQueue {
   constructor() {
-    this.queue = JSON.parse(localStorage.getItem('scan_queue') || '[]');
+    try {
+      this.queue = JSON.parse(localStorage.getItem('scan_queue') || '[]');
+    } catch (e) {
+      console.error("Failed to read localStorage:", e);
+      this.queue = [];
+    }
+
+    // Self-healing: Reset any stuck 'processing' status back to 'pending' on load
+    this.queue.forEach(item => {
+      if (item.status === 'processing') {
+        item.status = 'pending';
+      }
+    });
+
     this.isProcessing = false;
     this.cooldowns = {}; // For preventing duplicate double scans
   }
 
   save() {
-    localStorage.setItem('scan_queue', JSON.stringify(this.queue));
+    try {
+      localStorage.setItem('scan_queue', JSON.stringify(this.queue));
+    } catch (e) {
+      console.error("Failed to write localStorage:", e);
+    }
+    this.clearOldHistory(); // Prune history to limit size
     this.render();
   }
 
@@ -255,36 +273,67 @@ class ScanQueue {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.status === "ok") {
-        pendingItem.status = 'success';
-        pendingItem.name = data.name;
-        pendingItem.image = data.image || '';
-        showStatus(data.name, "success", `Hadir - Topik ${pendingItem.week}`);
-        if (navigator.vibrate) navigator.vibrate(200);
-      } else if (data.status === "duplicate") {
-        pendingItem.status = 'duplicate';
-        pendingItem.name = data.name || 'Sudah Absen';
-        pendingItem.image = data.image || '';
-        showStatus("Sudah Hadir", "error", data.message);
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      } else {
+        // Non-network response errors (e.g. 400, 500) are permanent failures for this item.
+        // Mark as error and let the queue proceed rather than blocking it permanently.
         pendingItem.status = 'error';
-        pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
-        showStatus("Gagal", "error", pendingItem.errorMsg);
+        pendingItem.errorMsg = `HTTP ${response.status}`;
+        
+        // Decouple sync status from active scanner UI if in state-scanning
+        const container = document.getElementById('app-container');
+        if (!container || !container.classList.contains('state-scanning')) {
+          showStatus("Gagal", "error", pendingItem.errorMsg);
+        }
+      } else {
+        const data = await response.json();
+        
+        if (data.status === "ok") {
+          pendingItem.status = 'success';
+          pendingItem.name = data.name;
+          pendingItem.image = data.image || '';
+          
+          const container = document.getElementById('app-container');
+          if (container && container.classList.contains('state-scanning')) {
+            // Tactile feedback without disturbing scanner status bar
+            if (navigator.vibrate) navigator.vibrate(200);
+          } else {
+            showStatus(data.name, "success", `Hadir - Topik ${pendingItem.week}`);
+            if (navigator.vibrate) navigator.vibrate(200);
+          }
+        } else if (data.status === "duplicate") {
+          pendingItem.status = 'duplicate';
+          pendingItem.name = data.name || 'Sudah Absen';
+          pendingItem.image = data.image || '';
+          
+          const container = document.getElementById('app-container');
+          if (container && container.classList.contains('state-scanning')) {
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          } else {
+            showStatus("Sudah Hadir", "error", data.message);
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          }
+        } else {
+          pendingItem.status = 'error';
+          pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
+          
+          const container = document.getElementById('app-container');
+          if (!container || !container.classList.contains('state-scanning')) {
+            showStatus("Gagal", "error", pendingItem.errorMsg);
+          }
+        }
       }
     } catch (error) {
-      console.error("Queue sync error:", error);
-      pendingItem.status = 'pending'; // Leave in pending to retry when online
+      console.error("Queue sync network error:", error);
+      pendingItem.status = 'pending'; // Revert back to pending to retry when online
       
-      // Stop loop temporarily due to network disconnect
+      try {
+        localStorage.setItem('scan_queue', JSON.stringify(this.queue));
+      } catch (e) {
+        console.error("Failed to save queue on fallback:", e);
+      }
+      
       this.isProcessing = false;
       this.updateBanner();
-      return;
+      return; // Stop processing loop until internet is restored
     }
 
     this.isProcessing = false;
@@ -363,55 +412,61 @@ class ScanQueue {
     // Keep only the last 20 items in localStorage to prevent storage overflow
     if (this.queue.length > 20) {
       this.queue = this.queue.slice(0, 20);
-      this.save();
+      try {
+        localStorage.setItem('scan_queue', JSON.stringify(this.queue));
+      } catch (e) {
+        console.error("Pruning failed to write localStorage:", e);
+      }
     }
   }
 }
 
-// Instantiate globally so other functions can call it
+// Instantiate globally
 window.scanQueue = new ScanQueue();
 
-// --- STATUS HANDLER (Text Only) ---
+// --- STATUS HANDLER ---
 function showStatus(mainText, type, subText = "") {
   const el = document.getElementById("status");
+  if (!el) return;
   
-  // Using Material Icons for visual indicators
-  let iconName = "";
+  let iconName = "qr_code_scanner";
   if (type === 'success') iconName = "check_circle_outline";
   else if (type === 'error') iconName = "error_outline";
   else if (type === 'processing') iconName = "hourglass_empty";
-  else iconName = "qr_code_scanner"; // Default for idle/camera
 
   if (subText) {
-      el.innerHTML = `
-          <span class="material-icons-outlined" style="font-size: 1.5rem;">${iconName}</span>
-          <div class="status-text-container">
-              <div class="main-text">${mainText}</div>
-              <div class="sub-text">${subText}</div>
-          </div>
-      `;
+    el.innerHTML = `
+      <span class="material-icons-outlined" style="font-size: 1.25rem;">${iconName}</span>
+      <div class="status-text-container">
+        <div class="main-text">${mainText}</div>
+        <div class="sub-text">${subText}</div>
+      </div>
+    `;
   } else {
-      el.innerHTML = `
-          <span class="material-icons-outlined" style="font-size: 1.5rem;">${iconName}</span>
-          <div class="main-text">${mainText}</div>
-      `;
+    el.innerHTML = `
+      <span class="material-icons-outlined" style="font-size: 1.25rem;">${iconName}</span>
+      <div class="main-text">${mainText}</div>
+    `;
   }
   el.className = type;
 }
 
-function resetStatus() { showStatus("Silakan pindai kode QR berikutnya", "idle"); }
+function resetStatus() { 
+  if (typeof scanQueue !== 'undefined') {
+    const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+    if (pendingCount > 0) {
+      showStatus("Sinkronisasi sedang berjalan...", "processing", `${pendingCount} item tersisa di antrean.`);
+      return;
+    }
+  }
+  showStatus("Silakan pindai kode QR berikutnya", "idle");
+}
 
 function safeAtob(str) {
-  // Remove all whitespace
-  let cleaned = str.replace(/\s/g, '');
-  // Convert URL-safe base64 to standard base64
-  cleaned = cleaned.replace(/-/g, '+').replace(/_/g, '/');
-  // Pad with '=' if the length is not a multiple of 4
+  let cleaned = str.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
   const pad = cleaned.length % 4;
   if (pad) {
-    if (pad === 1) {
-      throw new Error("Invalid base64 structure");
-    }
+    if (pad === 1) throw new Error("Invalid base64 structure");
     cleaned += '='.repeat(4 - pad);
   }
   return atob(cleaned);
@@ -419,79 +474,63 @@ function safeAtob(str) {
 
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
-  if (scanCooldown) return; // Prevent multiple scans at once
-
-  // Check if a topic is selected
-  if (!selectedWeek) { 
+  if (!selectedWeek) {
     showStatus("Pilih topik terlebih dahulu!", "error");
-    openTopicModal(); 
+    setAppState(1);
+    openTopicModal();
     return;
   }
 
   let originalStudentId;
   try {
-    // DECODE the Base64 string from the QR code using the robust helper
     originalStudentId = safeAtob(decodedText);
   } catch (e) {
-    // This catches errors if the QR code is not a valid Base64 string
     showStatus("Kode QR Tidak Valid", "error", "Format kode tidak dikenali.");
-    scanCooldown = true; // Start cooldown to prevent spamming invalid codes
-    setTimeout(() => { scanCooldown = false; resetStatus(); }, 4000);
+    if (navigator.vibrate) navigator.vibrate([100, 50]);
     return;
   }
 
-  scanCooldown = true;
-  
-  // OPTIMISTIC UI: Give immediate feedback
-  if (navigator.vibrate) navigator.vibrate(100); 
-  showStatus("Memproses...", "processing", `ID: ${originalStudentId}`);
+  // Optimistic tactile feedback on read
+  if (navigator.vibrate) navigator.vibrate(80);
 
-  try {
-    const token = sessionStorage.getItem('authToken');
-    const response = await fetch("/api/absensi", {
-      method: "POST", 
-      headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` }, 
-      body: JSON.stringify({ studentId: originalStudentId, week: selectedWeek }),
-    });
+  // Add scan to queue instantly and keep camera running!
+  scanQueue.add(originalStudentId, selectedWeek);
+}
 
-    if (!response.ok) {
-      const responseText = await response.text();
-      let errMsg = `HTTP ${response.status}`;
-      try {
-        const errJson = JSON.parse(responseText);
-        if (errJson.message) {
-          errMsg += `: ${errJson.message}`;
-          if (errJson.details) {
-            errMsg += ` (${errJson.details})`;
-          }
-        }
-      } catch (jsonErr) {
-        errMsg += `: ${responseText.substring(0, 80)}`;
-      }
-      throw new Error(errMsg);
+async function startScanner() {
+  if (html5QrcodeScanner) return; // Guard against duplicate instantiations
+
+  const scanConfig = { 
+    fps: 30,
+    qrbox: { width: 220, height: 220 },
+    aspectRatio: 1.0,
+    disableFlip: false,
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true
+    },
+    videoConstraints: {
+      facingMode: "environment",
+      width: { ideal: 640 },
+      height: { ideal: 640 }
     }
+  };
 
-    const data = await response.json();
-
-    if (data.status === "ok") {
-      // Haptic feedback for server confirmation
-      if (navigator.vibrate) navigator.vibrate(200); 
-      showStatus(data.name, "success", `ID: ${data.studentId} • Topik ${selectedWeek}`);
-      showProfileModal(data.name, data.studentId, selectedWeek, data.image);
-    } else if (data.status === "duplicate") {
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
-      showStatus("Sudah Hadir", "error", data.message);
-    } else {
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
-      showStatus("Gagal", "error", data.message || "Terjadi kesalahan");
+  html5QrcodeScanner = new Html5Qrcode("reader", /* verbose= */ false);
+  html5QrcodeScanner.start(
+    { facingMode: "environment" },
+    scanConfig,
+    handleScan
+  ).then(() => {
+    const loader = document.getElementById("camera-loader");
+    if (loader) loader.style.display = "none";
+    resetStatus();
+  }).catch(err => {
+    console.error("Camera start failed:", err);
+    const loader = document.getElementById("camera-loader");
+    if (loader) {
+      loader.innerHTML = '<div style="color:var(--status-duplicate-text); text-align:center; padding:10px;">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
     }
-  } catch (error) {
-    console.error("Scan request failed:", error);
-    showStatus("Error Koneksi", "error", error.message || "Gagal menghubungi server");
-  } finally {
-    // Shorter cooldown for better UX
-    setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
-  }
+  });
 }
 
 async function stopScanner() {
@@ -507,54 +546,53 @@ async function stopScanner() {
   }
 }
 
-async function startScanner() {
-  const scanConfig = { 
-      fps: 30, // Increased for faster recognition
-      qrbox: { width: 250, height: 250 },
-      aspectRatio: 1.0,
-      disableFlip: false,
-      experimentalFeatures: {
-          // Use native BarcodeDetector if supported, for faster scans
-          useBarCodeDetectorIfSupported: true
-      },
-      // Pass video constraints directly into the config object
-      videoConstraints: {
-          facingMode: "environment",
-          width: { ideal: 720 },
-          height: { ideal: 720 }
-      }
-  };
+async function loadTopikList() {
+  const listContainer = document.getElementById("topic-list-container");
+  if (!listContainer) return;
 
-  html5QrcodeScanner = new Html5Qrcode("reader", /* verbose= */ false);
-  html5QrcodeScanner.start(
-    { facingMode: "environment" }, // Request rear camera
-    scanConfig,
-    handleScan
-  ).then(() => {
-      document.getElementById("camera-loader").style.display = "none";
-      resetStatus();
-  }).catch(err => {
-      const loader = document.getElementById("camera-loader");
-      loader.innerHTML = '<div style="color:#d32f2f; text-align:center">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
-  });
+  try {
+    if (typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS)) {
+      listContainer.innerHTML = "";
+      STATIC_TOPICS.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "topic-option";
+        if (item.name.includes("(P)")) div.classList.add("topic-p");
+        else if (item.name.includes("(KI)")) div.classList.add("topic-ki");
+        
+        if (item.week === "R1" || item.week === "R2") {
+          div.classList.add("topic-rekoleksi");
+        }
+        div.textContent = `${item.week}. ${item.name}`;
+        div.onclick = () => selectTopic(item.week, item.name, div);
+        listContainer.appendChild(div);
+      });
+    } else {
+      listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:var(--status-duplicate-text);">Data topik tidak ditemukan.</div>`;
+    }
+  } catch (err) {
+    console.error(err);
+    listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:var(--status-duplicate-text);">Gagal memuat topik.</div>`;
+  }
 }
 
 async function initializeApp() {
-  showStatus("Memuat sistem...", "processing");
   await loadTopikList();
+  scanQueue.render();
+  scanQueue.process(); // Process any leftover queue from last load
 }
 
+// Initial triggers
 window.onload = () => {
   initTheme();
   
-  // Connect background queue trigger for online state detection (safe-checked)
+  // Connect background queue trigger for online state detection
   window.addEventListener('online', () => {
-    if (typeof scanQueue !== 'undefined') scanQueue.process();
+    scanQueue.process();
   });
 
   if (sessionStorage.getItem('authToken')) {
     setAppState(1); // Set to selection page initially
-    if (typeof initializeApp === 'function') initializeApp();
+    initializeApp();
   } else {
     setAppState(0); // Authentication screen
   }
