@@ -1,7 +1,6 @@
 let html5QrcodeScanner = null;
 let selectedWeek = null;
 let scannerStartPromise = null;
-let scanCooldown = false;
 
 // --- STATE MANAGEMENT ---
 // State 0: Auth, State 1: Selection, State 2: Scanning
@@ -169,11 +168,14 @@ class ScanQueue {
     }
 
     // Self-healing: Reset any stuck 'processing' status back to 'pending' on load
+    let modified = false;
     this.queue.forEach(item => {
       if (item.status === 'processing') {
         item.status = 'pending';
+        modified = true;
       }
     });
+    if (modified) this.save();
 
     this.isProcessing = false;
     this.cooldowns = {}; // For preventing duplicate double scans
@@ -312,7 +314,10 @@ class ScanQueue {
           pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
           
           const container = document.getElementById('app-container');
-          if (!container || !container.classList.contains('state-scanning')) {
+          if (container && container.classList.contains('state-scanning')) {
+            triggerVisualFlash('error');
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          } else {
             showStatus("Gagal", "error", pendingItem.errorMsg);
           }
         }
@@ -324,6 +329,7 @@ class ScanQueue {
       
       this.isProcessing = false;
       this.updateBanner();
+      setTimeout(() => this.process(), 5000);
       return; // Stop processing loop until back online
     }
 
@@ -387,7 +393,7 @@ class ScanQueue {
 
       row.innerHTML = `
         <div class="student-info">
-          <img class="student-photo" src="${avatarSrc}" onerror="this.src='/assets/favicon.png'" alt="Foto">
+          <img class="student-photo" src="${avatarSrc}" onerror="this.onerror=null; this.src='/assets/favicon.png'" alt="Foto">
           <div class="student-text">
             <span class="student-name">${item.name || 'Katekumen'}</span>
             <span class="student-id">${item.studentId} &bull; Topik ${item.week}</span>
