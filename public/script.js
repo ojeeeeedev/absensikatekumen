@@ -186,6 +186,191 @@ async function loadTopikList() {
   }
 }
 
+// --- BACKGROUND SCAN QUEUE ENGINE ---
+class ScanQueue {
+  constructor() {
+    this.queue = JSON.parse(localStorage.getItem('scan_queue') || '[]');
+    this.isProcessing = false;
+    this.cooldowns = {}; // For preventing duplicate double scans
+  }
+
+  save() {
+    localStorage.setItem('scan_queue', JSON.stringify(this.queue));
+    this.render();
+  }
+
+  add(studentId, week) {
+    const timestamp = Date.now();
+    
+    // Prevent double scan check (cooldown 3s for same studentId)
+    if (this.cooldowns[studentId] && (timestamp - this.cooldowns[studentId] < 3000)) {
+      console.log(`Scan blocked by cooldown: ${studentId}`);
+      return;
+    }
+    this.cooldowns[studentId] = timestamp;
+
+    const id = 'scan_' + Math.random().toString(36).substring(2, 9) + '_' + timestamp;
+    const item = {
+      id,
+      studentId,
+      week,
+      status: 'pending',
+      name: '',
+      image: '',
+      errorMsg: '',
+      timestamp
+    };
+
+    this.queue.unshift(item); // Add to the top of list
+    this.save();
+    
+    // Trigger immediate sequential processing loop
+    this.process();
+  }
+
+  async process() {
+    if (this.isProcessing) return;
+
+    // Find the oldest pending item
+    const pendingItem = [...this.queue].reverse().find(item => item.status === 'pending');
+    if (!pendingItem) {
+      this.isProcessing = false;
+      this.updateBanner();
+      return;
+    }
+
+    this.isProcessing = true;
+    pendingItem.status = 'processing';
+    this.save();
+
+    try {
+      const token = sessionStorage.getItem('authToken');
+      const response = await fetch("/api/absensi", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify({ studentId: pendingItem.studentId, week: pendingItem.week }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.status === "ok") {
+        pendingItem.status = 'success';
+        pendingItem.name = data.name;
+        pendingItem.image = data.image || '';
+        showStatus(data.name, "success", `Hadir - Topik ${pendingItem.week}`);
+        if (navigator.vibrate) navigator.vibrate(200);
+      } else if (data.status === "duplicate") {
+        pendingItem.status = 'duplicate';
+        pendingItem.name = data.name || 'Sudah Absen';
+        pendingItem.image = data.image || '';
+        showStatus("Sudah Hadir", "error", data.message);
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      } else {
+        pendingItem.status = 'error';
+        pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
+        showStatus("Gagal", "error", pendingItem.errorMsg);
+      }
+    } catch (error) {
+      console.error("Queue sync error:", error);
+      pendingItem.status = 'pending'; // Leave in pending to retry when online
+      
+      // Stop loop temporarily due to network disconnect
+      this.isProcessing = false;
+      this.updateBanner();
+      return;
+    }
+
+    this.isProcessing = false;
+    this.save();
+    
+    // Continue processing remaining items in queue
+    setTimeout(() => this.process(), 500);
+  }
+
+  updateBanner() {
+    const warningBar = document.getElementById('queue-warning-bar');
+    const remainingText = document.getElementById('queue-remaining-count');
+    const statusText = document.getElementById('queue-status-text');
+
+    const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+
+    if (warningBar && remainingText) {
+      if (pendingCount > 0) {
+        warningBar.style.display = 'flex';
+        remainingText.textContent = pendingCount;
+        if (statusText) {
+          statusText.textContent = `Menyinkronkan (${pendingCount})`;
+          statusText.style.color = 'var(--status-pending-text)';
+        }
+      } else {
+        warningBar.style.display = 'none';
+        if (statusText) {
+          statusText.textContent = 'Semua Tersinkronisasi';
+          statusText.style.color = 'var(--status-success-text)';
+        }
+      }
+    }
+  }
+
+  render() {
+    this.updateBanner();
+    const listContainer = document.getElementById('queue-list');
+    if (!listContainer) return;
+
+    if (this.queue.length === 0) {
+      listContainer.innerHTML = '<div class="queue-empty-state">Belum ada data pemindaian.</div>';
+      return;
+    }
+
+    // Keep only the most recent 10 items in DOM to save performance
+    const renderItems = this.queue.slice(0, 10);
+    listContainer.innerHTML = '';
+
+    renderItems.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `queue-row ${item.status}`;
+
+      const avatarSrc = item.image || '/assets/favicon.png';
+      
+      let badgeText = item.status;
+      if (item.status === 'success') badgeText = 'Hadir';
+      if (item.status === 'duplicate') badgeText = 'Sudah Absen';
+      if (item.status === 'error') badgeText = 'Gagal';
+      if (item.status === 'pending') badgeText = 'Antre';
+
+      row.innerHTML = `
+        <div class="student-info">
+          <img class="student-photo" src="${avatarSrc}" onerror="this.src='/assets/favicon.png'" alt="Foto">
+          <div class="student-text">
+            <span class="student-name">${item.name || 'Katekumen'}</span>
+            <span class="student-id">${item.studentId} &bull; Topik ${item.week}</span>
+          </div>
+        </div>
+        <span class="status-badge ${item.status}">${badgeText}</span>
+      `;
+      listContainer.appendChild(row);
+    });
+  }
+
+  clearOldHistory() {
+    // Keep only the last 20 items in localStorage to prevent storage overflow
+    if (this.queue.length > 20) {
+      this.queue = this.queue.slice(0, 20);
+      this.save();
+    }
+  }
+}
+
+// Instantiate globally so other functions can call it
+window.scanQueue = new ScanQueue();
+
 // --- STATUS HANDLER (Text Only) ---
 function showStatus(mainText, type, subText = "") {
   const el = document.getElementById("status");
