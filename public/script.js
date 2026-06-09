@@ -208,12 +208,12 @@ class ScanQueue {
   }
 
   save() {
+    this.clearOldHistory(); // Slice first
     try {
       localStorage.setItem('scan_queue', JSON.stringify(this.queue));
     } catch (e) {
       console.error("Failed to write localStorage:", e);
     }
-    this.clearOldHistory(); // Prune history to limit size
     this.render();
   }
 
@@ -254,6 +254,7 @@ class ScanQueue {
     if (!pendingItem) {
       this.isProcessing = false;
       this.updateBanner();
+      resetStatus(); // Revert status bar back to idle when sync queue is empty
       return;
     }
 
@@ -273,15 +274,21 @@ class ScanQueue {
       });
 
       if (!response.ok) {
-        // Non-network response errors (e.g. 400, 500) are permanent failures for this item.
-        // Mark as error and let the queue proceed rather than blocking it permanently.
-        pendingItem.status = 'error';
-        pendingItem.errorMsg = `HTTP ${response.status}`;
-        
-        // Decouple sync status from active scanner UI if in state-scanning
-        const container = document.getElementById('app-container');
-        if (!container || !container.classList.contains('state-scanning')) {
-          showStatus("Gagal", "error", pendingItem.errorMsg);
+        // Transient server errors (5xx) or rate limits (429) should be retried.
+        if (response.status >= 500 || response.status === 429) {
+          pendingItem.status = 'pending';
+          pendingItem.errorMsg = `HTTP ${response.status} (Menunggu retry)`;
+          this.isProcessing = false;
+          this.save();
+          return; // Stop queue loop temporarily
+        } else {
+          // Permanent client errors (e.g. 400, 401, 404)
+          pendingItem.status = 'error';
+          pendingItem.errorMsg = `HTTP ${response.status}`;
+          const container = document.getElementById('app-container');
+          if (!container || !container.classList.contains('state-scanning')) {
+            showStatus("Gagal", "error", pendingItem.errorMsg);
+          }
         }
       } else {
         const data = await response.json();
@@ -293,7 +300,7 @@ class ScanQueue {
           
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
-            // Tactile feedback without disturbing scanner status bar
+            triggerVisualFlash('success');
             if (navigator.vibrate) navigator.vibrate(200);
           } else {
             showStatus(data.name, "success", `Hadir - Topik ${pendingItem.week}`);
@@ -306,6 +313,7 @@ class ScanQueue {
           
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
+            triggerVisualFlash('duplicate');
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           } else {
             showStatus("Sudah Hadir", "error", data.message);
@@ -324,16 +332,11 @@ class ScanQueue {
     } catch (error) {
       console.error("Queue sync network error:", error);
       pendingItem.status = 'pending'; // Revert back to pending to retry when online
-      
-      try {
-        localStorage.setItem('scan_queue', JSON.stringify(this.queue));
-      } catch (e) {
-        console.error("Failed to save queue on fallback:", e);
-      }
+      this.save();
       
       this.isProcessing = false;
       this.updateBanner();
-      return; // Stop processing loop until internet is restored
+      return; // Stop processing loop until back online
     }
 
     this.isProcessing = false;
@@ -409,14 +412,8 @@ class ScanQueue {
   }
 
   clearOldHistory() {
-    // Keep only the last 20 items in localStorage to prevent storage overflow
     if (this.queue.length > 20) {
       this.queue = this.queue.slice(0, 20);
-      try {
-        localStorage.setItem('scan_queue', JSON.stringify(this.queue));
-      } catch (e) {
-        console.error("Pruning failed to write localStorage:", e);
-      }
     }
   }
 }
@@ -472,6 +469,36 @@ function safeAtob(str) {
   return atob(cleaned);
 }
 
+function triggerVisualFlash(type) {
+  const readerContainer = document.getElementById('reader-container');
+  if (!readerContainer) return;
+  
+  // Create a temporary overlay element
+  const flash = document.createElement('div');
+  flash.style.position = 'absolute';
+  flash.style.inset = '0';
+  flash.style.zIndex = '5';
+  flash.style.pointerEvents = 'none';
+  flash.style.opacity = '0.35';
+  flash.style.transition = 'opacity 0.4s ease';
+  
+  if (type === 'success') {
+    flash.style.backgroundColor = '#2e7d32'; // Green
+  } else if (type === 'duplicate') {
+    flash.style.backgroundColor = '#f57c00'; // Orange
+  } else {
+    flash.style.backgroundColor = '#c62828'; // Red
+  }
+  
+  readerContainer.appendChild(flash);
+  
+  // Trigger reflow and fade out
+  setTimeout(() => {
+    flash.style.opacity = '0';
+    setTimeout(() => flash.remove(), 400);
+  }, 100);
+}
+
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
   if (!selectedWeek) {
@@ -487,6 +514,7 @@ async function handleScan(decodedText) {
   } catch (e) {
     showStatus("Kode QR Tidak Valid", "error", "Format kode tidak dikenali.");
     if (navigator.vibrate) navigator.vibrate([100, 50]);
+    setTimeout(() => resetStatus(), 3000); // Revert back to idle/processing status
     return;
   }
 
@@ -526,6 +554,7 @@ async function startScanner() {
     resetStatus();
   }).catch(err => {
     console.error("Camera start failed:", err);
+    html5QrcodeScanner = null; // Reset reference so retry can be attempted
     const loader = document.getElementById("camera-loader");
     if (loader) {
       loader.innerHTML = '<div style="color:var(--status-duplicate-text); text-align:center; padding:10px;">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
@@ -535,13 +564,15 @@ async function startScanner() {
 
 async function stopScanner() {
   if (html5QrcodeScanner) {
+    const scanner = html5QrcodeScanner;
+    html5QrcodeScanner = null; // Reset reference immediately to avoid race conditions
     try {
-      await html5QrcodeScanner.stop();
-      html5QrcodeScanner = null;
-      const loader = document.getElementById("camera-loader");
-      if (loader) loader.style.display = "flex";
+      await scanner.stop();
     } catch (err) {
       console.error("Failed to stop scanner:", err);
+    } finally {
+      const loader = document.getElementById("camera-loader");
+      if (loader) loader.style.display = "flex";
     }
   }
 }
