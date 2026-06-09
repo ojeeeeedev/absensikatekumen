@@ -96,6 +96,7 @@ body {
 .liquid-shape {
   position: absolute; border-radius: 50%;
   filter: blur(120px); opacity: 0.45;
+  will-change: transform, filter; /* GPU compositor acceleration */
 }
 [data-theme="dark"] .liquid-shape { opacity: 0.25; }
 

@@ -1,6 +1,6 @@
 let html5QrcodeScanner = null;
 let selectedWeek = null;
-let profileModalTimeout = null;
+let scannerStartPromise = null;
 let scanCooldown = false;
 
 // --- STATE MANAGEMENT ---
@@ -156,35 +156,7 @@ window.handleLogin = async function() {
   }
 }
 
-async function loadTopikList() {
-  const listContainer = document.getElementById("topic-list-container");
-  try {
-    // Use STATIC_TOPICS from topics.js
-    if (typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS)) {
-      listContainer.innerHTML = "";
-      STATIC_TOPICS.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "topic-option";
-        if (item.name.includes("(P)")) {
-          div.classList.add("topic-p");
-        } else if (item.name.includes("(KI)")) {
-          div.classList.add("topic-ki");
-        }
-        if (item.week === "R1" || item.week === "R2") {
-          div.classList.add("topic-rekoleksi");
-        }
-        div.textContent = `${item.week}. ${item.name}`;
-        div.onclick = () => selectTopic(item.week, item.name, div);
-        listContainer.appendChild(div);
-      });
-    } else {
-      listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:#d32f2f;">Data topik tidak ditemukan.</div>`;
-    }
-  } catch (err) {
-    console.error(err);
-    listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:#d32f2f;">Gagal memuat topik.</div>`;
-  }
-}
+
 
 // --- BACKGROUND SCAN QUEUE ENGINE ---
 class ScanQueue {
@@ -274,17 +246,33 @@ class ScanQueue {
       });
 
       if (!response.ok) {
+        // Insert this check in process() immediately after checking response status:
+        if (response.status === 401) {
+          pendingItem.status = 'pending';
+          this.isProcessing = false;
+          this.save();
+          sessionStorage.removeItem('authToken');
+          showStatus("Sesi Habis", "error", "Silakan login kembali.");
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          triggerVisualFlash('error');
+          if (typeof setAppState === 'function') setAppState(0);
+          return; // Stop queue loop
+        }
+
         // Transient server errors (5xx) or rate limits (429) should be retried.
         if (response.status >= 500 || response.status === 429) {
           pendingItem.status = 'pending';
           pendingItem.errorMsg = `HTTP ${response.status} (Menunggu retry)`;
           this.isProcessing = false;
           this.save();
-          return; // Stop queue loop temporarily
+          // Trigger retry after 5 seconds
+          setTimeout(() => this.process(), 5000);
+          return; // Stop current loop
         } else {
-          // Permanent client errors (e.g. 400, 401, 404)
+          // Permanent client errors (e.g. 400, 404)
           pendingItem.status = 'error';
           pendingItem.errorMsg = `HTTP ${response.status}`;
+          triggerVisualFlash('error');
           const container = document.getElementById('app-container');
           if (!container || !container.classList.contains('state-scanning')) {
             showStatus("Gagal", "error", pendingItem.errorMsg);
@@ -413,7 +401,20 @@ class ScanQueue {
 
   clearOldHistory() {
     if (this.queue.length > 20) {
-      this.queue = this.queue.slice(0, 20);
+      // Separate pending/processing items and completed items
+      const pendingItems = this.queue.filter(item => item.status === 'pending' || item.status === 'processing');
+      const completedItems = this.queue.filter(item => item.status !== 'pending' && item.status !== 'processing');
+      
+      // Calculate how many completed items we are allowed to keep
+      const allowedCompletedCount = Math.max(0, 20 - pendingItems.length);
+      const prunedCompleted = completedItems.slice(0, allowedCompletedCount);
+      
+      // Combine them using a Set of allowed IDs to preserve original order
+      const allowedIds = new Set([
+        ...pendingItems.map(item => item.id),
+        ...prunedCompleted.map(item => item.id)
+      ]);
+      this.queue = this.queue.filter(item => allowedIds.has(item.id));
     }
   }
 }
@@ -514,6 +515,7 @@ async function handleScan(decodedText) {
   } catch (e) {
     showStatus("Kode QR Tidak Valid", "error", "Format kode tidak dikenali.");
     if (navigator.vibrate) navigator.vibrate([100, 50]);
+    triggerVisualFlash('error');
     setTimeout(() => resetStatus(), 3000); // Revert back to idle/processing status
     return;
   }
@@ -544,15 +546,19 @@ async function startScanner() {
   };
 
   html5QrcodeScanner = new Html5Qrcode("reader", /* verbose= */ false);
-  html5QrcodeScanner.start(
+  scannerStartPromise = html5QrcodeScanner.start(
     { facingMode: "environment" },
     scanConfig,
     handleScan
-  ).then(() => {
+  );
+
+  scannerStartPromise.then(() => {
+    scannerStartPromise = null;
     const loader = document.getElementById("camera-loader");
     if (loader) loader.style.display = "none";
     resetStatus();
   }).catch(err => {
+    scannerStartPromise = null;
     console.error("Camera start failed:", err);
     html5QrcodeScanner = null; // Reset reference so retry can be attempted
     const loader = document.getElementById("camera-loader");
@@ -564,8 +570,19 @@ async function startScanner() {
 
 async function stopScanner() {
   if (html5QrcodeScanner) {
+    // If still starting, wait for the start promise to resolve first
+    if (scannerStartPromise) {
+      try {
+        await scannerStartPromise;
+      } catch (e) {
+        // start failed, startScanner already cleared html5QrcodeScanner
+        return;
+      }
+    }
+
     const scanner = html5QrcodeScanner;
     html5QrcodeScanner = null; // Reset reference immediately to avoid race conditions
+    scannerStartPromise = null;
     try {
       await scanner.stop();
     } catch (err) {
