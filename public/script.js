@@ -1,19 +1,20 @@
 let html5QrcodeScanner = null;
 let selectedWeek = null;
 let profileModalTimeout = null;
+let scanCooldown = false;
 
 // --- STATE MANAGEMENT ---
 // State 0: Auth, State 1: Selection, State 2: Scanning
-function setAppState(state) {
+window.setAppState = async function(state) {
   const container = document.getElementById('app-container');
   container.className = 'glass-container';
   
   if (state === 0) {
     container.classList.add('state-auth');
-    stopScanner();
+    await stopScanner();
   } else if (state === 1) {
     container.classList.add('state-selection');
-    stopScanner();
+    await stopScanner();
   } else if (state === 2) {
     container.classList.add('state-scanning');
     // Set active topic name text
@@ -356,7 +357,6 @@ async function startScanner() {
 async function initializeApp() {
   showStatus("Memuat sistem...", "processing");
   await loadTopikList();
-  startScanner();
 }
 
 window.onload = () => {
