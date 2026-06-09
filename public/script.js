@@ -308,6 +308,19 @@ async function handleScan(decodedText) {
   }
 }
 
+async function stopScanner() {
+  if (html5QrcodeScanner) {
+    try {
+      await html5QrcodeScanner.stop();
+      html5QrcodeScanner = null;
+      const loader = document.getElementById("camera-loader");
+      if (loader) loader.style.display = "flex";
+    } catch (err) {
+      console.error("Failed to stop scanner:", err);
+    }
+  }
+}
+
 async function startScanner() {
   const scanConfig = { 
       fps: 30, // Increased for faster recognition
@@ -346,16 +359,18 @@ async function initializeApp() {
   startScanner();
 }
 
-// Check if user is already logged in on page load
 window.onload = () => {
+  initTheme();
+  
+  // Connect background queue trigger for online state detection (safe-checked)
+  window.addEventListener('online', () => {
+    if (typeof scanQueue !== 'undefined') scanQueue.process();
+  });
+
   if (sessionStorage.getItem('authToken')) {
-      document.getElementById('login-container').style.display = 'none';
-      const loginHeader = document.getElementById('login-header');
-      if (loginHeader) loginHeader.style.display = 'none';
-      const bottomBranding = document.getElementById('bottom-branding');
-      if (bottomBranding) bottomBranding.style.display = 'none';
-      document.getElementById('scanner-ui').style.display = 'flex';
-      document.getElementById('login-footer').style.display = 'none';
-      initializeApp();
+    setAppState(1); // Set to selection page initially
+    if (typeof initializeApp === 'function') initializeApp();
+  } else {
+    setAppState(0); // Authentication screen
   }
 }
