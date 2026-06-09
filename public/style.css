@@ -65,7 +65,7 @@
 * { 
   box-sizing: border-box; 
   margin: 0; padding: 0;
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.2s ease; 
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease; 
 }
 
 body {
@@ -125,6 +125,7 @@ body {
   cursor: pointer; z-index: 100;
   box-shadow: var(--shadow);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 .theme-toggle-btn:hover {
   transform: scale(1.08);
@@ -159,7 +160,7 @@ body {
    STATE TRANSITION CLASSES
    ========================================= */
 .glass-container.state-auth #login-section { display: flex; }
-.glass-container.state-auth #bottom-branding { display: flex; }
+.glass-container.state-auth ~ #bottom-branding { display: flex; }
 
 .glass-container.state-selection #main-app-section { display: flex; }
 .glass-container.state-selection #selection-panel { display: flex; flex-direction: column; }
@@ -275,6 +276,7 @@ body {
   color: var(--accent); font-size: 1rem; font-weight: 600;
   display: flex; justify-content: space-between; align-items: center;
   cursor: pointer; text-align: left;
+  transition: transform 0.2s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 .topic-selector-btn-large:hover {
   background: var(--accent-glow);
@@ -482,7 +484,7 @@ body {
 
 .fixed-bottom-branding {
   position: absolute; bottom: 2vh; left: 0; width: 100%;
-  display: flex; justify-content: center; align-items: center; z-index: 2;
+  display: none; justify-content: center; align-items: center; z-index: 2;
   pointer-events: none;
 }
 .branding-text {
