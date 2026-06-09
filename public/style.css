@@ -163,7 +163,7 @@ body {
 
 .glass-container.state-selection #main-app-section { display: flex; }
 .glass-container.state-selection #selection-panel { display: flex; flex-direction: column; }
-.glass-container.state-scanning #scanning-panel { display: none; }
+.glass-container.state-selection #scanning-panel { display: none; }
 
 .glass-container.state-scanning #main-app-section { display: flex; }
 .glass-container.state-scanning #selection-panel { display: none; }
