@@ -51,8 +51,8 @@ async function loadClasses() {
         select.innerHTML = '<option value="" disabled selected>Pilih Kelas...</option>';
         data.classes.forEach(c => {
           const opt = document.createElement('option');
-          opt.value = c;
-          opt.textContent = `Kelas ${c}`;
+          opt.value = c.code;
+          opt.textContent = `Kelas ${c.name}`;
           select.appendChild(opt);
         });
       }

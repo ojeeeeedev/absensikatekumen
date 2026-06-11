@@ -1,4 +1,6 @@
 import jwt from 'jsonwebtoken';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -26,10 +28,25 @@ export default async function handler(req, res) {
   }
 
   try {
+    let classNames = {};
+    try {
+      const classCodePath = resolve(process.cwd(), 'classcode.json');
+      classNames = JSON.parse(readFileSync(classCodePath, 'utf8'));
+    } catch (err) {
+      console.error("Error reading classcode.json:", err);
+    }
+
     const map = JSON.parse(process.env.VERCEL_SCRIPT_MAP_JSON || "{}");
-    const classes = Object.keys(map);
+    const classes = Object.keys(map)
+      .filter(code => code !== "YOUR_CLASS_CODE_HERE")
+      .map(code => ({
+        code: code,
+        name: classNames[code] || code
+      }));
+
     return res.status(200).json({ status: "ok", classes });
   } catch (e) {
+    console.error("Error in /api/classes:", e);
     return res.status(500).json({ status: "error", message: "Server config error" });
   }
 }
