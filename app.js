@@ -86,6 +86,28 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
+// Route to handle retrieving students list
+app.get('/api/students', async (req, res) => {
+  try {
+    const handler = (await import('./api/students.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/students:", error);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
+// Route to handle retrieving class list
+app.get('/api/classes', async (req, res) => {
+  try {
+    const handler = (await import('./api/classes.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/classes:", error);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
 // ==========================================
 // 3. STATIC FILES
 // ==========================================
