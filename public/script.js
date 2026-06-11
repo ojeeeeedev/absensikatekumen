@@ -30,7 +30,7 @@ window.setAppState = async function(state) {
 function initTheme() {
   const savedTheme = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
-  updateThemeToggleIcon(savedTheme);
+  updateLogos(savedTheme);
 }
 
 // Global toggle theme function (referenced in HTML button)
@@ -39,14 +39,18 @@ window.toggleTheme = function() {
   const newTheme = currentTheme === 'light' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', newTheme);
   localStorage.setItem('theme', newTheme);
-  updateThemeToggleIcon(newTheme);
+  updateLogos(newTheme);
 }
 
-function updateThemeToggleIcon(theme) {
-  const icon = document.querySelector('#theme-toggle span');
-  if (icon) {
-    icon.textContent = theme === 'light' ? 'dark_mode' : 'light_mode';
-  }
+function updateLogos(theme) {
+  const logos = document.querySelectorAll('.theme-logo');
+  logos.forEach(logo => {
+    if (theme === 'light') {
+      logo.src = 'assets/favicon.png';
+    } else {
+      logo.src = 'assets/pewartaan_invert.png';
+    }
+  });
 }
 
 // --- SAFARI VIEWPORT FIX ---
@@ -528,15 +532,15 @@ class ScanQueue {
 
   cleanExpiredItems() {
     const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
+    const thirtyMinutes = 30 * 60 * 1000;
     const initialLength = this.queue.length;
 
     // Keep items if they are pending/processing (so offline scans are not lost before syncing),
-    // or if they are less than 5 minutes old.
+    // or if they are less than 30 minutes old.
     this.queue = this.queue.filter(item => {
       const isPendingOrProcessing = item.status === 'pending' || item.status === 'processing';
       const itemTime = item.timestamp || 0;
-      const isExpired = (now - itemTime) >= fiveMinutes;
+      const isExpired = (now - itemTime) >= thirtyMinutes;
       return isPendingOrProcessing || !isExpired;
     });
 
@@ -876,17 +880,16 @@ window.showStudentModal = function(item) {
   nameEl.textContent = item.name || 'Katekumen';
   idEl.textContent = item.studentId;
   
-  const topicName = window.topicsList?.find(t => t.week == item.week)?.name || `Topik ${item.week}`;
-  topicEl.textContent = `${item.week}. ${topicName}`;
+  topicEl.textContent = `Topik ${item.week}`;
 
   statusEl.className = `status-badge ${item.status}`;
   
   let statusText = item.status;
   if (item.status === 'success') statusText = 'HADIR';
-  if (item.status === 'duplicate') statusText = 'SUDAH ABSEN';
+  if (item.status === 'duplicate') statusText = 'PRESENSI SUDAH TERCATAT';
   if (item.status === 'error') statusText = 'GAGAL';
-  if (item.status === 'pending') statusText = 'ANTRE';
-  if (item.status === 'processing') statusText = 'SINKRONISASI';
+  if (item.status === 'pending') statusText = 'MENUNGGU...';
+  if (item.status === 'processing') statusText = 'SYNCING...';
   statusEl.textContent = statusText;
 
   modal.style.display = 'flex';
