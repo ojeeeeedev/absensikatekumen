@@ -152,10 +152,12 @@ function renderStudents(students) {
     header.setAttribute('aria-expanded', 'false');
     
     const imgUrl = student.image;
-    const hasPhoto = !!imgUrl;
+    const cachedPhoto = window.ImageCache ? window.ImageCache.get(student.studentId) : null;
+    const displayImgUrl = cachedPhoto || imgUrl;
+    const hasPhoto = !!displayImgUrl;
     
     const photoHtml = hasPhoto 
-      ? `<img class="student-thumb" src="${escapeHTML(imgUrl)}" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      ? `<img class="student-thumb" src="${escapeHTML(displayImgUrl)}" crossorigin="anonymous" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="if(!this.src.startsWith('data:') && window.ImageCache) window.ImageCache.compressAndCacheElement('${student.studentId}', this);">
          <div class="student-thumb-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
       : `<div class="student-thumb-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
@@ -174,7 +176,7 @@ function renderStudents(students) {
     body.className = 'student-accordion-body collapsed';
     
     const largePhotoHtml = hasPhoto
-      ? `<img class="student-photo-large" src="${escapeHTML(imgUrl)}" alt="Foto ${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      ? `<img class="student-photo-large" src="${escapeHTML(displayImgUrl)}" crossorigin="anonymous" alt="Foto ${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <div class="student-photo-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
       : `<div class="student-photo-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
