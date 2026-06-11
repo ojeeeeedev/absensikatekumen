@@ -157,7 +157,7 @@ function renderStudents(students) {
     const hasPhoto = !!displayImgUrl;
     
     const photoHtml = hasPhoto 
-      ? `<img class="student-thumb" src="${escapeHTML(displayImgUrl)}" crossorigin="anonymous" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="if(!this.src.startsWith('data:') && window.ImageCache) window.ImageCache.compressAndCacheElement('${student.studentId}', this);">
+      ? `<img class="student-thumb" src="${escapeHTML(displayImgUrl)}" crossorigin="anonymous" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="if(!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);">
          <div class="student-thumb-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
       : `<div class="student-thumb-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
