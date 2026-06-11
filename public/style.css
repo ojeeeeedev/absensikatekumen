@@ -1062,6 +1062,7 @@ input:focus-visible,
   font-weight: bold;
   color: var(--text-primary);
   margin-bottom: 4px;
+  text-align: center;
 }
 
 .detail-id {
@@ -1070,6 +1071,7 @@ input:focus-visible,
   color: var(--accent);
   font-weight: 500;
   margin-bottom: 16px;
+  text-align: center;
 }
 
 .detail-info-grid {
