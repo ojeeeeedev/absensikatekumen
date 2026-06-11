@@ -70,12 +70,15 @@ window.ImageCache = {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      const maxDim = 300; 
+      // Zero compression: use original dimensions
       let width = imgEl.naturalWidth || imgEl.width;
       let height = imgEl.naturalHeight || imgEl.height;
       
       if (!width || !height) return;
       
+      // Sizing constraints bypassed to prevent pixelation/quality loss
+      /*
+      const maxDim = 300; 
       if (width > height) {
         if (width > maxDim) {
           height = Math.round((height * maxDim) / width);
@@ -87,12 +90,13 @@ window.ImageCache = {
           height = maxDim;
         }
       }
+      */
       
       canvas.width = width;
       canvas.height = height;
       ctx.drawImage(imgEl, 0, 0, width, height);
       
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 1.0);
       this.set(studentId, compressedDataUrl);
     } catch (e) {
       console.warn(`Error compressing image element for ${studentId}:`, e);
