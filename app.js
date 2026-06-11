@@ -89,7 +89,7 @@ app.get('/api/dashboard', async (req, res) => {
 // ==========================================
 // 3. STATIC FILES
 // ==========================================
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 // Fallback for clean URLs - serve index.html for unknown HTML paths
 app.get('*', (req, res, next) => {
