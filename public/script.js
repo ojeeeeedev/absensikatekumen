@@ -46,7 +46,7 @@ function updateLogos(theme) {
   const logos = document.querySelectorAll('.theme-logo');
   logos.forEach(logo => {
     if (theme === 'light') {
-      logo.src = 'assets/favicon.png';
+      logo.src = 'assets/pewartaan_normal.png';
     } else {
       logo.src = 'assets/pewartaan_invert.png';
     }
