@@ -480,6 +480,18 @@ body {
 /* =========================================
    SPINNERS
    ========================================= */
+#login-loader {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+}
+
 .spinner {
   border: 3px solid rgba(255, 255, 255, 0.15);
   border-top: 3px solid var(--accent);
