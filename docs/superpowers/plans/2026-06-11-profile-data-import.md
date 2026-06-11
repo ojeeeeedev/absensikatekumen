@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `apps-script/Code.js`
 
-- [ ] **Step 1: Update `doPost` to handle the `getStudentList` action**
+- [x] **Step 1: Update `doPost` to handle the `getStudentList` action**
 
   In [apps-script/Code.js](file:///Users/andarpartogi/repo/absensikatekumen/apps-script/Code.js) around lines 8-10, insert the action check:
   ```javascript
@@ -29,7 +29,7 @@
   }
   ```
 
-- [ ] **Step 2: Add helper function `getStudentList_` at the end of the file**
+- [x] **Step 2: Add helper function `getStudentList_` at the end of the file**
 
   In [apps-script/Code.js](file:///Users/andarpartogi/repo/absensikatekumen/apps-script/Code.js) at the bottom, append:
   ```javascript
@@ -80,7 +80,7 @@
   }
   ```
 
-- [ ] **Step 3: Push changes to Google Apps Script**
+- [x] **Step 3: Push changes to Google Apps Script**
 
   Run:
   ```bash
@@ -88,7 +88,7 @@
   ```
   Expected: Pushed files successfully.
 
-- [ ] **Step 4: Commit Google Apps Script changes**
+- [x] **Step 4: Commit Google Apps Script changes**
 
   Run:
   ```bash
@@ -104,7 +104,7 @@
 - Create: `api/students.js`
 - Create: `api/classes.js`
 
-- [ ] **Step 1: Implement `api/students.js` for retrieving and batch-signing students**
+- [x] **Step 1: Implement `api/students.js` for retrieving and batch-signing students**
 
   Create file `api/students.js` with this exact content:
   ```javascript
@@ -246,7 +246,7 @@
   }
   ```
 
-- [ ] **Step 2: Implement `api/classes.js` for retrieving configured Class Codes**
+- [x] **Step 2: Implement `api/classes.js` for retrieving configured Class Codes**
 
   Create file `api/classes.js` with this exact content:
   ```javascript
@@ -283,7 +283,7 @@
   }
   ```
 
-- [ ] **Step 3: Commit new Vercel serverless endpoints**
+- [x] **Step 3: Commit new Vercel serverless endpoints**
 
   Run:
   ```bash
@@ -298,7 +298,7 @@
 **Files:**
 - Modify: `app.js`
 
-- [ ] **Step 1: Expose local dev server routes in `app.js`**
+- [x] **Step 1: Expose local dev server routes in `app.js`**
 
   In [app.js](file:///Users/andarpartogi/repo/absensikatekumen/app.js) around line 88 (above `app.use(express.static)`), add:
   ```javascript
@@ -325,7 +325,7 @@
   });
   ```
 
-- [ ] **Step 2: Commit local server modifications**
+- [x] **Step 2: Commit local server modifications**
 
   Run:
   ```bash
@@ -340,7 +340,7 @@
 **Files:**
 - Create: `public/profile.js`
 
-- [ ] **Step 1: Create and write contents of `public/profile.js`**
+- [x] **Step 1: Create and write contents of `public/profile.js`**
 
   Create file `public/profile.js` with this exact content:
   ```javascript
@@ -557,7 +557,7 @@
   });
   ```
 
-- [ ] **Step 2: Commit new frontend script**
+- [x] **Step 2: Commit new frontend script**
 
   Run:
   ```bash
@@ -572,7 +572,7 @@
 **Files:**
 - Modify: `public/profile.html`
 
-- [ ] **Step 1: Rewrite HTML structure in `public/profile.html`**
+- [x] **Step 1: Rewrite HTML structure in `public/profile.html`**
 
   In [public/profile.html](file:///Users/andarpartogi/repo/absensikatekumen/public/profile.html), replace the contents from line 18 down (inside `<body>`) to match the new dynamic accordion design and script reference:
   ```html
@@ -618,7 +618,7 @@
   </body>
   ```
 
-- [ ] **Step 2: Commit HTML template modifications**
+- [x] **Step 2: Commit HTML template modifications**
 
   Run:
   ```bash
@@ -633,7 +633,7 @@
 **Files:**
 - Modify: `public/style.css`
 
-- [ ] **Step 1: Append Profile accordion styling rules to `public/style.css`**
+- [x] **Step 1: Append Profile accordion styling rules to `public/style.css`**
 
   In [public/style.css](file:///Users/andarpartogi/repo/absensikatekumen/public/style.css) at the very bottom, append:
   ```css
@@ -859,7 +859,7 @@
   }
   ```
 
-- [ ] **Step 2: Commit styling modifications**
+- [x] **Step 2: Commit styling modifications**
 
   Run:
   ```bash
@@ -875,15 +875,16 @@
 - Create: None
 - Modify: None
 
-- [ ] **Step 1: Start the local server**
+- [x] **Step 1: Start the local server**
 
   Run:
   ```bash
   PORT=5588 node app.js
   ```
 
-- [ ] **Step 2: Test endpoints and UI**
+- [x] **Step 2: Test endpoints and UI**
 
   1. Query `http://localhost:5588/api/classes` and verify it responds with config list.
   2. Query `http://localhost:5588/api/students?classCode=SAB` and check returned array of students.
   3. Load `http://localhost:5588/profile` in browser, verify layout rendering, class selection, searching, and expandable card layout.
+
