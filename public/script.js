@@ -187,6 +187,8 @@ class ScanQueue {
 
     this.isProcessing = false;
     this.cooldowns = {}; // For preventing duplicate double scans
+    const initialPending = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+    this.totalInBatch = initialPending;
     this.cleanExpiredItems();
     this.expireTimer = setInterval(() => this.cleanExpiredItems(), 15000);
   }
@@ -224,6 +226,12 @@ class ScanQueue {
     };
 
     this.queue.unshift(item); // Add to the top of list
+    const pendingCount = this.queue.filter(q => q.status === 'pending' || q.status === 'processing').length;
+    if (this.totalInBatch === 0 || this.totalInBatch < pendingCount) {
+      this.totalInBatch = pendingCount;
+    } else {
+      this.totalInBatch += 1;
+    }
     this.save();
     
     // Trigger immediate sequential processing loop
@@ -361,24 +369,34 @@ class ScanQueue {
 
   updateBanner() {
     const warningBar = document.getElementById('queue-warning-bar');
-    const remainingText = document.getElementById('queue-remaining-count');
-    const statusText = document.getElementById('queue-status-text');
+    const progressText = document.getElementById('queue-progress-text');
+    const progressBarFill = document.getElementById('queue-progress-bar-fill');
 
     const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
 
-    if (warningBar && remainingText) {
+    if (pendingCount === 0) {
+      this.totalInBatch = 0;
+    } else if (this.totalInBatch < pendingCount) {
+      this.totalInBatch = pendingCount;
+    }
+
+    if (warningBar) {
       if (pendingCount > 0) {
         warningBar.style.display = 'flex';
-        remainingText.textContent = pendingCount;
-        if (statusText) {
-          statusText.textContent = `Menyinkronkan (${pendingCount})`;
-          statusText.style.color = 'var(--status-pending-text)';
+        
+        const completedCount = this.totalInBatch - pendingCount;
+        const progressPercent = this.totalInBatch > 0 ? (completedCount / this.totalInBatch) * 100 : 0;
+        
+        if (progressText) {
+          progressText.textContent = `${completedCount}/${this.totalInBatch} Selesai`;
+        }
+        if (progressBarFill) {
+          progressBarFill.style.width = `${progressPercent}%`;
         }
       } else {
         warningBar.style.display = 'none';
-        if (statusText) {
-          statusText.textContent = 'Semua Tersinkronisasi';
-          statusText.style.color = 'var(--status-success-text)';
+        if (progressBarFill) {
+          progressBarFill.style.width = '0%';
         }
       }
     }
@@ -389,7 +407,10 @@ class ScanQueue {
     const listContainer = document.getElementById('queue-list');
     if (!listContainer) return;
 
+    const historyHeader = document.getElementById('history-header');
+
     if (this.queue.length === 0) {
+      if (historyHeader) historyHeader.style.display = 'none';
       listContainer.innerHTML = '';
       const emptyDiv = document.createElement('div');
       emptyDiv.className = 'queue-empty-state';
@@ -397,6 +418,8 @@ class ScanQueue {
       listContainer.appendChild(emptyDiv);
       return;
     }
+
+    if (historyHeader) historyHeader.style.display = 'flex';
 
     // Keep only the most recent 10 items in DOM to save performance
     const renderItems = this.queue.slice(0, 10);

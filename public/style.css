@@ -363,12 +363,43 @@ body {
 
 /* Queue Warning Banner */
 .queue-warning-banner {
-  background: var(--status-pending-bg); border: 1px solid var(--status-pending-border);
-  color: var(--status-pending-text); padding: 0.5rem 0.75rem; border-radius: 8px;
-  display: flex; align-items: center; gap: 8px; font-size: 0.7rem;
-  margin-bottom: 0.75rem; animation: pulse 1.5s infinite alternate;
+  background: var(--status-pending-bg);
+  border: 1px solid var(--status-pending-border);
+  color: var(--status-pending-text);
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.7rem;
+  margin-bottom: 0.75rem;
 }
-@keyframes pulse { from { opacity: 0.85; } to { opacity: 1; } }
+
+.queue-progress-text {
+  font-weight: 600;
+  white-space: nowrap;
+  font-size: 0.7rem;
+}
+
+.queue-progress-bar-container {
+  flex-grow: 1;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .queue-progress-bar-container {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.queue-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
 /* =========================================
    COMPACT HISTORY / QUEUE LIST
@@ -379,17 +410,11 @@ body {
 }
 
 .history-header {
-  display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem;
+  display: flex; justify-content: flex-end; align-items: center; font-size: 0.7rem;
   font-weight: 600; text-transform: uppercase; color: var(--text-secondary);
   letter-spacing: 0.05em; padding-bottom: 4px; border-bottom: 1px solid var(--border-glass);
   margin-bottom: 6px;
 }
-.history-title-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-#queue-status-text { color: var(--status-success-text); }
 
 .clear-history-btn {
   background: transparent;

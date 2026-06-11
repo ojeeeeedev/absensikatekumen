@@ -109,17 +109,16 @@
 
           <!-- Sync Queue Warning Bar -->
           <div id="queue-warning-bar" class="queue-warning-banner" style="display: none;">
+            <span id="queue-progress-text" class="queue-progress-text">0/0 Selesai</span>
+            <div class="queue-progress-bar-container">
+              <div id="queue-progress-bar-fill" class="queue-progress-bar-fill" style="width: 0%;"></div>
+            </div>
             <div class="spinner-small"></div>
-            <span>Menyinkronkan... Mohon jangan tutup halaman ini (<span id="queue-remaining-count">0</span> item tersisa)</span>
           </div>
 
           <!-- Queue History List -->
           <div id="queue-history-panel">
-            <div class="history-header">
-              <div class="history-title-group">
-                <span>Riwayat Pemindaian Terkini:</span>
-                <span id="queue-status-text">Semua tersinkronisasi</span>
-              </div>
+            <div id="history-header" class="history-header" style="display: none;">
               <button id="clear-history-btn" 
                       class="clear-history-btn" 
                       onclick="clearScanHistory()" 
