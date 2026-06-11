@@ -120,12 +120,10 @@
                 <span>Riwayat Pemindaian Terkini:</span>
                 <span id="queue-status-text">Semua tersinkronisasi</span>
               </div>
-              <button id="clear-history-btn" class="clear-history-btn"
-                onclick="clearScanHistory()"
-                onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); clearScanHistory(); }"
-                role="button"
-                tabindex="0"
-                aria-label="Hapus semua riwayat pemindaian">
+              <button id="clear-history-btn" 
+                      class="clear-history-btn" 
+                      onclick="clearScanHistory()" 
+                      aria-label="Hapus semua riwayat pemindaian">
                 <span class="material-icons-outlined">delete_outline</span>
               </button>
             </div>

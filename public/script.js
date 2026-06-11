@@ -480,7 +480,8 @@ class ScanQueue {
     // or if they are less than 5 minutes old.
     this.queue = this.queue.filter(item => {
       const isPendingOrProcessing = item.status === 'pending' || item.status === 'processing';
-      const isExpired = (now - item.timestamp) >= fiveMinutes;
+      const itemTime = item.timestamp || now;
+      const isExpired = (now - itemTime) >= fiveMinutes;
       return isPendingOrProcessing || !isExpired;
     });
 
@@ -802,11 +803,23 @@ window.onload = () => {
 }
 
 window.clearScanHistory = function() {
-  if (confirm("Apakah Anda yakin ingin menghapus semua riwayat pemindaian?")) {
-    if (typeof scanQueue !== 'undefined') {
-      scanQueue.queue = [];
-      scanQueue.save();
-      showToast("Riwayat pemindaian berhasil dihapus", "info");
-    }
+  if (typeof scanQueue === 'undefined') return;
+
+  const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+  
+  if (scanQueue.queue.length === 0) {
+    showToast("Belum ada data pemindaian untuk dihapus", "info");
+    return;
+  }
+
+  const confirmMsg = pendingCount > 0
+    ? `Hapus riwayat? ${pendingCount} item antrean yang belum tersinkronisasi akan tetap dipertahankan.`
+    : "Apakah Anda yakin ingin menghapus semua riwayat pemindaian?";
+
+  if (confirm(confirmMsg)) {
+    // Clear only completed scans, keep pending/processing to prevent data loss
+    scanQueue.queue = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing');
+    scanQueue.save();
+    showToast("Riwayat pemindaian berhasil dibersihkan", "info");
   }
 }
