@@ -140,7 +140,7 @@ function renderStudents(students) {
     
     const body = document.createElement('div');
     body.className = 'student-accordion-body';
-    body.style.display = 'none';
+    body.classList.add('collapsed');
     
     body.innerHTML = `
       <div class="student-detail-card">
@@ -158,16 +158,16 @@ function renderStudents(students) {
     `;
     
     const toggle = () => {
-      const isExpanded = body.style.display === 'flex';
+      const isExpanded = !body.classList.contains('collapsed');
       
-      document.querySelectorAll('.student-accordion-body').forEach(b => b.style.display = 'none');
+      document.querySelectorAll('.student-accordion-body').forEach(b => b.classList.add('collapsed'));
       document.querySelectorAll('.student-accordion-header').forEach(h => {
         h.classList.remove('active');
         h.setAttribute('aria-expanded', 'false');
       });
       
       if (!isExpanded) {
-        body.style.display = 'flex';
+        body.classList.remove('collapsed');
         header.classList.add('active');
         header.setAttribute('aria-expanded', 'true');
       }

@@ -932,8 +932,6 @@ input:focus-visible,
   flex-direction: column;
   gap: 12px;
   width: 100%;
-  max-height: 50vh;
-  overflow-y: auto;
   padding-right: 4px;
 }
 
@@ -1021,6 +1019,10 @@ input:focus-visible,
   align-items: center;
   padding: 20px;
   background: rgba(0,0,0,0.05);
+}
+
+.student-accordion-body.collapsed {
+  display: none;
 }
 
 .student-detail-card {
