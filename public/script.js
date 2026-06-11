@@ -340,8 +340,6 @@ class ScanQueue {
       pendingItem.status = 'pending'; // Revert back to pending to retry when online
       this.save();
       
-      showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
-      
       this.isProcessing = false;
       this.updateBanner();
       setTimeout(() => this.process(), 5000);
@@ -451,26 +449,39 @@ window.showToast = function(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   
-  let icon = 'check_circle';
-  if (type === 'error') icon = 'error';
-  if (type === 'info') icon = 'info';
+  let iconName = 'check_circle';
+  if (type === 'error') iconName = 'error';
+  if (type === 'info') iconName = 'info';
 
-  toast.innerHTML = `
-    <span class="material-icons-outlined toast-icon">${icon}</span>
-    <span class="toast-message">${message}</span>
-  `;
+  // Safe element construction to prevent XSS
+  const icon = document.createElement('span');
+  icon.className = 'material-icons-outlined toast-icon';
+  icon.textContent = iconName;
 
+  const text = document.createElement('span');
+  text.className = 'toast-message';
+  text.textContent = message;
+
+  toast.appendChild(icon);
+  toast.appendChild(text);
   container.appendChild(toast);
 
-  // Trigger animation
-  setTimeout(() => toast.classList.add('show'), 10);
-
-  // Remove toast after 3 seconds
-  setTimeout(() => {
+  // Smooth dismiss helper
+  const dismiss = () => {
+    if (toast.classList.contains('hide')) return;
     toast.classList.remove('show');
     toast.classList.add('hide');
     setTimeout(() => toast.remove(), 400);
-  }, 3000);
+  };
+
+  // Click to dismiss early
+  toast.addEventListener('click', dismiss);
+
+  // Trigger entry animation
+  setTimeout(() => toast.classList.add('show'), 10);
+
+  // Auto-remove timer
+  setTimeout(dismiss, 3000);
 }
 
 // --- STATUS HANDLER ---

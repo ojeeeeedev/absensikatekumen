@@ -82,12 +82,17 @@
         <!-- STATE 2: ACTIVE SCANNING -->
         <div id="scanning-panel" class="panel-state">
           <!-- Mini Active Topic Bar (Acts as a dropdown) -->
-          <div class="active-topic-bar" onclick="openTopicModal()" style="cursor: pointer;">
+          <div class="active-topic-bar" 
+               role="button" 
+               tabindex="0" 
+               aria-haspopup="dialog" 
+               onclick="openTopicModal()"
+               onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); openTopicModal(); }">
             <div class="topic-info">
               <span class="material-icons-outlined">event_note</span>
               <span id="active-topic-name">Belum memilih topik</span>
             </div>
-            <span class="material-icons-outlined dropdown-arrow-icon" style="color: var(--text-secondary); font-size: 1.25rem;">arrow_drop_down</span>
+            <span class="material-icons-outlined dropdown-arrow-icon">arrow_drop_down</span>
           </div>
 
           <!-- Camera Viewer -->
@@ -153,7 +158,7 @@
     </div>
 
     <!-- Toast Container -->
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
     <script src="topics.js"></script>
     <script src="script.js"></script>

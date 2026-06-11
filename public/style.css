@@ -317,6 +317,10 @@ body {
 .active-topic-bar:hover .dropdown-arrow-icon {
   color: var(--accent) !important;
 }
+.dropdown-arrow-icon {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+}
 .active-topic-bar:active {
   transform: scale(0.98);
 }
@@ -529,7 +533,8 @@ body {
    ========================================= */
 button:focus-visible, 
 input:focus-visible, 
-.topic-selector-btn-large:focus-visible {
+.topic-selector-btn-large:focus-visible,
+.active-topic-bar:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
