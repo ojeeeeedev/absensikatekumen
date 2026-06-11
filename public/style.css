@@ -5,6 +5,7 @@
   /* Light Theme (Default) */
   --bg-body: #FAF9F5;
   --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-card: rgba(255, 255, 255, 0.45);
   --border-glass: rgba(0, 0, 0, 0.08);
   --text-primary: #2B2D2F;
   --text-secondary: #6E7175;
@@ -38,6 +39,7 @@
   /* Dark Theme */
   --bg-body: #121212;
   --bg-glass: rgba(30, 30, 30, 0.7);
+  --bg-card: rgba(30, 30, 30, 0.45);
   --border-glass: rgba(255, 255, 255, 0.08);
   --text-primary: #E0E0E0;
   --text-secondary: #9A9DA2;
@@ -942,7 +944,7 @@ input:focus-visible,
   background: transparent;
 }
 .students-list-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-glass);
   border-radius: 10px;
 }
 
@@ -969,7 +971,7 @@ input:focus-visible,
 }
 
 .student-accordion-header.active {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-glass);
 }
 
 .header-left {
@@ -983,7 +985,7 @@ input:focus-visible,
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--border-glass);
 }
 
 .student-meta {
@@ -1056,7 +1058,7 @@ input:focus-visible,
 
 .detail-info-grid {
   width: 100%;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-glass);
   padding-top: 16px;
   display: flex;
   flex-direction: column;
