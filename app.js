@@ -18,6 +18,12 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[local-dev] ${req.method} ${req.url} - body:`, req.body);
+  next();
+});
+
 // Accessing variables from environment
 const PORT = process.env.PORT || 5500;
 

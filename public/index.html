@@ -46,7 +46,7 @@
           <label for="login-input" class="sr-only">Password</label>
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
           <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
-          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility_off</span>
+          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); togglePasswordVisibility(); }">visibility_off</span>
         </div>
         <button id="login-btn" onclick="handleLogin()"><b>Masuk</b></button>
         <div id="login-footer">
@@ -153,7 +153,7 @@
         <div id="topic-list-container">
           <div class="topic-loading-placeholder">Memuat topik...</div>
         </div>
-        <div class="modal-close-btn" onclick="closeTopicModal()">Tutup</div>
+        <div class="modal-close-btn" onclick="closeTopicModal()" role="button" tabindex="0" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeTopicModal(); }">Tutup</div>
       </div>
     </div>
 

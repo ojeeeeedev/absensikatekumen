@@ -94,9 +94,13 @@ window.togglePasswordVisibility = function() {
   if (input.type === 'password') {
     input.type = 'text';
     icon.textContent = 'visibility';
+    icon.setAttribute('aria-pressed', 'true');
+    icon.setAttribute('aria-label', 'Sembunyikan password');
   } else {
     input.type = 'password';
     icon.textContent = 'visibility_off';
+    icon.setAttribute('aria-pressed', 'false');
+    icon.setAttribute('aria-label', 'Tampilkan password');
   }
 }
 
@@ -384,7 +388,11 @@ class ScanQueue {
     if (!listContainer) return;
 
     if (this.queue.length === 0) {
-      listContainer.innerHTML = '<div class="queue-empty-state">Belum ada data pemindaian.</div>';
+      listContainer.innerHTML = '';
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'queue-empty-state';
+      emptyDiv.textContent = 'Belum ada data pemindaian.';
+      listContainer.appendChild(emptyDiv);
       return;
     }
 
@@ -404,16 +412,40 @@ class ScanQueue {
       if (item.status === 'error') badgeText = 'Gagal';
       if (item.status === 'pending') badgeText = 'Antre';
 
-      row.innerHTML = `
-        <div class="student-info">
-          <img class="student-photo" src="${avatarSrc}" onerror="this.onerror=null; this.src='/assets/favicon.png'" alt="Foto">
-          <div class="student-text">
-            <span class="student-name">${item.name || 'Katekumen'}</span>
-            <span class="student-id">${item.studentId} &bull; Topik ${item.week}</span>
-          </div>
-        </div>
-        <span class="status-badge ${item.status}">${badgeText}</span>
-      `;
+      const studentInfo = document.createElement('div');
+      studentInfo.className = 'student-info';
+
+      const studentPhoto = document.createElement('img');
+      studentPhoto.className = 'student-photo';
+      studentPhoto.src = avatarSrc;
+      studentPhoto.alt = 'Foto';
+      studentPhoto.onerror = function() {
+        this.onerror = null;
+        this.src = '/assets/favicon.png';
+      };
+      studentInfo.appendChild(studentPhoto);
+
+      const studentText = document.createElement('div');
+      studentText.className = 'student-text';
+
+      const studentName = document.createElement('span');
+      studentName.className = 'student-name';
+      studentName.textContent = item.name || 'Katekumen';
+      studentText.appendChild(studentName);
+
+      const studentIdSpan = document.createElement('span');
+      studentIdSpan.className = 'student-id';
+      studentIdSpan.textContent = `${item.studentId} • Topik ${item.week}`;
+      studentText.appendChild(studentIdSpan);
+
+      studentInfo.appendChild(studentText);
+      row.appendChild(studentInfo);
+
+      const statusBadge = document.createElement('span');
+      statusBadge.className = `status-badge ${item.status}`;
+      statusBadge.textContent = badgeText;
+      row.appendChild(statusBadge);
+
       listContainer.appendChild(row);
     });
   }
@@ -469,6 +501,8 @@ window.showToast = function(message, type = 'success') {
   // Smooth dismiss helper
   const dismiss = () => {
     if (toast.classList.contains('hide')) return;
+    clearTimeout(autoDismissTimer);
+    toast.removeEventListener('click', dismiss);
     toast.classList.remove('show');
     toast.classList.add('hide');
     setTimeout(() => toast.remove(), 400);
@@ -481,7 +515,7 @@ window.showToast = function(message, type = 'success') {
   setTimeout(() => toast.classList.add('show'), 10);
 
   // Auto-remove timer
-  setTimeout(dismiss, 3000);
+  const autoDismissTimer = setTimeout(dismiss, 3000);
 }
 
 // --- STATUS HANDLER ---
@@ -494,19 +528,34 @@ function showStatus(mainText, type, subText = "") {
   else if (type === 'error') iconName = "error_outline";
   else if (type === 'processing') iconName = "hourglass_empty";
 
+  el.innerHTML = "";
+
+  const iconSpan = document.createElement("span");
+  iconSpan.className = "material-icons-outlined";
+  iconSpan.style.fontSize = "1.25rem";
+  iconSpan.textContent = iconName;
+  el.appendChild(iconSpan);
+
   if (subText) {
-    el.innerHTML = `
-      <span class="material-icons-outlined" style="font-size: 1.25rem;">${iconName}</span>
-      <div class="status-text-container">
-        <div class="main-text">${mainText}</div>
-        <div class="sub-text">${subText}</div>
-      </div>
-    `;
+    const textContainer = document.createElement("div");
+    textContainer.className = "status-text-container";
+
+    const mainDiv = document.createElement("div");
+    mainDiv.className = "main-text";
+    mainDiv.textContent = mainText;
+
+    const subDiv = document.createElement("div");
+    subDiv.className = "sub-text";
+    subDiv.textContent = subText;
+
+    textContainer.appendChild(mainDiv);
+    textContainer.appendChild(subDiv);
+    el.appendChild(textContainer);
   } else {
-    el.innerHTML = `
-      <span class="material-icons-outlined" style="font-size: 1.25rem;">${iconName}</span>
-      <div class="main-text">${mainText}</div>
-    `;
+    const mainDiv = document.createElement("div");
+    mainDiv.className = "main-text";
+    mainDiv.textContent = mainText;
+    el.appendChild(mainDiv);
   }
   el.className = type;
 }
@@ -673,15 +722,37 @@ async function loadTopikList() {
           div.classList.add("topic-rekoleksi");
         }
         div.textContent = `${item.week}. ${item.name}`;
+        
+        // Accessibility attributes
+        div.setAttribute("role", "button");
+        div.tabIndex = 0;
+        
         div.onclick = () => selectTopic(item.week, item.name, div);
+        div.onkeydown = (event) => {
+          if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            selectTopic(item.week, item.name, div);
+          }
+        };
+        
         listContainer.appendChild(div);
       });
     } else {
-      listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:var(--status-duplicate-text);">Data topik tidak ditemukan.</div>`;
+      listContainer.innerHTML = "";
+      const errorDiv = document.createElement("div");
+      errorDiv.className = "topic-loading-placeholder";
+      errorDiv.style.color = "var(--status-duplicate-text)";
+      errorDiv.textContent = "Data topik tidak ditemukan.";
+      listContainer.appendChild(errorDiv);
     }
   } catch (err) {
     console.error(err);
-    listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:var(--status-duplicate-text);">Gagal memuat topik.</div>`;
+    listContainer.innerHTML = "";
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "topic-loading-placeholder";
+    errorDiv.style.color = "var(--status-duplicate-text)";
+    errorDiv.textContent = "Gagal memuat topik.";
+    listContainer.appendChild(errorDiv);
   }
 }
 
