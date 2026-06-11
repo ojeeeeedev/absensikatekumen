@@ -52,7 +52,7 @@ async function loadClasses() {
         data.classes.forEach(c => {
           const opt = document.createElement('option');
           opt.value = c.code;
-          opt.textContent = `Kelas ${c.name}`;
+          opt.textContent = `Kelompok ${c.name}`;
           select.appendChild(opt);
         });
       }
@@ -115,14 +115,16 @@ function renderStudents(students) {
   if (summaryContainer && summaryText) {
     const selector = document.getElementById('class-selector');
     const classCode = selector ? selector.value : '';
+    const selectedOption = selector && selector.selectedIndex >= 0 ? selector.options[selector.selectedIndex] : null;
     const query = document.getElementById('search-input')?.value.trim();
     
     if (classCode) {
       summaryContainer.style.display = 'flex';
+      const classNameDisplay = selectedOption ? selectedOption.textContent : `Kelas ${classCode}`;
       if (query) {
         summaryText.textContent = `Menampilkan ${students.length} dari ${allStudents.length} katekumen (pencarian "${query}")`;
       } else {
-        summaryText.textContent = `Total ${allStudents.length} katekumen terdaftar di Kelas ${classCode}`;
+        summaryText.textContent = `Total ${allStudents.length} katekumen terdaftar di ${classNameDisplay}`;
       }
     } else {
       summaryContainer.style.display = 'none';
