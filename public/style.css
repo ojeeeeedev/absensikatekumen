@@ -1211,3 +1211,73 @@ input:focus-visible,
   color: var(--status-duplicate-text);
   font-weight: 500;
 }
+
+/* =========================================
+   NAVIGATION BAR
+   ========================================= */
+.app-nav {
+  display: flex;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 1.25rem;
+  gap: 4px;
+  width: 100%;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-item span.material-icons-outlined {
+  font-size: 1.15rem;
+}
+
+.nav-item:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active {
+  color: #fff !important;
+  background: var(--accent);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+/* =========================================
+   TOPIC NOT SELECTED DIMMING STATE
+   ========================================= */
+.needs-topic #reader-container,
+.needs-topic #status,
+.needs-topic #queue-warning-bar,
+.needs-topic #queue-history-panel,
+.needs-topic .app-nav {
+  opacity: 0.2;
+  pointer-events: none;
+  filter: blur(1.5px);
+  transition: all 0.3s ease;
+}
+
+.needs-topic .active-topic-bar {
+  border-color: var(--accent);
+  box-shadow: 0 0 15px var(--accent-glow);
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70% { box-shadow: 0 0 0 8px rgba(162, 123, 222, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(162, 123, 222, 0); }
+}
