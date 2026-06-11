@@ -147,6 +147,8 @@ window.handleLogin = async function() {
 
         setTimeout(() => {
           sessionStorage.setItem('authToken', data.token);
+          // Set the cookie for server-side middleware and profile page access
+          document.cookie = `auth_token=${data.token}; path=/; max-age=28800; SameSite=Lax`;
           loginLoader.style.display = 'none';
           
           // Switch to Selection State
@@ -276,6 +278,8 @@ class ScanQueue {
           this.isProcessing = false;
           this.save();
           sessionStorage.removeItem('authToken');
+          // Clear the auth_token cookie
+          document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           showStatus("Sesi Habis", "error", "Silakan login kembali.");
           if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           triggerVisualFlash('error');
@@ -854,7 +858,10 @@ window.onload = () => {
     scanQueue.process();
   });
 
-  if (sessionStorage.getItem('authToken')) {
+  const sessionToken = sessionStorage.getItem('authToken');
+  if (sessionToken) {
+    // Sync the auth_token cookie with the sessionStorage token
+    document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
     setAppState(1); // Set to selection page initially
     initializeApp();
   } else {
