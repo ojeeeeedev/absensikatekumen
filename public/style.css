@@ -332,10 +332,10 @@ body {
 #active-topic-name { font-weight: 500; color: var(--text-primary); }
 
 #reader-container {
-  width: 100%; aspect-ratio: 1 / 1; border-radius: 16px;
+  width: 200px; height: 200px; border-radius: 16px;
   overflow: hidden; position: relative; border: 1px solid var(--border-glass);
   background: #000; box-shadow: inset 0 4px 12px rgba(0,0,0,0.2);
-  margin-bottom: 0.75rem;
+  margin: 0 auto 0.75rem auto;
 }
 #reader { width: 100%; height: 100%; object-fit: cover; }
 
@@ -445,7 +445,7 @@ body {
 
 .queue-list-container {
   overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-  max-height: 260px; /* Force slightly larger size to fit cards */
+  max-height: 380px; /* Expanded size to fit more history records */
   padding-right: 2px;
 }
 

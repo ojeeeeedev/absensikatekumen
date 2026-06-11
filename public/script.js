@@ -311,7 +311,8 @@ class ScanQueue {
         if (data.status === "ok") {
           pendingItem.status = 'success';
           pendingItem.name = data.name;
-          pendingItem.image = data.image || '';
+          const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
+          pendingItem.image = data.image || (localMatch ? localMatch.image : '');
           
           showToast(`Berhasil: ${data.name} hadir!`, 'success');
 
@@ -325,8 +326,9 @@ class ScanQueue {
           }
         } else if (data.status === "duplicate") {
           pendingItem.status = 'duplicate';
-          pendingItem.name = data.name || 'Sudah Absen';
-          pendingItem.image = data.image || '';
+          pendingItem.name = data.name || 'Presensi Sudah Tercatat';
+          const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
+          pendingItem.image = data.image || (localMatch ? localMatch.image : '');
           
           showToast(`Sudah Hadir - Topik ${pendingItem.week} - ${data.name || 'Katekumen'}`, 'info');
 
