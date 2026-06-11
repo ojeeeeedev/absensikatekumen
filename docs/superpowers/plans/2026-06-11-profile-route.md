@@ -16,7 +16,7 @@
 - Create: None
 - Modify: None
 
-- [ ] **Step 1: Create and switch to local branch `profilecard`**
+- [x] **Step 1: Create and switch to local branch `profilecard`**
 
   Run:
   ```bash
@@ -24,7 +24,7 @@
   ```
   Expected: Switch to a new branch 'profilecard'
 
-- [ ] **Step 2: Verify the current branch is `profilecard`**
+- [x] **Step 2: Verify the current branch is `profilecard`**
 
   Run:
   ```bash
@@ -42,7 +42,7 @@
 **Files:**
 - Modify: `app.js:90-95`
 
-- [ ] **Step 1: Modify static serving middleware in `app.js`**
+- [x] **Step 1: Modify static serving middleware in `app.js`**
 
   In [app.js](file:///Users/andarpartogi/repo/absensikatekumen/app.js) around lines 90-95, replace:
   ```javascript
@@ -53,7 +53,7 @@
   app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
   ```
 
-- [ ] **Step 2: Commit the Express server changes**
+- [x] **Step 2: Commit the Express server changes**
 
   Run:
   ```bash
@@ -69,7 +69,7 @@
 **Files:**
 - Create: `public/profile.html`
 
-- [ ] **Step 1: Create and write contents of `public/profile.html`**
+- [x] **Step 1: Create and write contents of `public/profile.html`**
 
   Create file `public/profile.html` with this exact content:
   ```html
@@ -115,7 +115,7 @@
   </html>
   ```
 
-- [ ] **Step 2: Commit the new HTML file**
+- [x] **Step 2: Commit the new HTML file**
 
   Run:
   ```bash
