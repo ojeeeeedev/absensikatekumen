@@ -47,13 +47,15 @@ async function loadClasses() {
     const data = await res.json();
     if (data.status === 'ok') {
       const select = document.getElementById('class-selector');
-      select.innerHTML = '<option value="" disabled selected>Pilih Kelas...</option>';
-      data.classes.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = `Kelas ${c}`;
-        select.appendChild(opt);
-      });
+      if (select) {
+        select.innerHTML = '<option value="" disabled selected>Pilih Kelas...</option>';
+        data.classes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = `Kelas ${c}`;
+          select.appendChild(opt);
+        });
+      }
     } else {
       showToast(data.message || "Gagal memuat daftar kelas", "error");
     }
@@ -67,8 +69,8 @@ async function loadStudents(classCode) {
   const listContainer = document.getElementById('students-list');
   const loader = document.getElementById('students-loader');
   
-  listContainer.innerHTML = '';
-  loader.style.display = 'flex';
+  if (listContainer) listContainer.innerHTML = '';
+  if (loader) loader.style.display = 'flex';
   
   try {
     const res = await fetch(`/api/students?classCode=${classCode}`, {
@@ -87,7 +89,7 @@ async function loadStudents(classCode) {
     console.error("Error loading students:", e);
     showToast("Gagal mengambil data katekumen", "error");
   } finally {
-    loader.style.display = 'none';
+    if (loader) loader.style.display = 'none';
   }
 }
 
@@ -103,6 +105,8 @@ function escapeHTML(str) {
 
 function renderStudents(students) {
   const listContainer = document.getElementById('students-list');
+  if (!listContainer) return;
+  
   listContainer.innerHTML = '';
   
   if (students.length === 0) {
@@ -121,10 +125,11 @@ function renderStudents(students) {
     header.setAttribute('aria-expanded', 'false');
     
     const imgUrl = student.image || 'assets/favicon.png';
+    const escapedImgUrl = escapeHTML(imgUrl);
     
     header.innerHTML = `
       <div class="header-left">
-        <img class="student-thumb" src="${imgUrl}" alt="${escapeHTML(student.name)}" onerror="this.src='assets/favicon.png'">
+        <img class="student-thumb" src="${escapedImgUrl}" alt="${escapeHTML(student.name)}" onerror="this.src='assets/favicon.png'">
         <div class="student-meta">
           <div class="student-name-text">${escapeHTML(student.name)}</div>
           <div class="student-id-text">${escapeHTML(student.studentId)}</div>
@@ -139,7 +144,7 @@ function renderStudents(students) {
     
     body.innerHTML = `
       <div class="student-detail-card">
-        <img class="student-photo-large" src="${imgUrl}" alt="Foto ${escapeHTML(student.name)}" onerror="this.src='assets/favicon.png'">
+        <img class="student-photo-large" src="${escapedImgUrl}" alt="Foto ${escapeHTML(student.name)}" onerror="this.src='assets/favicon.png'">
         <h3 class="detail-name">${escapeHTML(student.name)}</h3>
         <p class="detail-id">ID: ${escapeHTML(student.studentId)}</p>
         
@@ -183,7 +188,9 @@ function renderStudents(students) {
 }
 
 function filterStudents() {
-  const query = document.getElementById('search-input').value.toLowerCase().trim();
+  const searchInput = document.getElementById('search-input');
+  if (!searchInput) return;
+  const query = searchInput.value.toLowerCase().trim();
   const filtered = allStudents.filter(s => 
     (s.name || '').toLowerCase().includes(query) || 
     (s.studentId || '').toLowerCase().includes(query)
@@ -193,6 +200,7 @@ function filterStudents() {
 
 function showToast(message, type = 'success') {
   const container = document.getElementById('toast-container');
+  if (!container) return;
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
