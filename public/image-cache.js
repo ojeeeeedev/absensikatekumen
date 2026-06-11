@@ -70,7 +70,7 @@ window.ImageCache = {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      const maxDim = 150; 
+      const maxDim = 300; 
       let width = imgEl.naturalWidth || imgEl.width;
       let height = imgEl.naturalHeight || imgEl.height;
       
@@ -92,7 +92,7 @@ window.ImageCache = {
       canvas.height = height;
       ctx.drawImage(imgEl, 0, 0, width, height);
       
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
       this.set(studentId, compressedDataUrl);
     } catch (e) {
       console.warn(`Error compressing image element for ${studentId}:`, e);
