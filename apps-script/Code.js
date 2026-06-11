@@ -198,18 +198,22 @@ function getStudentList_(ss) {
       studentMap[id.toLowerCase()] = {
         studentId: id,
         name: name,
-        dob: "" // Default empty
+        dob: "", // Default empty
+        kelasKi: "", // Default empty
+        katekisKk: "" // Default empty
       };
     }
   }
   
-  // Read Data Siswa (for TTL in Column F - Index 5)
+  // Read Data Siswa (for TTL in Column F - Index 5, Kelas KI in Column R - Index 17, Katekis KK in Column S - Index 18)
   if (sheetSiswa) {
     const siswaData = sheetSiswa.getDataRange().getValues();
     for (let k = 1; k < siswaData.length; k++) {
       const sId = String(siswaData[k][11] || "").trim().toLowerCase(); // Column L
       if (studentMap[sId]) {
         studentMap[sId].dob = String(siswaData[k][5] || "").trim(); // Column F (TTL)
+        studentMap[sId].kelasKi = String(siswaData[k][17] || "").trim(); // Column R (Index 17)
+        studentMap[sId].katekisKk = String(siswaData[k][18] || "").trim(); // Column S (Index 18)
       }
     }
   }

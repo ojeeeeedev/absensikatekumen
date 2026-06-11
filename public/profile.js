@@ -176,6 +176,9 @@ function renderStudents(students) {
          <div class="student-photo-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
       : `<div class="student-photo-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
+    const kelasKiVal = student.kelasKi ? escapeHTML(student.kelasKi) : `<span class="text-na">N/A</span>`;
+    const katekisKkVal = student.katekisKk ? escapeHTML(student.katekisKk) : `<span class="text-na">N/A</span>`;
+
     body.innerHTML = `
       <div class="student-accordion-inner">
         <div class="student-detail-card">
@@ -189,6 +192,18 @@ function renderStudents(students) {
                 <span class="material-icons-outlined detail-icon-inline">cake</span>Tempat, Tanggal Lahir
               </span>
               <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <span class="material-icons-outlined detail-icon-inline">meeting_room</span>Kelas KI
+              </span>
+              <span class="detail-value">${kelasKiVal}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <span class="material-icons-outlined detail-icon-inline">person</span>Katekis KK
+              </span>
+              <span class="detail-value">${katekisKkVal}</span>
             </div>
           </div>
         </div>

@@ -1204,3 +1204,8 @@ input:focus-visible,
 .student-photo-placeholder span {
   font-size: 3rem !important;
 }
+
+.text-na {
+  color: var(--status-duplicate-text);
+  font-weight: 500;
+}
