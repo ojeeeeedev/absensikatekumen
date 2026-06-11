@@ -39,8 +39,16 @@
           <span style="font-size: 0.85rem; color: var(--text-primary); opacity: 0.8;">Memuat katekumen...</span>
         </div>
 
+        <div id="students-summary" class="students-summary-container" style="display: none;">
+          <span id="summary-text"></span>
+        </div>
+
         <div id="students-list" class="students-list-container">
-          <!-- Dynamically populated via profile.js -->
+          <div class="welcome-placeholder">
+            <span class="material-icons-outlined welcome-icon">school</span>
+            <h3>Daftar Katekumen</h3>
+            <p>Silakan pilih kelas terlebih dahulu untuk melihat daftar katekumen.</p>
+          </div>
         </div>
 
         <button id="login-btn" onclick="window.location.href='/'" style="margin-top: 20px;"><b>Kembali ke Presensi</b></button>

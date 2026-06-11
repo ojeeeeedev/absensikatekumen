@@ -105,12 +105,37 @@ function escapeHTML(str) {
 
 function renderStudents(students) {
   const listContainer = document.getElementById('students-list');
-  if (!listContainer) return;
+  const summaryContainer = document.getElementById('students-summary');
+  const summaryText = document.getElementById('summary-text');
   
+  if (!listContainer) return;
   listContainer.innerHTML = '';
   
+  // Update count summary
+  if (summaryContainer && summaryText) {
+    const selector = document.getElementById('class-selector');
+    const classCode = selector ? selector.value : '';
+    const query = document.getElementById('search-input')?.value.trim();
+    
+    if (classCode) {
+      summaryContainer.style.display = 'flex';
+      if (query) {
+        summaryText.textContent = `Menampilkan ${students.length} dari ${allStudents.length} katekumen (pencarian "${query}")`;
+      } else {
+        summaryText.textContent = `Total ${allStudents.length} katekumen terdaftar di Kelas ${classCode}`;
+      }
+    } else {
+      summaryContainer.style.display = 'none';
+    }
+  }
+  
   if (students.length === 0) {
-    listContainer.innerHTML = '<div class="empty-state">Tidak ada data katekumen ditemukan.</div>';
+    listContainer.innerHTML = `
+      <div class="empty-state">
+        <span class="material-icons-outlined empty-icon">person_search</span>
+        <p>Tidak ada data katekumen ditemukan.</p>
+      </div>
+    `;
     return;
   }
   
@@ -124,12 +149,17 @@ function renderStudents(students) {
     header.setAttribute('role', 'button');
     header.setAttribute('aria-expanded', 'false');
     
-    const imgUrl = student.image || 'assets/favicon.png';
-    const escapedImgUrl = escapeHTML(imgUrl);
+    const imgUrl = student.image;
+    const hasPhoto = !!imgUrl;
+    
+    const photoHtml = hasPhoto 
+      ? `<img class="student-thumb" src="${escapeHTML(imgUrl)}" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+         <div class="student-thumb-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
+      : `<div class="student-thumb-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
     header.innerHTML = `
       <div class="header-left">
-        <img class="student-thumb" src="${escapedImgUrl}" alt="${escapeHTML(student.name)}" onerror="this.src='assets/favicon.png'">
+        ${photoHtml}
         <div class="student-meta">
           <div class="student-name-text">${escapeHTML(student.name)}</div>
           <div class="student-id-text">${escapeHTML(student.studentId)}</div>
@@ -139,28 +169,39 @@ function renderStudents(students) {
     `;
     
     const body = document.createElement('div');
-    body.className = 'student-accordion-body';
-    body.classList.add('collapsed');
+    body.className = 'student-accordion-body collapsed';
+    
+    const largePhotoHtml = hasPhoto
+      ? `<img class="student-photo-large" src="${escapeHTML(imgUrl)}" alt="Foto ${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+         <div class="student-photo-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
+      : `<div class="student-photo-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
     body.innerHTML = `
-      <div class="student-detail-card">
-        <img class="student-photo-large" src="${escapedImgUrl}" alt="Foto ${escapeHTML(student.name)}" onerror="this.src='assets/favicon.png'">
-        <h3 class="detail-name">${escapeHTML(student.name)}</h3>
-        <p class="detail-id">ID: ${escapeHTML(student.studentId)}</p>
-        
-        <div class="detail-info-grid">
-          <div class="detail-item">
-            <span class="detail-label">Tempat, Tanggal Lahir (TTL)</span>
-            <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
+      <div class="student-accordion-inner">
+        <div class="student-detail-card">
+          ${largePhotoHtml}
+          <h3 class="detail-name">${escapeHTML(student.name)}</h3>
+          <p class="detail-id">ID: ${escapeHTML(student.studentId)}</p>
+          
+          <div class="detail-info-grid">
+            <div class="detail-item">
+              <span class="detail-label">
+                <span class="material-icons-outlined detail-icon-inline">cake</span>Tempat, Tanggal Lahir
+              </span>
+              <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
+            </div>
           </div>
         </div>
       </div>
     `;
     
     const toggle = () => {
-      const isExpanded = !body.classList.contains('collapsed');
+      const isExpanded = body.classList.contains('expanded');
       
-      document.querySelectorAll('.student-accordion-body').forEach(b => b.classList.add('collapsed'));
+      document.querySelectorAll('.student-accordion-body').forEach(b => {
+        b.classList.remove('expanded');
+        b.classList.add('collapsed');
+      });
       document.querySelectorAll('.student-accordion-header').forEach(h => {
         h.classList.remove('active');
         h.setAttribute('aria-expanded', 'false');
@@ -168,6 +209,7 @@ function renderStudents(students) {
       
       if (!isExpanded) {
         body.classList.remove('collapsed');
+        body.classList.add('expanded');
         header.classList.add('active');
         header.setAttribute('aria-expanded', 'true');
       }
@@ -226,7 +268,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (selector) {
     selector.addEventListener('change', (e) => {
       const searchInput = document.getElementById('search-input');
-      if (searchInput) searchInput.style.display = 'block';
+      if (searchInput) {
+        searchInput.style.display = 'block';
+        searchInput.value = '';
+      }
       loadStudents(e.target.value);
     });
   }
