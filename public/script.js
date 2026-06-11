@@ -480,7 +480,7 @@ class ScanQueue {
     // or if they are less than 5 minutes old.
     this.queue = this.queue.filter(item => {
       const isPendingOrProcessing = item.status === 'pending' || item.status === 'processing';
-      const itemTime = item.timestamp || now;
+      const itemTime = item.timestamp || 0;
       const isExpired = (now - itemTime) >= fiveMinutes;
       return isPendingOrProcessing || !isExpired;
     });
@@ -806,9 +806,15 @@ window.clearScanHistory = function() {
   if (typeof scanQueue === 'undefined') return;
 
   const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+  const completedCount = scanQueue.queue.length - pendingCount;
   
   if (scanQueue.queue.length === 0) {
     showToast("Belum ada data pemindaian untuk dihapus", "info");
+    return;
+  }
+
+  if (completedCount === 0) {
+    showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
     return;
   }
 
