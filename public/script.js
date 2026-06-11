@@ -407,10 +407,20 @@ class ScanQueue {
     const listContainer = document.getElementById('queue-list');
     if (!listContainer) return;
 
-    const historyHeader = document.getElementById('history-header');
+    const floatingClearBtn = document.getElementById('floating-clear-btn');
+    const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+    const completedCount = this.queue.length - pendingCount;
+
+    if (completedCount > 0) {
+      if (floatingClearBtn) floatingClearBtn.style.display = 'flex';
+    } else {
+      if (floatingClearBtn) {
+        floatingClearBtn.style.display = 'none';
+        floatingClearBtn.classList.remove('expanded');
+      }
+    }
 
     if (this.queue.length === 0) {
-      if (historyHeader) historyHeader.style.display = 'none';
       listContainer.innerHTML = '';
       const emptyDiv = document.createElement('div');
       emptyDiv.className = 'queue-empty-state';
@@ -419,8 +429,6 @@ class ScanQueue {
       return;
     }
 
-    if (historyHeader) historyHeader.style.display = 'flex';
-
     // Keep only the most recent 10 items in DOM to save performance
     const renderItems = this.queue.slice(0, 10);
     listContainer.innerHTML = '';
@@ -428,15 +436,23 @@ class ScanQueue {
     renderItems.forEach(item => {
       const row = document.createElement('div');
       row.className = `queue-row ${item.status}`;
+      row.style.cursor = 'pointer';
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}`);
+      
+      row.onclick = () => {
+        showStudentModal(item);
+      };
+      row.onkeydown = (event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.preventDefault();
+          showStudentModal(item);
+        }
+      };
 
       const avatarSrc = item.image || '/assets/favicon.png';
       
-      let badgeText = item.status;
-      if (item.status === 'success') badgeText = 'Hadir';
-      if (item.status === 'duplicate') badgeText = 'Sudah Absen';
-      if (item.status === 'error') badgeText = 'Gagal';
-      if (item.status === 'pending') badgeText = 'Antre';
-
       const studentInfo = document.createElement('div');
       studentInfo.className = 'student-info';
 
@@ -468,7 +484,23 @@ class ScanQueue {
 
       const statusBadge = document.createElement('span');
       statusBadge.className = `status-badge ${item.status}`;
-      statusBadge.textContent = badgeText;
+      
+      const icon = document.createElement('span');
+      icon.className = 'material-icons-outlined';
+      
+      if (item.status === 'success') {
+        icon.textContent = 'check';
+      } else if (item.status === 'error') {
+        icon.textContent = 'close';
+      } else if (item.status === 'duplicate') {
+        icon.textContent = 'refresh';
+      } else if (item.status === 'processing') {
+        icon.textContent = 'sync';
+      } else {
+        icon.textContent = 'schedule';
+      }
+      
+      statusBadge.appendChild(icon);
       row.appendChild(statusBadge);
 
       listContainer.appendChild(row);
@@ -825,30 +857,84 @@ window.onload = () => {
   }
 }
 
-window.clearScanHistory = function() {
-  if (typeof scanQueue === 'undefined') return;
+window.showStudentModal = function(item) {
+  const modal = document.getElementById('student-detail-modal');
+  const photoEl = document.getElementById('modal-student-photo');
+  const nameEl = document.getElementById('modal-student-name');
+  const idEl = document.getElementById('modal-student-id');
+  const topicEl = document.getElementById('modal-student-topic');
+  const statusEl = document.getElementById('modal-student-status');
 
-  const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-  const completedCount = scanQueue.queue.length - pendingCount;
+  if (!modal) return;
+
+  photoEl.src = item.image || '/assets/favicon.png';
+  photoEl.onerror = function() {
+    this.onerror = null;
+    this.src = '/assets/favicon.png';
+  };
+
+  nameEl.textContent = item.name || 'Katekumen';
+  idEl.textContent = item.studentId;
   
-  if (scanQueue.queue.length === 0) {
-    showToast("Belum ada data pemindaian untuk dihapus", "info");
-    return;
-  }
+  const topicName = window.topicsList?.find(t => t.week == item.week)?.name || `Topik ${item.week}`;
+  topicEl.textContent = `${item.week}. ${topicName}`;
 
-  if (completedCount === 0) {
-    showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
-    return;
-  }
+  statusEl.className = `status-badge ${item.status}`;
+  
+  let statusText = item.status;
+  if (item.status === 'success') statusText = 'HADIR';
+  if (item.status === 'duplicate') statusText = 'SUDAH ABSEN';
+  if (item.status === 'error') statusText = 'GAGAL';
+  if (item.status === 'pending') statusText = 'ANTRE';
+  if (item.status === 'processing') statusText = 'SINKRONISASI';
+  statusEl.textContent = statusText;
 
-  const confirmMsg = pendingCount > 0
-    ? `Hapus riwayat? ${pendingCount} item antrean yang belum tersinkronisasi akan tetap dipertahankan.`
-    : "Apakah Anda yakin ingin menghapus semua riwayat pemindaian?";
+  modal.style.display = 'flex';
+};
 
-  if (confirm(confirmMsg)) {
-    // Clear only completed scans, keep pending/processing to prevent data loss
-    scanQueue.queue = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing');
-    scanQueue.save();
-    showToast("Riwayat pemindaian berhasil dibersihkan", "info");
+window.closeStudentModal = function(event) {
+  const modal = document.getElementById('student-detail-modal');
+  if (modal) {
+    modal.style.display = 'none';
   }
-}
+};
+
+window.handleFloatingClearClick = function(event) {
+  event.stopPropagation();
+  const btn = document.getElementById('floating-clear-btn');
+  if (!btn) return;
+
+  if (!btn.classList.contains('expanded')) {
+    btn.classList.add('expanded');
+    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
+    window.clearBtnTimeout = setTimeout(() => {
+      btn.classList.remove('expanded');
+    }, 4000);
+  } else {
+    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
+    btn.classList.remove('expanded');
+    
+    if (typeof scanQueue !== 'undefined') {
+      const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+      const completedCount = scanQueue.queue.length - pendingCount;
+      
+      if (completedCount === 0) {
+        showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
+        return;
+      }
+      
+      scanQueue.queue = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing');
+      scanQueue.save();
+      showToast("Riwayat pemindaian berhasil dibersihkan", "info");
+    }
+  }
+};
+
+// Document click listener to auto-collapse floating clear history button if clicking outside
+document.addEventListener('click', () => {
+  const btn = document.getElementById('floating-clear-btn');
+  if (btn && btn.classList.contains('expanded')) {
+    btn.classList.remove('expanded');
+    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
+  }
+});

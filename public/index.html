@@ -118,14 +118,6 @@
 
           <!-- Queue History List -->
           <div id="queue-history-panel">
-            <div id="history-header" class="history-header" style="display: none;">
-              <button id="clear-history-btn" 
-                      class="clear-history-btn" 
-                      onclick="clearScanHistory()" 
-                      aria-label="Hapus semua riwayat pemindaian">
-                <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
-              </button>
-            </div>
             <div id="queue-list" class="queue-list-container">
               <!-- Dynamically populated via script -->
               <div class="queue-empty-state">Belum ada data pemindaian.</div>
@@ -163,6 +155,30 @@
         <div class="modal-close-btn" onclick="closeTopicModal()" role="button" tabindex="0" aria-label="Tutup modal" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeTopicModal(); }">Tutup</div>
       </div>
     </div>
+
+    <!-- Modal Student Detail -->
+    <div id="student-detail-modal" class="student-modal" style="display: none;" onclick="closeStudentModal(event)">
+      <div class="modal-content student-modal-content" onclick="event.stopPropagation()">
+        <div class="student-modal-header">
+          <span class="student-modal-close-icon material-icons-outlined" onclick="closeStudentModal(event)" role="button" tabindex="0" aria-label="Tutup detail katekumen" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeStudentModal(event); }">close</span>
+        </div>
+        <div class="student-modal-body">
+          <img id="modal-student-photo" class="modal-student-photo" src="/assets/favicon.png" alt="Foto Katekumen">
+          <div class="student-modal-info">
+            <h3 id="modal-student-name" class="modal-student-name">Nama Katekumen</h3>
+            <p id="modal-student-id" class="modal-student-id">2025/SAB/000</p>
+            <p id="modal-student-topic" class="modal-student-topic">Topik Pertemuan</p>
+            <span id="modal-student-status" class="status-badge">Status</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Clear History Button -->
+    <button id="floating-clear-btn" class="floating-clear-btn" style="display: none;" onclick="handleFloatingClearClick(event)" aria-label="Hapus semua riwayat pemindaian">
+      <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
+      <span class="clear-confirm-text">Hapus riwayat scan?</span>
+    </button>
 
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>

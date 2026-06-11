@@ -138,8 +138,8 @@ export default async function handler(req, res) {
         });
       }
 
-      // Inject image if we got a URL and GAS was successful
-      if (data.status === 'ok' && signedUrl) {
+      // Inject image if we got a URL and GAS was successful or returned duplicate (SUDAH ABSEN)
+      if ((data.status === 'ok' || data.status === 'duplicate') && signedUrl) {
         data.image = signedUrl;
       }
 
