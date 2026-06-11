@@ -461,15 +461,23 @@ class ScanQueue {
         }
       };
 
-      const avatarSrc = item.image || '/assets/favicon.png';
+      const cachedPhoto = window.ImageCache ? window.ImageCache.get(item.studentId) : null;
+      const avatarSrc = cachedPhoto || item.image || '/assets/favicon.png';
       
       const studentInfo = document.createElement('div');
       studentInfo.className = 'student-info';
 
       const studentPhoto = document.createElement('img');
       studentPhoto.className = 'student-photo';
+      studentPhoto.setAttribute('crossorigin', 'anonymous');
+      studentPhoto.setAttribute('data-student-id', item.studentId || '');
       studentPhoto.src = avatarSrc;
       studentPhoto.alt = 'Foto';
+      studentPhoto.onload = function() {
+        if (!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) {
+          window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);
+        }
+      };
       studentPhoto.onerror = function() {
         this.onerror = null;
         this.src = '/assets/favicon.png';
@@ -895,7 +903,17 @@ window.showStudentModal = function(item) {
 
   if (!modal) return;
 
-  photoEl.src = item.image || '/assets/favicon.png';
+  const cachedPhoto = window.ImageCache ? window.ImageCache.get(item.studentId) : null;
+  const modalImgSrc = cachedPhoto || item.image || '/assets/favicon.png';
+
+  photoEl.setAttribute('crossorigin', 'anonymous');
+  photoEl.setAttribute('data-student-id', item.studentId || '');
+  photoEl.src = modalImgSrc;
+  photoEl.onload = function() {
+    if (!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) {
+      window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);
+    }
+  };
   photoEl.onerror = function() {
     this.onerror = null;
     this.src = '/assets/favicon.png';
