@@ -5,7 +5,8 @@
   "scripts": {
     "start": "vercel dev",
     "dev": "node app.js",
-    "build": "echo 'No build step needed'"
+    "build": "echo 'No build step needed'",
+    "clasp-push-all": "node scripts/clasp-push-all.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
