@@ -132,7 +132,7 @@
 - Create: None
 - Modify: None
 
-- [ ] **Step 1: Push the `profilecard` branch to origin**
+- [x] **Step 1: Push the `profilecard` branch to origin**
 
   Run:
   ```bash
@@ -148,7 +148,7 @@
 - Create: None
 - Modify: None
 
-- [ ] **Step 1: Start the local server**
+- [x] **Step 1: Start the local server**
 
   Run:
   ```bash
@@ -159,6 +159,6 @@
   Server started locally on http://localhost:5500
   ```
 
-- [ ] **Step 2: Verify the route loads successfully**
+- [x] **Step 2: Verify the route loads successfully**
 
   Open browser to: `http://localhost:5500/profile` and verify the profile page renders correctly without showing the index/login page or a 404 error. Also check `http://localhost:5500/profile.html`.
