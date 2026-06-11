@@ -314,7 +314,7 @@ class ScanQueue {
           pendingItem.name = data.name || 'Sudah Absen';
           pendingItem.image = data.image || '';
           
-          showToast(`Sudah Hadir: ${data.name || 'Katekumen'}`, 'info');
+          showToast(`Sudah Hadir - Topik ${pendingItem.week} - ${data.name || 'Katekumen'}`, 'info');
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
