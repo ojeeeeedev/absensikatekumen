@@ -16,13 +16,31 @@ window.setAppState = async function(state) {
     await stopScanner();
   } else if (state === 2) {
     container.classList.add('state-scanning');
-    // Set active topic name text
-    const topicTrigger = document.getElementById('topic-trigger-large');
-    const activeTopicText = document.getElementById('active-topic-name');
-    if (activeTopicText && topicTrigger) {
-      activeTopicText.textContent = topicTrigger.textContent.replace('arrow_drop_down', '').trim();
+    
+    if (!selectedWeek) {
+      container.classList.add('needs-topic');
+      const activeTopicText = document.getElementById('active-topic-name');
+      if (activeTopicText) {
+        activeTopicText.textContent = "Ketuk di sini untuk memilih topik...";
+      }
+    } else {
+      container.classList.remove('needs-topic');
+      const topicTrigger = document.getElementById('topic-trigger-large');
+      const activeTopicText = document.getElementById('active-topic-name');
+      if (activeTopicText && topicTrigger) {
+        activeTopicText.textContent = topicTrigger.textContent.replace('arrow_drop_down', '').trim();
+      }
     }
-    startScanner();
+
+    if (selectedWeek) {
+      startScanner();
+    } else {
+      const loader = document.getElementById("camera-loader");
+      if (loader) {
+        loader.innerHTML = '<span style="color:var(--text-secondary); text-align:center;">Silakan pilih topik terlebih dahulu</span>';
+        loader.style.display = "flex";
+      }
+    }
   }
 }
 
@@ -152,7 +170,7 @@ window.handleLogin = async function() {
           loginLoader.style.display = 'none';
           
           // Switch to Selection State
-          setAppState(1);
+          setAppState(2);
           initializeApp();
         }, 250);
       }, 800);
@@ -711,7 +729,6 @@ function triggerVisualFlash(type) {
 async function handleScan(decodedText) {
   if (!selectedWeek) {
     showStatus("Pilih topik terlebih dahulu!", "error");
-    setAppState(1);
     openTopicModal();
     return;
   }
@@ -886,7 +903,7 @@ window.onload = () => {
   if (sessionToken) {
     // Sync the auth_token cookie with the sessionStorage token
     document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
-    setAppState(1); // Set to selection page initially
+    setAppState(2); // Set to scanner page initially
     initializeApp();
   } else {
     setAppState(0); // Authentication screen
