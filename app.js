@@ -108,6 +108,17 @@ app.get('/api/classes', async (req, res) => {
   }
 });
 
+// Route to handle version retrieval
+app.get('/api/version', async (req, res) => {
+  try {
+    const handler = (await import('./api/version.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/version:", error);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
 // ==========================================
 // 3. STATIC FILES
 // ==========================================

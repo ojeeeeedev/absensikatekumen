@@ -843,6 +843,21 @@ async function loadTopikList() {
   }
 }
 
+async function loadVersion() {
+  try {
+    const res = await fetch('/api/version');
+    if (res.ok) {
+      const data = await res.json();
+      const versionEl = document.getElementById('footer-version');
+      if (versionEl && data.version) {
+        versionEl.textContent = `v${data.version}`;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load version:", error);
+  }
+}
+
 async function initializeApp() {
   await loadTopikList();
   scanQueue.render();
@@ -852,6 +867,7 @@ async function initializeApp() {
 // Initial triggers
 window.onload = () => {
   initTheme();
+  loadVersion();
   
   // Connect background queue trigger for online state detection
   window.addEventListener('online', () => {
