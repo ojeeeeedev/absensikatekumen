@@ -54,6 +54,8 @@ async function loadClasses() {
         opt.textContent = `Kelas ${c}`;
         select.appendChild(opt);
       });
+    } else {
+      showToast(data.message || "Gagal memuat daftar kelas", "error");
     }
   } catch (e) {
     console.error("Error loading classes:", e);
@@ -89,6 +91,16 @@ async function loadStudents(classCode) {
   }
 }
 
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.toString()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function renderStudents(students) {
   const listContainer = document.getElementById('students-list');
   listContainer.innerHTML = '';
@@ -112,10 +124,10 @@ function renderStudents(students) {
     
     header.innerHTML = `
       <div class="header-left">
-        <img class="student-thumb" src="${imgUrl}" alt="${student.name}" onerror="this.src='assets/favicon.png'">
+        <img class="student-thumb" src="${imgUrl}" alt="${escapeHTML(student.name)}" onerror="this.src='assets/favicon.png'">
         <div class="student-meta">
-          <div class="student-name-text">${student.name}</div>
-          <div class="student-id-text">${student.studentId}</div>
+          <div class="student-name-text">${escapeHTML(student.name)}</div>
+          <div class="student-id-text">${escapeHTML(student.studentId)}</div>
         </div>
       </div>
       <span class="material-icons-outlined expand-arrow">expand_more</span>
@@ -127,14 +139,14 @@ function renderStudents(students) {
     
     body.innerHTML = `
       <div class="student-detail-card">
-        <img class="student-photo-large" src="${imgUrl}" alt="Foto ${student.name}" onerror="this.src='assets/favicon.png'">
-        <h3 class="detail-name">${student.name}</h3>
-        <p class="detail-id">ID: ${student.studentId}</p>
+        <img class="student-photo-large" src="${imgUrl}" alt="Foto ${escapeHTML(student.name)}" onerror="this.src='assets/favicon.png'">
+        <h3 class="detail-name">${escapeHTML(student.name)}</h3>
+        <p class="detail-id">ID: ${escapeHTML(student.studentId)}</p>
         
         <div class="detail-info-grid">
           <div class="detail-item">
             <span class="detail-label">Tempat, Tanggal Lahir (TTL)</span>
-            <span class="detail-value">${student.dob || '-'}</span>
+            <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
           </div>
         </div>
       </div>
@@ -173,8 +185,8 @@ function renderStudents(students) {
 function filterStudents() {
   const query = document.getElementById('search-input').value.toLowerCase().trim();
   const filtered = allStudents.filter(s => 
-    s.name.toLowerCase().includes(query) || 
-    s.studentId.toLowerCase().includes(query)
+    (s.name || '').toLowerCase().includes(query) || 
+    (s.studentId || '').toLowerCase().includes(query)
   );
   renderStudents(filtered);
 }
@@ -202,10 +214,17 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   loadClasses();
   
-  document.getElementById('class-selector').addEventListener('change', (e) => {
-    document.getElementById('search-input').style.display = 'block';
-    loadStudents(e.target.value);
-  });
+  const selector = document.getElementById('class-selector');
+  if (selector) {
+    selector.addEventListener('change', (e) => {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) searchInput.style.display = 'block';
+      loadStudents(e.target.value);
+    });
+  }
   
-  document.getElementById('search-input').addEventListener('input', filterStudents);
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', filterStudents);
+  }
 });
