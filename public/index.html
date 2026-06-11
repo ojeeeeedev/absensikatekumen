@@ -81,13 +81,13 @@
 
         <!-- STATE 2: ACTIVE SCANNING -->
         <div id="scanning-panel" class="panel-state">
-          <!-- Mini Active Topic Bar -->
-          <div class="active-topic-bar">
+          <!-- Mini Active Topic Bar (Acts as a dropdown) -->
+          <div class="active-topic-bar" onclick="openTopicModal()" style="cursor: pointer;">
             <div class="topic-info">
               <span class="material-icons-outlined">event_note</span>
               <span id="active-topic-name">Belum memilih topik</span>
             </div>
-            <button class="change-topic-btn" onclick="setAppState(1)">Ubah</button>
+            <span class="material-icons-outlined dropdown-arrow-icon" style="color: var(--text-secondary); font-size: 1.25rem;">arrow_drop_down</span>
           </div>
 
           <!-- Camera Viewer -->
@@ -151,6 +151,9 @@
         <div class="modal-close-btn" onclick="closeTopicModal()">Tutup</div>
       </div>
     </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script src="topics.js"></script>
     <script src="script.js"></script>

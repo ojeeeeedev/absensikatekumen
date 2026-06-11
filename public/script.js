@@ -67,6 +67,10 @@ window.selectTopic = function(week, name, element) {
   if (btn) {
     btn.innerHTML = `<span>${week}. ${name}</span><span class="material-icons-outlined">arrow_drop_down</span>`;
   }
+  const activeTopicText = document.getElementById('active-topic-name');
+  if (activeTopicText) {
+    activeTopicText.textContent = `${week}. ${name}`;
+  }
   document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
   element.classList.add('active');
   setTimeout(() => {
@@ -274,6 +278,9 @@ class ScanQueue {
           // Permanent client errors (e.g. 400, 404)
           pendingItem.status = 'error';
           pendingItem.errorMsg = `HTTP ${response.status}`;
+          
+          showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
+
           triggerVisualFlash('error');
           const container = document.getElementById('app-container');
           if (!container || !container.classList.contains('state-scanning')) {
@@ -288,6 +295,8 @@ class ScanQueue {
           pendingItem.name = data.name;
           pendingItem.image = data.image || '';
           
+          showToast(`Berhasil: ${data.name} hadir!`, 'success');
+
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('success');
@@ -301,6 +310,8 @@ class ScanQueue {
           pendingItem.name = data.name || 'Sudah Absen';
           pendingItem.image = data.image || '';
           
+          showToast(`Sudah Hadir: ${data.name || 'Katekumen'}`, 'info');
+
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('duplicate');
@@ -313,6 +324,8 @@ class ScanQueue {
           pendingItem.status = 'error';
           pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
           
+          showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
+
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('error');
@@ -326,6 +339,8 @@ class ScanQueue {
       console.error("Queue sync network error:", error);
       pendingItem.status = 'pending'; // Revert back to pending to retry when online
       this.save();
+      
+      showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
       
       this.isProcessing = false;
       this.updateBanner();
@@ -427,6 +442,36 @@ class ScanQueue {
 
 // Instantiate globally
 window.scanQueue = new ScanQueue();
+
+// --- TOAST NOTIFICATIONS ---
+window.showToast = function(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  let icon = 'check_circle';
+  if (type === 'error') icon = 'error';
+  if (type === 'info') icon = 'info';
+
+  toast.innerHTML = `
+    <span class="material-icons-outlined toast-icon">${icon}</span>
+    <span class="toast-message">${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  // Trigger animation
+  setTimeout(() => toast.classList.add('show'), 10);
+
+  // Remove toast after 3 seconds
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 400);
+  }, 3000);
+}
 
 // --- STATUS HANDLER ---
 function showStatus(mainText, type, subText = "") {
