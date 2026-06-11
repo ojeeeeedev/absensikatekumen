@@ -498,10 +498,12 @@ window.showToast = function(message, type = 'success') {
   toast.appendChild(text);
   container.appendChild(toast);
 
+  let autoDismissTimer;
+
   // Smooth dismiss helper
   const dismiss = () => {
     if (toast.classList.contains('hide')) return;
-    clearTimeout(autoDismissTimer);
+    if (autoDismissTimer) clearTimeout(autoDismissTimer);
     toast.removeEventListener('click', dismiss);
     toast.classList.remove('show');
     toast.classList.add('hide');
@@ -515,7 +517,7 @@ window.showToast = function(message, type = 'success') {
   setTimeout(() => toast.classList.add('show'), 10);
 
   // Auto-remove timer
-  const autoDismissTimer = setTimeout(dismiss, 3000);
+  autoDismissTimer = setTimeout(dismiss, 3000);
 }
 
 // --- STATUS HANDLER ---
