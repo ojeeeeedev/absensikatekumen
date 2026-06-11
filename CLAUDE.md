@@ -58,3 +58,5 @@ This repository implements a lightweight, responsive, serverless attendance syst
   - `DASHBOARD_URL`: Target Google Sheets editor URL.
   - `DAFTAR_URL`: Target Google Forms or registration URL.
 - **Deployment**: Configured to deploy natively to Vercel (see `vercel.json` and `middleware.js` for redirects and path behavior).
+- **Version Bumping**: When all requested modifications for a task are complete and verified, ask the user if they want to bump the package version (major, minor, patch, or none) before final completion and commit.
+

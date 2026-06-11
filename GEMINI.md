@@ -92,3 +92,6 @@ The following environment variables are required (configured in Vercel or `.env`
 - **Error Handling:**
   - Provide clear visual and haptic (vibration) feedback for success/error states on the mobile UI.
   - Always validate incoming `studentId` formats before processing.
+- **Version Bumping:**
+  - When all requested modifications for a task are complete and verified, ask the user if they want to bump the package version in `package.json` (major, minor, patch, or none) before final completion and commit.
+
