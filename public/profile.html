@@ -18,23 +18,48 @@
     </div>
 
     <main id="app-container" class="glass-container">
-      <div class="app-section">
+      <div class="app-section" style="display: flex; flex-direction: column;">
         <div class="header-container">
-          <img src="assets/pewartaan_invert.png" class="header-logo theme-logo" alt="Logo Pewartaan" style="cursor: pointer;">
+          <img src="assets/favicon.png" class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;">
           <div class="header-text">
             <h1>Profil Katekumen</h1>
             <h2>Detail & Riwayat</h2>
           </div>
         </div>
 
-        <div style="text-align: center; margin: 40px 0; color: var(--text-color, #ffffff);">
+        <div style="text-align: center; margin: 40px 0; color: var(--text-primary);">
           <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.7; margin-bottom: 16px;">account_circle</span>
           <h3 style="font-family: 'Cinzel', serif; font-size: 20px; margin-bottom: 8px;">Kartu Profil Katekumen</h3>
           <p style="font-family: 'Inter', sans-serif; font-size: 14px; opacity: 0.8; max-width: 280px; margin: 0 auto;">Fitur profil katekumen sedang dalam pengembangan.</p>
         </div>
 
-        <button onclick="window.location.href='/'" style="width: 100%; margin-top: 20px;"><b>Kembali ke Presensi</b></button>
+        <button id="login-btn" onclick="window.location.href='/'" style="width: 100%; margin-top: 20px;"><b>Kembali ke Presensi</b></button>
       </div>
     </main>
+    <script>
+      function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateLogos(savedTheme);
+      }
+      function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateLogos(newTheme);
+      }
+      function updateLogos(theme) {
+        const logos = document.querySelectorAll('.theme-logo');
+        logos.forEach(logo => {
+          if (theme === 'light') {
+            logo.src = 'assets/favicon.png';
+          } else {
+            logo.src = 'assets/pewartaan_invert.png';
+          }
+        });
+      }
+      initTheme();
+    </script>
   </body>
 </html>
