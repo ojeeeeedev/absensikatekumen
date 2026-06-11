@@ -80,9 +80,13 @@ app.get('/api/dashboard', async (req, res) => {
 // ==========================================
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Fallback for clean URLs - serve index.html for unknown paths
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Fallback for clean URLs - serve index.html for unknown HTML paths
+app.get('*', (req, res, next) => {
+  if (req.accepts('html')) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    next();
+  }
 });
 
 app.listen(PORT, () => {

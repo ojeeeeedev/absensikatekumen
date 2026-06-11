@@ -14,7 +14,7 @@
 **Files:**
 - Modify: `package.json`
 
-- [ ] **Step 1: Modifikasi `package.json` untuk menambahkan dependencies baru dan perintah `npm run dev`.**
+- [x] **Step 1: Modifikasi `package.json` untuk menambahkan dependencies baru dan perintah `npm run dev`.**
 
 Tambahkan `express`, `dotenv`, dan `cookie-parser` ke dalam `dependencies`, dan tambahkan `"dev": "node app.js"` ke dalam `"scripts"`. Edit `package.json`:
 ```json
@@ -43,12 +43,12 @@ Tambahkan `express`, `dotenv`, dan `cookie-parser` ke dalam `dependencies`, dan 
 }
 ```
 
-- [ ] **Step 2: Jalankan `npm install` untuk memasang package baru.**
+- [x] **Step 2: Jalankan `npm install` untuk memasang package baru.**
 
 Run: `npm install`
 Expected: Instalasi sukses tanpa error.
 
-- [ ] **Step 3: Commit perubahan package.json.**
+- [x] **Step 3: Commit perubahan package.json.**
 ```bash
 git add package.json package-lock.json
 git commit -m "chore: add express, dotenv, cookie-parser dependencies and dev script"
