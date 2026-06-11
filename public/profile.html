@@ -19,11 +19,21 @@
 
     <main id="app-container" class="glass-container">
       <div class="app-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto;">
+        <nav class="app-nav">
+          <a href="/" class="nav-item">
+            <span class="material-icons-outlined">qr_code_scanner</span>
+            <span>Scan Presensi</span>
+          </a>
+          <a href="/profile" class="nav-item active">
+            <span class="material-icons-outlined">people_alt</span>
+            <span>Profil Katekumen</span>
+          </a>
+        </nav>
         <div class="header-container">
           <img src="assets/pewartaan_normal.png" class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;">
           <div class="header-text">
             <h1>Profil Katekumen</h1>
-            <h2>Detail & Riwayat</h2>
+            <h2>Paroki St. Petrus</h2>
           </div>
         </div>
 
@@ -50,8 +60,6 @@
             <p>Silakan pilih kelas terlebih dahulu untuk melihat daftar katekumen.</p>
           </div>
         </div>
-
-        <button id="login-btn" onclick="window.location.href='/'" style="margin-top: 20px;"><b>Kembali ke Presensi</b></button>
       </div>
     </main>
 
