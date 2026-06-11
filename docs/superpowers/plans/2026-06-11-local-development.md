@@ -60,7 +60,7 @@ git commit -m "chore: add express, dotenv, cookie-parser dependencies and dev sc
 **Files:**
 - Modify: `app.js`
 
-- [ ] **Step 1: Tulis ulang `app.js` ke sintaks ESM, pasang middleware cookie-parser, serta tiru alur routing Vercel untuk `/daftar` dan `/dashboard`.**
+- [x] **Step 1: Tulis ulang `app.js` ke sintaks ESM, pasang middleware cookie-parser, serta tiru alur routing Vercel untuk `/daftar` dan `/dashboard`.**
 
 Ganti seluruh isi `app.js` dengan kode berikut. Edit baris 1-25 di `app.js`:
 ```javascript
@@ -156,12 +156,12 @@ app.listen(PORT, () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan aplikasi secara lokal untuk memverifikasi server berjalan.**
+- [x] **Step 2: Jalankan aplikasi secara lokal untuk memverifikasi server berjalan.**
 
 Run: `npm run dev`
 Expected: Server log `Server started locally on http://localhost:5500` muncul di terminal. Buka http://localhost:5500 di browser untuk memastikan halaman login tampil dengan benar.
 
-- [ ] **Step 3: Commit perubahan app.js.**
+- [x] **Step 3: Commit perubahan app.js.**
 ```bash
 git add app.js
 git commit -m "feat: refactor app.js to ES Modules and implement local Vercel-like routing redirects"
