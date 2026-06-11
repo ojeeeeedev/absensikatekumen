@@ -725,7 +725,6 @@ async function startScanner() {
 
   const scanConfig = { 
     fps: 30,
-    qrbox: { width: 220, height: 220 },
     aspectRatio: 1.0,
     disableFlip: false,
     experimentalFeatures: {
