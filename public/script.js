@@ -471,7 +471,6 @@ class ScanQueue {
       studentPhoto.className = 'student-photo';
       studentPhoto.setAttribute('crossorigin', 'anonymous');
       studentPhoto.setAttribute('data-student-id', item.studentId || '');
-      studentPhoto.src = avatarSrc;
       studentPhoto.alt = 'Foto';
       studentPhoto.onload = function() {
         if (!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) {
@@ -482,6 +481,7 @@ class ScanQueue {
         this.onerror = null;
         this.src = '/assets/favicon.png';
       };
+      studentPhoto.src = avatarSrc;
       studentInfo.appendChild(studentPhoto);
 
       const studentText = document.createElement('div');
@@ -908,7 +908,6 @@ window.showStudentModal = function(item) {
 
   photoEl.setAttribute('crossorigin', 'anonymous');
   photoEl.setAttribute('data-student-id', item.studentId || '');
-  photoEl.src = modalImgSrc;
   photoEl.onload = function() {
     if (!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) {
       window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);
@@ -918,6 +917,7 @@ window.showStudentModal = function(item) {
     this.onerror = null;
     this.src = '/assets/favicon.png';
   };
+  photoEl.src = modalImgSrc;
 
   nameEl.textContent = item.name || 'Katekumen';
   idEl.textContent = item.studentId;
