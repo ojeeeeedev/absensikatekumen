@@ -379,12 +379,44 @@ body {
 }
 
 .history-header {
-  display: flex; justify-content: space-between; font-size: 0.7rem;
+  display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem;
   font-weight: 600; text-transform: uppercase; color: var(--text-secondary);
   letter-spacing: 0.05em; padding-bottom: 4px; border-bottom: 1px solid var(--border-glass);
   margin-bottom: 6px;
 }
+.history-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 #queue-status-text { color: var(--status-success-text); }
+
+.clear-history-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+}
+.clear-history-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--status-duplicate-text);
+}
+.clear-history-btn:active {
+  transform: scale(0.92);
+}
+.clear-history-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.clear-history-btn .material-icons-outlined {
+  font-size: 1.1rem;
+}
 
 .queue-list-container {
   overflow-y: auto; display: flex; flex-direction: column; gap: 8px;

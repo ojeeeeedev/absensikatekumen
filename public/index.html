@@ -116,8 +116,18 @@
           <!-- Queue History List -->
           <div id="queue-history-panel">
             <div class="history-header">
-              <span>Riwayat Pemindaian Terkini:</span>
-              <span id="queue-status-text">Semua tersinkronisasi</span>
+              <div class="history-title-group">
+                <span>Riwayat Pemindaian Terkini:</span>
+                <span id="queue-status-text">Semua tersinkronisasi</span>
+              </div>
+              <button id="clear-history-btn" class="clear-history-btn"
+                onclick="clearScanHistory()"
+                onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); clearScanHistory(); }"
+                role="button"
+                tabindex="0"
+                aria-label="Hapus semua riwayat pemindaian">
+                <span class="material-icons-outlined">delete_outline</span>
+              </button>
             </div>
             <div id="queue-list" class="queue-list-container">
               <!-- Dynamically populated via script -->

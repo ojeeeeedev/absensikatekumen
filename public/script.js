@@ -187,6 +187,8 @@ class ScanQueue {
 
     this.isProcessing = false;
     this.cooldowns = {}; // For preventing duplicate double scans
+    this.cleanExpiredItems();
+    this.expireTimer = setInterval(() => this.cleanExpiredItems(), 15000);
   }
 
   save() {
@@ -466,6 +468,24 @@ class ScanQueue {
         ...prunedCompleted.map(item => item.id)
       ]);
       this.queue = this.queue.filter(item => allowedIds.has(item.id));
+    }
+  }
+
+  cleanExpiredItems() {
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    const initialLength = this.queue.length;
+
+    // Keep items if they are pending/processing (so offline scans are not lost before syncing),
+    // or if they are less than 5 minutes old.
+    this.queue = this.queue.filter(item => {
+      const isPendingOrProcessing = item.status === 'pending' || item.status === 'processing';
+      const isExpired = (now - item.timestamp) >= fiveMinutes;
+      return isPendingOrProcessing || !isExpired;
+    });
+
+    if (this.queue.length !== initialLength) {
+      this.save();
     }
   }
 }
@@ -778,5 +798,15 @@ window.onload = () => {
     initializeApp();
   } else {
     setAppState(0); // Authentication screen
+  }
+}
+
+window.clearScanHistory = function() {
+  if (confirm("Apakah Anda yakin ingin menghapus semua riwayat pemindaian?")) {
+    if (typeof scanQueue !== 'undefined') {
+      scanQueue.queue = [];
+      scanQueue.save();
+      showToast("Riwayat pemindaian berhasil dihapus", "info");
+    }
   }
 }
