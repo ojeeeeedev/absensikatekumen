@@ -10,6 +10,23 @@ window.handleLogout = function(e) {
   window.location.href = '/';
 };
 
+// Throttled active state update
+let lastActivityUpdate = 0;
+function updateActivity() {
+  const now = Date.now();
+  if (now - lastActivityUpdate > 30000) { // throttle to 30s
+    lastActivityUpdate = now;
+    if (sessionStorage.getItem('authToken')) {
+      localStorage.setItem('lastActiveTimestamp', now.toString());
+    }
+  }
+}
+
+// Attach listener for common interactions to track activity
+window.addEventListener('click', updateActivity);
+window.addEventListener('keydown', updateActivity);
+window.addEventListener('touchstart', updateActivity);
+
 function checkTopicExpiry() {
   const loggedIn = !!sessionStorage.getItem('authToken');
   const now = Date.now();
@@ -20,6 +37,7 @@ function checkTopicExpiry() {
     if (logoutTime) {
       if (now - parseInt(logoutTime) > tenMinutes) {
         localStorage.removeItem('selectedWeek');
+        localStorage.removeItem('selectedTopicName');
       }
       localStorage.removeItem('logoutTimestamp');
     }
@@ -29,12 +47,17 @@ function checkTopicExpiry() {
     if (lastActive) {
       if (now - parseInt(lastActive) > tenMinutes) {
         localStorage.removeItem('selectedWeek');
+        localStorage.removeItem('selectedTopicName');
       }
       localStorage.removeItem('lastActiveTimestamp');
     }
   }
 }
-document.addEventListener('DOMContentLoaded', checkTopicExpiry);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkTopicExpiry);
+} else {
+  checkTopicExpiry();
+}
 
 let scannerStartPromise = null;
 
