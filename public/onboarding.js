@@ -1,8 +1,8 @@
 (function() {
-  // Check if they already saw onboarding
-  if (localStorage.getItem('hasSeenOnboardingV2')) return;
-
   const checkOnboarding = () => {
+    // Check if they already saw onboarding
+    if (localStorage.getItem('hasSeenOnboardingV2')) return;
+
     const sessionToken = sessionStorage.getItem('authToken');
     if (!sessionToken) return;
 
@@ -21,10 +21,14 @@
       modal.id = 'onboarding-modal';
       modal.className = 'student-modal';
       modal.style.display = 'flex';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      
+      // Close modal on click outside content
       modal.onclick = (e) => closeOnboardingModal(e);
       
       modal.innerHTML = `
-        <div class="modal-content onboarding-modal-content" onclick="event.stopPropagation()">
+        <div class="modal-content onboarding-modal-content">
           <div class="onboarding-header">
             <span class="material-icons-outlined onboarding-welcome-icon" aria-hidden="true">celebration</span>
             <h2 class="onboarding-title">Selamat datang di Sistem Presensi v2</h2>
@@ -91,7 +95,26 @@
       `;
       document.body.appendChild(modal);
 
-      document.getElementById('onboarding-dismiss-btn').onclick = () => closeOnboardingModal(null);
+      // Stop propagation programmatically
+      const content = modal.querySelector('.onboarding-modal-content');
+      if (content) {
+        content.onclick = (e) => e.stopPropagation();
+      }
+
+      // Bind dismiss button
+      const dismissBtn = document.getElementById('onboarding-dismiss-btn');
+      if (dismissBtn) {
+        dismissBtn.onclick = () => closeOnboardingModal(null);
+      }
+
+      // Register escape key handler
+      window.addEventListener('keydown', handleEscapeKey);
+    }
+  };
+
+  const handleEscapeKey = (e) => {
+    if (e.key === 'Escape') {
+      closeOnboardingModal(null);
     }
   };
 
@@ -104,6 +127,7 @@
       modal.remove();
       localStorage.setItem('hasSeenOnboardingV2', 'true');
     }
+    window.removeEventListener('keydown', handleEscapeKey);
   };
 
   // Expose check function globally
