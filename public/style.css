@@ -267,35 +267,10 @@ body {
   display: flex; align-items: center; justify-content: center;
   padding-bottom: 1rem; border-bottom: 1px solid var(--border-glass);
   margin-bottom: 1rem;
-  max-height: 120px;
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              margin 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease,
-              visibility 0.3s;
-  overflow: hidden;
 }
 
-.app-section.scrolled .header-container {
-  max-height: 0;
-  padding-bottom: 0;
-  margin-bottom: 0;
-  opacity: 0;
-  border-bottom-color: transparent;
-  pointer-events: none;
-  visibility: hidden;
-}
 .header-logo {
   height: 48px; width: auto; margin-right: 12px;
-  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease;
-}
-
-.app-section.scrolled .header-logo {
-  height: 0;
-  margin-right: 0;
-  opacity: 0;
 }
 .header-text h1 {
   font-family: 'Cinzel', serif; font-size: 1.15rem; font-weight: 600; color: var(--text-primary);
@@ -1390,6 +1365,13 @@ input:focus-visible,
   background: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.nav-item.logout-btn {
+  flex: 0 0 auto;
+  width: 45px;
+  padding: 0.55rem;
+  justify-content: center;
 }
 
 /* =========================================
