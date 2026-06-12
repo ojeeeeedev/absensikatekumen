@@ -23,7 +23,7 @@
 .onboarding-title {
   font-family: 'Inter', sans-serif !important;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 16px 0;
   text-align: center !important;
@@ -38,6 +38,8 @@
   border-bottom: 1px solid var(--border-glass);
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-glass) transparent;
 }
 
 /* Custom scrollbar for scroll area */
@@ -67,12 +69,22 @@
   font-size: 1.05rem;
 }
 
+/* Light Theme Defaults (Accessible contrast) */
 .updates-header {
-  color: #38bdf8; /* Lighter shade of blue */
+  color: #0284c7;
 }
 
 .removals-header {
-  color: #7dd3fc; /* Lighter shade of blue (no red) */
+  color: #0369a1;
+}
+
+/* Dark Mode overrides for section headers */
+[data-theme="dark"] .updates-header {
+  color: #38bdf8;
+}
+
+[data-theme="dark"] .removals-header {
+  color: #7dd3fc;
 }
 
 /* Row Accordion Card Styles */
@@ -128,12 +140,21 @@
   flex-shrink: 0;
 }
 
-/* Icon colors using lighter blues */
+/* Icon colors using theme-aware blues */
 .updates-list .row-accordion-title span.material-icons-outlined {
-  color: #38bdf8;
+  color: #0284c7;
 }
 
 .removals-list .row-accordion-title span.material-icons-outlined {
+  color: #0369a1;
+}
+
+/* Dark Mode overrides for icons */
+[data-theme="dark"] .updates-list .row-accordion-title span.material-icons-outlined {
+  color: #38bdf8;
+}
+
+[data-theme="dark"] .removals-list .row-accordion-title span.material-icons-outlined {
   color: #7dd3fc;
 }
 
@@ -155,7 +176,7 @@
 }
 
 .row-accordion.open .row-accordion-content {
-  max-height: 80px; /* Space for detail text */
+  max-height: 150px; /* Space for detail text with wrap room */
 }
 
 .row-accordion.open .chevron {
@@ -175,7 +196,7 @@
 .onboarding-btn {
   width: 100%;
   padding: 0.75rem;
-  background: linear-gradient(135deg, var(--accent) 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #0ea5e9 100%);
   border: none;
   border-radius: 12px;
   color: white;
