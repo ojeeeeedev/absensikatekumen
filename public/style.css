@@ -263,6 +263,21 @@ body {
   display: flex; align-items: center; justify-content: center;
   padding-bottom: 1rem; border-bottom: 1px solid var(--border-glass);
   margin-bottom: 1rem;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease,
+              border-bottom-width 0.3s ease;
+  overflow: hidden;
+}
+
+.app-section.scrolled .header-container {
+  max-height: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  opacity: 0;
+  border-bottom-width: 0;
+  pointer-events: none;
 }
 .header-logo {
   height: 48px; width: auto; margin-right: 12px;
@@ -892,42 +907,55 @@ input:focus-visible,
   gap: 12px;
   width: 100%;
   margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid transparent;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  margin-top: -5px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-section.scrolled .profile-selector-container {
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-glass);
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+#class-selector, #search-input {
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              font-size 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s;
 }
 
 #class-selector {
-  width: 100%;
-  padding: 0.85rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  border-radius: 12px;
-  color: var(--text-primary);
-  font-size: 1rem;
   font-weight: 500;
-  outline: none;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transition: border-color 0.3s;
 }
 
-#class-selector:focus {
+#class-selector:focus, #search-input:focus {
   border-color: var(--accent);
 }
 
-#search-input {
-  width: 100%;
-  padding: 0.85rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  border-radius: 12px;
-  color: var(--text-primary);
-  font-size: 1rem;
-  outline: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transition: border-color 0.3s;
-}
-
-#search-input:focus {
-  border-color: var(--accent);
+.app-section.scrolled #class-selector,
+.app-section.scrolled #search-input {
+  padding: 0.55rem 0.85rem;
+  font-size: 0.85rem;
 }
 
 .students-list-container {
@@ -1146,17 +1174,77 @@ input:focus-visible,
 
 /* Summary Box */
 .students-summary-container {
-  padding: 6px 12px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border-glass);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-weight: 500;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.summary-badge {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.summary-badge span.material-icons-outlined {
+  font-size: 1rem !important;
+}
+
+.summary-total {
+  background: var(--accent-glow);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+}
+.summary-total span.material-icons-outlined {
+  color: var(--accent);
+}
+
+.summary-active {
+  background: var(--status-success-bg);
+  border: 1px solid var(--status-success-border);
+  color: var(--status-success-text);
+}
+
+.summary-inactive {
+  background: var(--status-duplicate-bg);
+  border: 1px solid var(--status-duplicate-border);
+  color: var(--status-duplicate-text);
+}
+
+/* Inactive student list cards */
+.student-accordion-item.inactive {
+  opacity: 0.65;
+  border-style: dashed;
+}
+
+.student-accordion-item.inactive:hover {
+  opacity: 0.85;
+}
+
+.inactive-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--status-duplicate-bg);
+  border: 1px solid var(--status-duplicate-border);
+  color: var(--status-duplicate-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
 }
 
 /* Placeholders and states */
