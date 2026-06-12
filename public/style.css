@@ -968,6 +968,7 @@ input:focus-visible,
   width: 100%;
   padding-right: 4px;
   min-height: 320px;
+  flex-shrink: 0;
 }
 
 
@@ -991,6 +992,7 @@ input:focus-visible,
   transform: translateX(0);
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
   animation: slideInFromRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  flex-shrink: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1380,10 +1382,25 @@ input:focus-visible,
 
 .nav-item.logout-btn {
   flex: 0 0 auto;
-  width: 45px;
-  padding: 0.55rem;
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  padding: 0;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  color: var(--status-duplicate-text);
+  background: var(--status-duplicate-bg);
+  border-color: var(--status-duplicate-border);
 }
+
+.nav-item.logout-btn:hover {
+  color: #fff;
+  background: var(--status-duplicate-text);
+  border-color: var(--status-duplicate-text);
+  transform: translateY(-1px);
+}
+
 
 /* =========================================
    TOPIC NOT SELECTED DIMMING STATE

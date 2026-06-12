@@ -155,7 +155,7 @@ async function loadStudents(classCode) {
     const data = await res.json();
     if (data.status === 'ok') {
       allStudents = data.students;
-      renderStudents(allStudents);
+      filterStudents();
     } else {
       showToast(data.message || "Gagal memuat data", "error");
     }
@@ -190,8 +190,9 @@ function renderStudents(students) {
 
   // Inactive helper
   const isInactive = (student) => {
-    const ki = (student.kelasKi || '').trim().toLowerCase();
-    const kk = (student.katekisKk || '').trim().toLowerCase();
+    if (!student) return false;
+    const ki = String(student.kelasKi || '').trim().toLowerCase();
+    const kk = String(student.katekisKk || '').trim().toLowerCase();
     return ki === 'inactive' || kk === 'inactive';
   };
 
