@@ -136,8 +136,8 @@ function renderStudents(students) {
       
       // Calculate active/inactive counts from current array (filtered if search active, or all)
       const currentTotal = students.length;
-      const currentActive = students.filter(s => !isInactive(s)).length;
-      const currentInactive = students.filter(s => isInactive(s)).length;
+      const currentActive = activeList.length;
+      const currentInactive = inactiveList.length;
 
       summaryTotalText.textContent = `Total: ${currentTotal}`;
       summaryActiveText.textContent = `Aktif: ${currentActive}`;
