@@ -1,0 +1,161 @@
+/* Onboarding Modal Styles */
+.onboarding-modal-content {
+  max-height: 80vh !important;
+  max-width: 460px;
+  margin: auto;
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.onboarding-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.onboarding-welcome-icon {
+  font-size: 2.75rem;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.onboarding-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 6px 0;
+  text-align: center !important;
+}
+
+.onboarding-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
+  opacity: 0.9;
+  text-align: center !important;
+}
+
+.onboarding-scroll-area {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 1.25rem;
+  border-top: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* Custom scrollbar for scroll area */
+.onboarding-scroll-area::-webkit-scrollbar {
+  width: 5px;
+}
+.onboarding-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.onboarding-scroll-area::-webkit-scrollbar-thumb {
+  background: var(--border-glass);
+  border-radius: 4px;
+}
+
+.onboarding-section {
+  margin-bottom: 1.25rem;
+}
+
+.onboarding-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left !important;
+}
+
+.onboarding-section-title.updates-title {
+  color: var(--accent);
+}
+
+.onboarding-section-title.removals-title {
+  color: #f43f5e;
+}
+
+.onboarding-section-title span {
+  font-size: 1.05rem;
+}
+
+.onboarding-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.onboarding-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.onboarding-item-icon {
+  font-size: 1.25rem;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.onboarding-item-icon.updates-icon {
+  color: var(--accent);
+}
+
+.onboarding-item-icon.removals-icon {
+  color: #f43f5e;
+}
+
+.onboarding-item-text {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  text-align: left !important;
+}
+
+.onboarding-item-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.onboarding-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, var(--accent) 0%, #00f2fe 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 15px var(--accent-glow);
+}
+
+.onboarding-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+.onboarding-btn:active {
+  transform: translateY(0);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
