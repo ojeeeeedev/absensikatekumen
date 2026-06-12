@@ -66,27 +66,28 @@
           <select id="class-selector">
             <option value="" disabled selected>Memuat kelas...</option>
           </select>
+          
+          <div id="students-summary" class="students-summary-container" style="display: none;">
+            <div class="summary-badge summary-total">
+              <span class="material-icons-outlined">group</span>
+              <span id="summary-total-text">Total: 0</span>
+            </div>
+            <div class="summary-badge summary-active">
+              <span class="material-icons-outlined">check_circle</span>
+              <span id="summary-active-text">Aktif: 0</span>
+            </div>
+            <div class="summary-badge summary-inactive">
+              <span class="material-icons-outlined">cancel</span>
+              <span id="summary-inactive-text">Nonaktif: 0</span>
+            </div>
+          </div>
+          
           <input type="text" id="search-input" placeholder="Cari nama atau ID..." style="display: none;">
         </div>
 
         <div id="students-loader" style="display: none;">
           <div class="spinner"></div>
           <span style="font-size: 0.85rem; color: var(--text-primary); opacity: 0.8;">Memuat katekumen...</span>
-        </div>
-
-        <div id="students-summary" class="students-summary-container" style="display: none;">
-          <div class="summary-badge summary-total">
-            <span class="material-icons-outlined">group</span>
-            <span id="summary-total-text">Total: 0</span>
-          </div>
-          <div class="summary-badge summary-active">
-            <span class="material-icons-outlined">check_circle</span>
-            <span id="summary-active-text">Aktif: 0</span>
-          </div>
-          <div class="summary-badge summary-inactive">
-            <span class="material-icons-outlined">cancel</span>
-            <span id="summary-inactive-text">Nonaktif: 0</span>
-          </div>
         </div>
 
         <div id="students-list" class="students-list-container">
