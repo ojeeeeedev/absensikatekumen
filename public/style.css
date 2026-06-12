@@ -267,7 +267,16 @@ body {
   display: flex; align-items: center; justify-content: center;
   padding-bottom: 1rem; border-bottom: 1px solid var(--border-glass);
   margin-bottom: 1rem;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.app-section.scrolled .header-container {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 
 .header-logo {
   height: 48px; width: auto; margin-right: 12px;
@@ -958,7 +967,9 @@ input:focus-visible,
   gap: 12px;
   width: 100%;
   padding-right: 4px;
+  min-height: 320px;
 }
+
 
 .students-list-container::-webkit-scrollbar {
   width: 6px;
