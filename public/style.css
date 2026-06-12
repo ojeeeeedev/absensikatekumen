@@ -233,14 +233,19 @@ body {
 }
 
 #login-btn {
-  width: 100%; padding: 0.7rem; background: var(--accent); color: white;
-  border: none; border-radius: 12px; font-size: 1.15rem; font-weight: 500;
+  position: relative;
+  width: 100%; padding: 0.75rem; background: var(--accent); color: white;
+  border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 500;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
-  gap: 8px; margin-bottom: 1rem;
+  margin-bottom: 1rem;
   box-shadow: 0 4px 12px var(--accent-glow);
 }
 #login-btn .material-icons-outlined {
-  font-size: 1.15rem;
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.45rem;
 }
 #login-btn:hover {
   background: var(--accent-hover);
