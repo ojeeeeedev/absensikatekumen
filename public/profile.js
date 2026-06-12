@@ -141,9 +141,13 @@ function renderStudents(students) {
     return;
   }
   
-  students.forEach(student => {
+  students.forEach((student, index) => {
     const item = document.createElement('div');
     item.className = 'student-accordion-item';
+    
+    // Stagger animation delays top-to-bottom
+    const delay = Math.min(index * 0.04, 0.8);
+    item.style.animationDelay = `${delay}s`;
     
     const header = document.createElement('div');
     header.className = 'student-accordion-header';
