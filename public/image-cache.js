@@ -76,21 +76,7 @@ window.ImageCache = {
       
       if (!width || !height) return;
       
-      // Sizing constraints bypassed to prevent pixelation/quality loss
-      /*
-      const maxDim = 300; 
-      if (width > height) {
-        if (width > maxDim) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        }
-      } else {
-        if (height > maxDim) {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-      }
-      */
+      // Natural dimensions are preserved to prevent pixelation/quality loss
       
       canvas.width = width;
       canvas.height = height;
