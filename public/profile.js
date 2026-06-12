@@ -106,32 +106,48 @@ function escapeHTML(str) {
 function renderStudents(students) {
   const listContainer = document.getElementById('students-list');
   const summaryContainer = document.getElementById('students-summary');
-  const summaryText = document.getElementById('summary-text');
+  
+  const summaryTotalText = document.getElementById('summary-total-text');
+  const summaryActiveText = document.getElementById('summary-active-text');
+  const summaryInactiveText = document.getElementById('summary-inactive-text');
   
   if (!listContainer) return;
   listContainer.innerHTML = '';
+
+  // Inactive helper
+  const isInactive = (student) => {
+    const ki = (student.kelasKi || '').trim().toLowerCase();
+    const kk = (student.katekisKk || '').trim().toLowerCase();
+    return ki === 'inactive' || kk === 'inactive';
+  };
+
+  // Group active and inactive students (inactive at the bottom)
+  const activeList = students.filter(s => !isInactive(s));
+  const inactiveList = students.filter(s => isInactive(s));
+  const processedStudents = [...activeList, ...inactiveList];
   
-  // Update count summary
-  if (summaryContainer && summaryText) {
+  // Update count summary badges
+  if (summaryContainer && summaryTotalText && summaryActiveText && summaryInactiveText) {
     const selector = document.getElementById('class-selector');
     const classCode = selector ? selector.value : '';
-    const selectedOption = selector && selector.selectedIndex >= 0 ? selector.options[selector.selectedIndex] : null;
-    const query = document.getElementById('search-input')?.value.trim();
     
     if (classCode) {
       summaryContainer.style.display = 'flex';
-      const classNameDisplay = selectedOption ? selectedOption.textContent : `Kelas ${classCode}`;
-      if (query) {
-        summaryText.textContent = `Menampilkan ${students.length} dari ${allStudents.length} katekumen (pencarian "${query}")`;
-      } else {
-        summaryText.textContent = `Total ${allStudents.length} katekumen terdaftar di ${classNameDisplay}`;
-      }
+      
+      // Calculate active/inactive counts from current array (filtered if search active, or all)
+      const currentTotal = students.length;
+      const currentActive = students.filter(s => !isInactive(s)).length;
+      const currentInactive = students.filter(s => isInactive(s)).length;
+
+      summaryTotalText.textContent = `Total: ${currentTotal}`;
+      summaryActiveText.textContent = `Aktif: ${currentActive}`;
+      summaryInactiveText.textContent = `Tidak Aktif: ${currentInactive}`;
     } else {
       summaryContainer.style.display = 'none';
     }
   }
   
-  if (students.length === 0) {
+  if (processedStudents.length === 0) {
     listContainer.innerHTML = `
       <div class="empty-state">
         <span class="material-icons-outlined empty-icon">person_search</span>
@@ -141,9 +157,12 @@ function renderStudents(students) {
     return;
   }
   
-  students.forEach((student, index) => {
+  processedStudents.forEach((student, index) => {
     const item = document.createElement('div');
-    item.className = 'student-accordion-item';
+    const studentInactive = isInactive(student);
+    item.className = studentInactive 
+      ? 'student-accordion-item inactive' 
+      : 'student-accordion-item';
     
     // Stagger animation delays top-to-bottom
     const delay = Math.min(index * 0.04, 0.8);
@@ -165,11 +184,18 @@ function renderStudents(students) {
          <div class="student-thumb-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
       : `<div class="student-thumb-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
+    const inactiveBadge = studentInactive 
+      ? `<span class="inactive-badge">Tidak Aktif</span>`
+      : '';
+
     header.innerHTML = `
       <div class="header-left">
         ${photoHtml}
         <div class="student-meta">
-          <div class="student-name-text">${escapeHTML(student.name)}</div>
+          <div class="student-name-text-wrapper" style="display: flex; align-items: center; gap: 8px;">
+            <div class="student-name-text">${escapeHTML(student.name)}</div>
+            ${inactiveBadge}
+          </div>
           <div class="student-id-text">${escapeHTML(student.studentId)}</div>
         </div>
       </div>
@@ -286,6 +312,18 @@ function showToast(message, type = 'success') {
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   loadClasses();
+
+  // Scroll listener for header minimization
+  const appSection = document.querySelector('.app-section');
+  if (appSection) {
+    appSection.addEventListener('scroll', () => {
+      if (appSection.scrollTop > 10) {
+        appSection.classList.add('scrolled');
+      } else {
+        appSection.classList.remove('scrolled');
+      }
+    });
+  }
   
   const selector = document.getElementById('class-selector');
   if (selector) {
