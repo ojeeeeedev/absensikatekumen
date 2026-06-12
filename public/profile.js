@@ -141,7 +141,7 @@ function renderStudents(students) {
 
       summaryTotalText.textContent = `Total: ${currentTotal}`;
       summaryActiveText.textContent = `Aktif: ${currentActive}`;
-      summaryInactiveText.textContent = `Tidak Aktif: ${currentInactive}`;
+      summaryInactiveText.textContent = `Nonaktif: ${currentInactive}`;
     } else {
       summaryContainer.style.display = 'none';
     }
@@ -185,7 +185,7 @@ function renderStudents(students) {
       : `<div class="student-thumb-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
     const inactiveBadge = studentInactive 
-      ? `<span class="inactive-badge">Tidak Aktif</span>`
+      ? `<span class="inactive-badge">Nonaktif</span>`
       : '';
 
     header.innerHTML = `

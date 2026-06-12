@@ -281,6 +281,15 @@ body {
 }
 .header-logo {
   height: 48px; width: auto; margin-right: 12px;
+  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
+}
+
+.app-section.scrolled .header-logo {
+  height: 0;
+  margin-right: 0;
+  opacity: 0;
 }
 .header-text h1 {
   font-family: 'Cinzel', serif; font-size: 1.15rem; font-weight: 600; color: var(--text-primary);
