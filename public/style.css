@@ -1484,6 +1484,13 @@ input:focus-visible,
   margin-top: 0;
   padding-top: 12px;
   padding-bottom: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+}
+
+[data-theme="dark"] #profile-page .app-section.scrolled .profile-selector-container {
+  background: rgba(18, 18, 18, 0.85);
 }
 
 #profile-page .students-summary-container {
