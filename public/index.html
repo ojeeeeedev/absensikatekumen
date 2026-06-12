@@ -218,5 +218,79 @@
     <script src="image-cache.js"></script>
     <script src="topics.js"></script>
     <script src="script.js"></script>
+
+    <!-- Onboarding Modal -->
+    <div id="onboarding-modal" class="student-modal" style="display: none;" onclick="closeOnboardingModal(event)">
+      <div class="modal-content onboarding-modal-content" onclick="event.stopPropagation()">
+        <!-- Welcome Header -->
+        <div class="onboarding-header">
+          <span class="material-icons-outlined onboarding-welcome-icon">celebration</span>
+          <h2 class="onboarding-title">Selamat datang di Sistem Presensi v2</h2>
+          <p class="onboarding-subtitle">Panduan singkat pembaruan aplikasi Anda:</p>
+        </div>
+
+        <!-- Scrollable content area -->
+        <div class="onboarding-scroll-area">
+          <!-- Feature Updates Section -->
+          <div class="onboarding-section">
+            <h4 class="onboarding-section-title updates-title">
+              <span class="material-icons-outlined">auto_awesome</span>
+              Fitur Baru yang Memudahkan
+            </h4>
+            <div class="onboarding-list">
+              <div class="onboarding-item">
+                <span class="material-icons-outlined onboarding-item-icon updates-icon">bolt</span>
+                <div class="onboarding-item-text">
+                  <strong>Scan QR Berturut-turut:</strong> Scan peserta berikutnya langsung tanpa jeda. Data otomatis dikirim di latar belakang.
+                </div>
+              </div>
+              <div class="onboarding-item">
+                <span class="material-icons-outlined onboarding-item-icon updates-icon">wifi_off</span>
+                <div class="onboarding-item-text">
+                  <strong>Simpan Offline Otomatis:</strong> Scan tetap jalan walau internet lambat/putus. Data aman dan terkirim otomatis saat online.
+                </div>
+              </div>
+              <div class="onboarding-item">
+                <span class="material-icons-outlined onboarding-item-icon updates-icon">badge</span>
+                <div class="onboarding-item-text">
+                  <strong>Daftar & Profil Katekumen:</strong> Halaman khusus untuk melihat daftar seluruh peserta kelas, katekis, kelompok KI, dan foto mereka.
+                </div>
+              </div>
+              <div class="onboarding-item">
+                <span class="material-icons-outlined onboarding-item-icon updates-icon">layers</span>
+                <div class="onboarding-item-text">
+                  <strong>Tampilan Informasi Rapi:</strong> Detail data katekumen kini langsung muncul di bagian bawah layar secara instan.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature Removals/Simplifications Section -->
+          <div class="onboarding-section">
+            <h4 class="onboarding-section-title removals-title">
+              <span class="material-icons-outlined">published_with_changes</span>
+              Penyederhanaan Sistem
+            </h4>
+            <div class="onboarding-list">
+              <div class="onboarding-item">
+                <span class="material-icons-outlined onboarding-item-icon removals-icon">speed</span>
+                <div class="onboarding-item-text">
+                  <strong>Buka Scanner Lebih Cepat:</strong> Topik pertemuan terakhir otomatis disimpan. Tidak perlu memilih ulang setiap membuka web.
+                </div>
+              </div>
+              <div class="onboarding-item">
+                <span class="material-icons-outlined onboarding-item-icon removals-icon">navigation</span>
+                <div class="onboarding-item-text">
+                  <strong>Navigasi Menu Simpel:</strong> Menu bawah layar baru memudahkan ganti halaman secara instan tanpa tombol ribet.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dismiss Button -->
+        <button class="onboarding-btn" onclick="closeOnboardingModal(null)">Mulai Gunakan</button>
+      </div>
+    </div>
   </body>
 </html>
