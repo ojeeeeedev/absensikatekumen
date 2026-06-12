@@ -12,6 +12,15 @@ if (!token) {
 
 let allStudents = [];
 
+// Expose handleLogout globally
+window.handleLogout = function(e) {
+  if (e) e.preventDefault();
+  document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+  sessionStorage.removeItem('authToken');
+  localStorage.setItem('logoutTimestamp', Date.now().toString());
+  window.location.href = '/';
+};
+
 function initTheme() {
   const savedTheme = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
@@ -68,6 +77,12 @@ async function loadClasses() {
 async function loadStudents(classCode) {
   const listContainer = document.getElementById('students-list');
   const loader = document.getElementById('students-loader');
+  const summaryContainer = document.getElementById('students-summary');
+  
+  // Hide counts summary box immediately when starting to load a class
+  if (summaryContainer) {
+    summaryContainer.style.display = 'none';
+  }
   
   // Reset scroll position and remove scrolled class on loading new students
   const appSection = document.querySelector('.app-section');
@@ -141,10 +156,13 @@ function renderStudents(students) {
     if (classCode) {
       summaryContainer.style.display = 'flex';
       
-      // Calculate active/inactive counts from current array (filtered if search active, or all)
-      const currentTotal = students.length;
-      const currentActive = activeList.length;
-      const currentInactive = inactiveList.length;
+      // Calculate active/inactive counts from full class list (allStudents) instead of filtered students list
+      const activeAll = allStudents.filter(s => !isInactive(s));
+      const inactiveAll = allStudents.filter(s => isInactive(s));
+      
+      const currentTotal = allStudents.length;
+      const currentActive = activeAll.length;
+      const currentInactive = inactiveAll.length;
 
       summaryTotalText.textContent = `Total: ${currentTotal}`;
       summaryActiveText.textContent = `Aktif: ${currentActive}`;
@@ -324,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const appSection = document.querySelector('.app-section');
   if (appSection) {
     appSection.addEventListener('scroll', () => {
-      if (appSection.scrollTop > 10) {
+      if (appSection.scrollTop > 50) {
         appSection.classList.add('scrolled');
       } else {
         appSection.classList.remove('scrolled');
