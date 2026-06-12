@@ -70,10 +70,14 @@
            1. STATE: AUTH (LOGIN SCREEN)
            ========================================== -->
       <div id="login-section" class="app-section">
-        <div class="login-header-logo">
-          <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" class="logo-large theme-logo" onclick="toggleTheme()" style="cursor: pointer;">
+        <div class="login-header-branding">
+          <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" width="48" height="48" class="theme-logo" onclick="toggleTheme()" style="cursor: pointer;">
+          <div class="branding-text">
+            <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
+            <div>Paroki St. Petrus - Katedral</div>
+            <div>Keuskupan Bandung</div>
+          </div>
         </div>
-        <h2 class="login-header-title">Login</h2>
         <div id="login-error-box" class="login-error-message" style="display: none;" onmouseover="hideLoginError()"></div>
         <div class="input-wrapper">
           <label for="login-input" class="sr-only">Password</label>
@@ -81,7 +85,10 @@
           <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
           <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); togglePasswordVisibility(); }">visibility_off</span>
         </div>
-        <button id="login-btn" onclick="handleLogin()"><b>Masuk</b></button>
+        <button id="login-btn" onclick="handleLogin()">
+          <span>Masuk</span>
+          <span class="material-icons-outlined">arrow_circle_right</span>
+        </button>
         <div id="login-footer">
           <a href="https://wa.link/3yg0ug">Lupa password?</a>
         </div>
@@ -168,16 +175,6 @@
         </footer>
       </div>
     </main>
-
-    <!-- Bottom Fixed Branding (Only visible on login screen) -->
-    <div id="bottom-branding" class="fixed-bottom-branding">
-      <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" width="48" height="48" style="margin-right: 12px; cursor: pointer;" class="theme-logo" onclick="toggleTheme()">
-      <div class="branding-text">
-        <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
-        <div>Paroki St. Petrus - Katedral</div>
-        <div>Keuskupan Bandung</div>
-      </div>
-    </div>
 
     <!-- Modal Topic Selection -->
     <div id="topic-modal">
