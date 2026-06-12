@@ -178,6 +178,11 @@ window.handleLogin = async function() {
           // Switch to Selection State
           setAppState(2);
           initializeApp();
+
+          // Safe trigger for onboarding
+          if (typeof window.checkOnboarding === 'function') {
+            window.checkOnboarding();
+          }
         }, 250);
       }, 800);
     } else {
