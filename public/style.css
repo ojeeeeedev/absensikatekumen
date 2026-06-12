@@ -1459,3 +1459,42 @@ input:focus-visible,
 .app-section {
   animation: enterAnimation 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* =========================================
+   PROFILE PAGE CUSTOM LAYOUT
+   ========================================= */
+#profile-page .glass-container {
+  padding: 0;
+}
+
+#profile-page .header-container {
+  padding: 1.25rem 1.25rem 1rem 1.25rem;
+}
+
+#profile-page .profile-selector-container {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  margin-top: 0;
+}
+
+#profile-page .app-section.scrolled .profile-selector-container {
+  margin-top: 0;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+#profile-page .students-summary-container {
+  padding: 0 1.25rem;
+  margin-bottom: 12px;
+}
+
+#profile-page .students-list-container {
+  padding: 0 1.25rem 1.25rem 1.25rem;
+}
+
+#profile-page #students-loader {
+  padding: 30px 1.25rem;
+}
