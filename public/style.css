@@ -907,7 +907,11 @@ input:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 100%;
+  width: calc(100% + 2.5rem);
+  margin-left: -1.25rem;
+  margin-right: -1.25rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
   margin-bottom: 12px;
   position: sticky;
   top: 0;
@@ -924,6 +928,7 @@ input:focus-visible,
               border-bottom-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               padding-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               background 0.3s ease,
               backdrop-filter 0.3s ease,
               -webkit-backdrop-filter 0.3s ease;
@@ -932,18 +937,19 @@ input:focus-visible,
 .app-section.scrolled .profile-selector-container {
   gap: 8px;
   margin-bottom: 8px;
-  border-bottom-color: transparent;
-  padding-top: 8px;
+  border-bottom-color: var(--border-glass);
+  margin-top: -1.25rem;
+  padding-top: calc(1.25rem + 8px);
   padding-bottom: 8px;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 #class-selector, #search-input {
   width: 100%;
   padding: 0.85rem;
-  background: var(--bg-body);
+  background: var(--bg-card);
   border: 1px solid var(--border-glass);
   border-radius: 12px;
   color: var(--text-primary);
