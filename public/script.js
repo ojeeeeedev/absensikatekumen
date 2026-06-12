@@ -34,6 +34,8 @@ function checkTopicExpiry() {
     }
   }
 }
+document.addEventListener('DOMContentLoaded', checkTopicExpiry);
+
 let scannerStartPromise = null;
 
 // --- STATE MANAGEMENT ---
@@ -940,9 +942,6 @@ async function initializeApp() {
 
 // Initial triggers
 window.onload = () => {
-  // Check topic selection expiry first
-  checkTopicExpiry();
-
   initTheme();
   loadVersion();
   
