@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Profil Katekumen - Presensi Katekumen Digital</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
@@ -12,23 +18,38 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
+    <script>
+      (function() {
+        const getCookie = (name) => {
+          const value = '; ' + document.cookie;
+          const parts = value.split('; ' + name + '=');
+          if (parts.length === 2) return parts.pop().split(';').shift();
+          return null;
+        };
+        if (!getCookie('auth_token')) {
+          window.location.href = '/';
+        }
+      })();
+    </script>
     <div class="liquid-background">
       <div class="liquid-shape shape1"></div>
       <div class="liquid-shape shape2"></div>
     </div>
 
+    <nav class="app-nav" id="app-nav">
+      <a href="/" class="nav-item">
+        <span class="material-icons-outlined">qr_code_scanner</span>
+        <span>Scan Presensi</span>
+      </a>
+      <a href="/profile" class="nav-item active">
+        <span class="material-icons-outlined">people_alt</span>
+        <span>Profil Katekumen</span>
+      </a>
+    </nav>
+
     <main id="app-container" class="glass-container">
       <div class="app-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto;">
-        <nav class="app-nav">
-          <a href="/" class="nav-item">
-            <span class="material-icons-outlined">qr_code_scanner</span>
-            <span>Scan Presensi</span>
-          </a>
-          <a href="/profile" class="nav-item active">
-            <span class="material-icons-outlined">people_alt</span>
-            <span>Profil Katekumen</span>
-          </a>
-        </nav>
+
         <div class="header-container">
           <img src="assets/pewartaan_normal.png" class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;">
           <div class="header-text">

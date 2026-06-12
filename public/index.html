@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Sistem Presensi Katekumen Dewasa</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      })();
+    </script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +33,35 @@
       <div class="spinner"></div>
     </div>
 
-    <main id="app-container" class="glass-container state-auth">
+    <nav class="app-nav" id="app-nav" style="display: none;">
+      <a href="/" class="nav-item active">
+        <span class="material-icons-outlined">qr_code_scanner</span>
+        <span>Scan Presensi</span>
+      </a>
+      <a href="/profile" class="nav-item">
+        <span class="material-icons-outlined">people_alt</span>
+        <span>Profil Katekumen</span>
+      </a>
+    </nav>
+
+    <main id="app-container" class="glass-container">
+      <script>
+        (function() {
+          const sessionToken = sessionStorage.getItem('authToken');
+          const container = document.currentScript.parentElement;
+          if (sessionToken) {
+            container.classList.add('state-scanning');
+            const savedWeek = localStorage.getItem('selectedWeek');
+            if (!savedWeek) {
+              container.classList.add('needs-topic');
+            }
+            const nav = document.getElementById('app-nav');
+            if (nav) nav.style.display = 'flex';
+          } else {
+            container.classList.add('state-auth');
+          }
+        })();
+      </script>
       
       <!-- ==========================================
            1. STATE: AUTH (LOGIN SCREEN)
@@ -54,16 +88,7 @@
            2. STATE: SELECTION & SCANNING (SHARED)
            ========================================== -->
       <div id="main-app-section" class="app-section">
-        <nav class="app-nav">
-          <a href="/" class="nav-item active">
-            <span class="material-icons-outlined">qr_code_scanner</span>
-            <span>Scan Presensi</span>
-          </a>
-          <a href="/profile" class="nav-item">
-            <span class="material-icons-outlined">people_alt</span>
-            <span>Profil Katekumen</span>
-          </a>
-        </nav>
+
         <!-- Brand Header (Kecil di scan state, besar di selection state) -->
         <div class="header-container">
           <img src="assets/pewartaan_normal.png" class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" style="cursor: pointer;">

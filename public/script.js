@@ -7,15 +7,19 @@ let scannerStartPromise = null;
 window.setAppState = async function(state) {
   const container = document.getElementById('app-container');
   container.className = 'glass-container';
+  const nav = document.getElementById('app-nav');
   
   if (state === 0) {
     container.classList.add('state-auth');
     await stopScanner();
+    if (nav) nav.style.display = 'none';
   } else if (state === 1) {
     container.classList.add('state-selection');
     await stopScanner();
+    if (nav) nav.style.display = 'flex';
   } else if (state === 2) {
     container.classList.add('state-scanning');
+    if (nav) nav.style.display = 'flex';
     
     if (!selectedWeek) {
       container.classList.add('needs-topic');
@@ -85,6 +89,8 @@ window.closeTopicModal = function() { document.getElementById('topic-modal').sty
 
 window.selectTopic = function(week, name, element) {
   selectedWeek = week;
+  localStorage.setItem('selectedWeek', week);
+  localStorage.setItem('selectedTopicName', name);
   const btn = document.getElementById('topic-trigger-large');
   if (btn) {
     btn.innerHTML = `<span>${week}. ${name}</span><span class="material-icons-outlined">arrow_drop_down</span>`;
@@ -835,6 +841,10 @@ async function loadTopikList() {
         }
         div.textContent = `${item.week}. ${item.name}`;
         
+        if (item.week === selectedWeek) {
+          div.classList.add("active");
+        }
+        
         // Accessibility attributes
         div.setAttribute("role", "button");
         div.tabIndex = 0;
@@ -903,6 +913,21 @@ window.onload = () => {
   if (sessionToken) {
     // Sync the auth_token cookie with the sessionStorage token
     document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
+    
+    const savedWeek = localStorage.getItem('selectedWeek');
+    const savedTopicName = localStorage.getItem('selectedTopicName');
+    if (savedWeek && savedTopicName) {
+      selectedWeek = savedWeek;
+      const btn = document.getElementById('topic-trigger-large');
+      if (btn) {
+        btn.innerHTML = `<span>${savedWeek}. ${savedTopicName}</span><span class="material-icons-outlined">arrow_drop_down</span>`;
+      }
+      const activeTopicText = document.getElementById('active-topic-name');
+      if (activeTopicText) {
+        activeTopicText.textContent = `${savedWeek}. ${savedTopicName}`;
+      }
+    }
+    
     setAppState(2); // Set to scanner page initially
     initializeApp();
   } else {
