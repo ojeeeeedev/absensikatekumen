@@ -69,6 +69,13 @@ async function loadStudents(classCode) {
   const listContainer = document.getElementById('students-list');
   const loader = document.getElementById('students-loader');
   
+  // Reset scroll position and remove scrolled class on loading new students
+  const appSection = document.querySelector('.app-section');
+  if (appSection) {
+    appSection.scrollTop = 0;
+    appSection.classList.remove('scrolled');
+  }
+  
   if (listContainer) listContainer.innerHTML = '';
   if (loader) loader.style.display = 'flex';
   
