@@ -943,7 +943,7 @@ input:focus-visible,
 #class-selector, #search-input {
   width: 100%;
   padding: 0.85rem;
-  background: var(--bg-card);
+  background: var(--bg-body);
   border: 1px solid var(--border-glass);
   border-radius: 12px;
   color: var(--text-primary);
