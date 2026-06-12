@@ -9,6 +9,7 @@
   animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--border-glass);
 }
 
 .onboarding-header {
@@ -147,6 +148,11 @@
 
 .onboarding-btn:active {
   transform: translateY(0);
+}
+
+.onboarding-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 @keyframes slideUp {
