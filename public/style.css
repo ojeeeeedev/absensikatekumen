@@ -292,7 +292,7 @@ body {
 }
 .header-text h2, .header-text h3 {
   font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 400; color: var(--text-secondary);
-  letter-spacing: 0.05em; margin-top: 2px;
+  letter-spacing: normal; margin-top: 2px;
 }
 
 /* =========================================
