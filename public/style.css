@@ -263,11 +263,11 @@ body {
   display: flex; align-items: center; justify-content: center;
   padding-bottom: 1rem; border-bottom: 1px solid var(--border-glass);
   margin-bottom: 1rem;
+  max-height: 120px;
   transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               margin 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease,
-              border-bottom-width 0.3s ease;
+              opacity 0.2s ease;
   overflow: hidden;
 }
 
@@ -276,7 +276,7 @@ body {
   padding-bottom: 0;
   margin-bottom: 0;
   opacity: 0;
-  border-bottom-width: 0;
+  border-bottom-color: transparent;
   pointer-events: none;
 }
 .header-logo {
@@ -917,13 +917,17 @@ input:focus-visible,
   padding-top: 5px;
   padding-bottom: 5px;
   margin-top: -5px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: gap 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-bottom-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-section.scrolled .profile-selector-container {
   gap: 8px;
   margin-bottom: 12px;
-  border-bottom: 1px solid var(--border-glass);
+  border-bottom-color: var(--border-glass);
   padding-top: 8px;
   padding-bottom: 8px;
 }
@@ -1196,7 +1200,6 @@ input:focus-visible,
   font-weight: 600;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
 }
 
 .summary-badge span.material-icons-outlined {
