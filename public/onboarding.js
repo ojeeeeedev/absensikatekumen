@@ -29,65 +29,125 @@
       
       modal.innerHTML = `
         <div class="modal-content onboarding-modal-content">
-          <div class="onboarding-header">
-            <span class="material-icons-outlined onboarding-welcome-icon" aria-hidden="true">celebration</span>
-            <h2 class="onboarding-title">Selamat datang di Sistem Presensi v2</h2>
-            <p class="onboarding-subtitle">Panduan singkat pembaruan aplikasi Anda:</p>
-          </div>
+          <!-- Small Pewartaan Logo -->
+          <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" class="onboarding-logo">
+
+          <!-- Welcome Header (Inter Font) -->
+          <h2 class="onboarding-title">Selamat datang di Sistem Presensi v2</h2>
 
           <div class="onboarding-scroll-area">
-            <div class="onboarding-section">
-              <h3 class="onboarding-section-title updates-title">
-                <span class="material-icons-outlined" aria-hidden="true">auto_awesome</span>
-                Fitur Baru yang Memudahkan
-              </h3>
-              <div class="onboarding-list">
-                <div class="onboarding-item">
-                  <span class="material-icons-outlined onboarding-item-icon updates-icon" aria-hidden="true">bolt</span>
-                  <div class="onboarding-item-text">
-                    <strong>Scan QR Berturut-turut:</strong> Scan peserta berikutnya langsung tanpa jeda. Data otomatis dikirim di latar belakang.
+            <!-- Section 1: Fitur Baru yang Memudahkan -->
+            <h3 class="onboarding-section-header updates-header">
+              <span class="material-icons-outlined" aria-hidden="true">auto_awesome</span>
+              Fitur Baru yang Memudahkan
+            </h3>
+            <div class="updates-list">
+              
+              <!-- Row 1: Scan QR Berturut-turut -->
+              <div class="row-accordion" id="row-scan">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">bolt</span>
+                    <span>Scan QR Berturut-turut</span>
                   </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
                 </div>
-                <div class="onboarding-item">
-                  <span class="material-icons-outlined onboarding-item-icon updates-icon" aria-hidden="true">wifi_off</span>
-                  <div class="onboarding-item-text">
-                    <strong>Simpan Offline Otomatis:</strong> Scan tetap jalan walau internet lambat/putus. Data aman dan terkirim otomatis saat online.
-                  </div>
-                </div>
-                <div class="onboarding-item">
-                  <span class="material-icons-outlined onboarding-item-icon updates-icon" aria-hidden="true">badge</span>
-                  <div class="onboarding-item-text">
-                    <strong>Daftar & Profil Katekumen:</strong> Halaman khusus untuk melihat daftar seluruh peserta kelas, katekis, kelompok KI, dan foto mereka.
-                  </div>
-                </div>
-                <div class="onboarding-item">
-                  <span class="material-icons-outlined onboarding-item-icon updates-icon" aria-hidden="true">layers</span>
-                  <div class="onboarding-item-text">
-                    <strong>Tampilan Informasi Rapi:</strong> Detail data katekumen kini langsung muncul di bagian bawah layar secara instan.
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Scan peserta berikutnya langsung tanpa jeda. Data otomatis dikirim di latar belakang.
                   </div>
                 </div>
               </div>
+
+              <!-- Row 2: Simpan Offline Otomatis -->
+              <div class="row-accordion" id="row-offline">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">wifi_off</span>
+                    <span>Simpan Offline Otomatis</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Scan tetap jalan walau internet lambat/putus. Data aman dan terkirim otomatis saat online.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 3: Daftar & Profil Katekumen -->
+              <div class="row-accordion" id="row-profile">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">badge</span>
+                    <span>Daftar & Profil Katekumen</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Halaman khusus untuk melihat daftar seluruh peserta kelas, katekis, kelompok KI, dan foto mereka.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 4: Tampilan Informasi Rapi -->
+              <div class="row-accordion" id="row-detail">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">layers</span>
+                    <span>Tampilan Informasi Rapi</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Detail data katekumen kini langsung muncul di bagian bawah layar secara instan.
+                  </div>
+                </div>
+              </div>
+
             </div>
 
-            <div class="onboarding-section">
-              <h3 class="onboarding-section-title removals-title">
-                <span class="material-icons-outlined" aria-hidden="true">published_with_changes</span>
-                Penyederhanaan Sistem
-              </h3>
-              <div class="onboarding-list">
-                <div class="onboarding-item">
-                  <span class="material-icons-outlined onboarding-item-icon removals-icon" aria-hidden="true">speed</span>
-                  <div class="onboarding-item-text">
-                    <strong>Buka Scanner Lebih Cepat:</strong> Topik pertemuan terakhir otomatis disimpan. Tidak perlu memilih ulang setiap membuka web.
+            <!-- Section 2: Penyederhanaan Sistem -->
+            <h3 class="onboarding-section-header removals-header">
+              <span class="material-icons-outlined" aria-hidden="true">published_with_changes</span>
+              Penyederhanaan Sistem
+            </h3>
+            <div class="removals-list">
+              
+              <!-- Row 5: Buka Scanner Lebih Cepat -->
+              <div class="row-accordion" id="row-speed">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">speed</span>
+                    <span>Buka Scanner Lebih Cepat</span>
                   </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
                 </div>
-                <div class="onboarding-item">
-                  <span class="material-icons-outlined onboarding-item-icon removals-icon" aria-hidden="true">navigation</span>
-                  <div class="onboarding-item-text">
-                    <strong>Navigasi Menu Simpel:</strong> Menu bawah layar baru memudahkan ganti halaman secara instan tanpa tombol ribet.
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Topik pertemuan terakhir otomatis disimpan. Tidak perlu memilih ulang setiap membuka web.
                   </div>
                 </div>
               </div>
+
+              <!-- Row 6: Navigasi Menu Simpel -->
+              <div class="row-accordion" id="row-nav">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">navigation</span>
+                    <span>Navigasi Menu Simpel</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Menu bawah layar baru memudahkan ganti halaman secara instan tanpa tombol ribet.
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
           <button class="onboarding-btn" id="onboarding-dismiss-btn">Mulai Gunakan</button>
@@ -101,6 +161,15 @@
         content.onclick = (e) => e.stopPropagation();
       }
 
+      // Bind row click handlers programmatically
+      const rows = modal.querySelectorAll('.row-accordion');
+      rows.forEach(row => {
+        const header = row.querySelector('.row-accordion-header');
+        if (header) {
+          header.onclick = () => toggleOnboardingRow(row.id);
+        }
+      });
+
       // Bind dismiss button
       const dismissBtn = document.getElementById('onboarding-dismiss-btn');
       if (dismissBtn) {
@@ -109,6 +178,25 @@
 
       // Register escape key handler
       window.addEventListener('keydown', handleEscapeKey);
+    }
+  };
+
+  const toggleOnboardingRow = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    const isOpen = el.classList.contains('open');
+    
+    // Close all other rows
+    const container = document.querySelector('.onboarding-scroll-area');
+    if (container) {
+      const all = container.querySelectorAll('.row-accordion');
+      all.forEach(acc => acc.classList.remove('open'));
+    }
+    
+    // Toggle selected row
+    if (!isOpen) {
+      el.classList.add('open');
     }
   };
 
