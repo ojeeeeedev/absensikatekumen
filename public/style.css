@@ -187,13 +187,13 @@ body {
    ========================================= */
 .glass-container.state-auth #login-section { display: flex; }
 
-.glass-container.state-selection #main-app-section { display: flex; }
+.glass-container.state-selection #main-app-section { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .glass-container.state-selection #selection-panel { display: flex; flex-direction: column; }
 .glass-container.state-selection #scanning-panel { display: none; }
 
-.glass-container.state-scanning #main-app-section { display: flex; }
+.glass-container.state-scanning #main-app-section { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .glass-container.state-scanning #selection-panel { display: none; }
-.glass-container.state-scanning #scanning-panel { display: flex; flex-direction: column; }
+.glass-container.state-scanning #scanning-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
 /* =========================================
    LOGIN SCREEN STYLES
@@ -430,7 +430,8 @@ body {
    COMPACT HISTORY / QUEUE LIST
    ========================================= */
 #queue-history-panel {
-  flex-grow: 1; display: flex; flex-direction: column;
+  flex: 1 1 auto; display: flex; flex-direction: column;
+  min-height: 0;
   overflow: hidden; margin-bottom: 0.5rem;
 }
 
@@ -472,6 +473,8 @@ body {
   overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
   max-height: 380px; /* Expanded size to fit more history records */
   padding-right: 2px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .queue-empty-state {
