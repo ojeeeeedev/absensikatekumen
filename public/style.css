@@ -360,6 +360,7 @@ body {
   overflow: hidden; position: relative; border: 1px solid var(--border-glass);
   background: #000; box-shadow: inset 0 4px 12px rgba(0,0,0,0.2);
   margin: 0 auto 0.75rem auto;
+  pointer-events: none;
 }
 #reader { width: 100%; height: 100%; object-fit: cover; }
 
@@ -835,12 +836,12 @@ input:focus-visible,
   margin: 0;
 }
 
-/* Floating Clear History Button */
+/* Inline Clear History Button */
 .floating-clear-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 100;
+  position: relative;
+  width: 100%;
+  height: 44px;
+  margin-top: 12px;
   background: var(--status-duplicate-bg);
   border: 1px solid var(--status-duplicate-border);
   color: var(--status-duplicate-text);
@@ -848,29 +849,32 @@ input:focus-visible,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 8px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  padding: 0;
+  padding: 0 16px;
 }
 
 [data-theme="dark"] .floating-clear-btn {
-  background: rgba(198, 40, 40, 0.2);
-  border-color: rgba(198, 40, 40, 0.4);
+  background: rgba(198, 40, 40, 0.15);
+  border-color: rgba(198, 40, 40, 0.35);
   color: #ef5350;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .floating-clear-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  background: rgba(198, 40, 40, 0.08);
+  border-color: var(--status-duplicate-text);
+}
+
+[data-theme="dark"] .floating-clear-btn:hover {
+  background: rgba(198, 40, 40, 0.25);
 }
 
 .floating-clear-btn:active {
-  transform: translateY(0) scale(0.95);
+  transform: scale(0.98);
 }
 
 .floating-clear-btn:focus-visible {
@@ -878,28 +882,33 @@ input:focus-visible,
   outline-offset: 2px;
 }
 
+.floating-clear-btn .clear-text {
+  display: inline;
+}
+
 .floating-clear-btn .clear-confirm-text {
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-  opacity: 0;
-  max-width: 0;
-  transition: opacity 0.25s ease, max-width 0.25s ease, margin 0.25s ease;
-  overflow: hidden;
+  display: none;
 }
 
 /* Expanded Confirmation State */
 .floating-clear-btn.expanded {
-  width: auto;
-  max-width: 240px;
-  padding: 0 16px;
-  border-radius: 24px;
+  background: var(--status-duplicate-text);
+  color: white;
+  border-color: var(--status-duplicate-text);
+}
+
+[data-theme="dark"] .floating-clear-btn.expanded {
+  background: #c62828;
+  border-color: #c62828;
+  color: #fff;
+}
+
+.floating-clear-btn.expanded .clear-text {
+  display: none;
 }
 
 .floating-clear-btn.expanded .clear-confirm-text {
-  opacity: 1;
-  max-width: 160px;
-  margin-left: 8px;
+  display: inline;
 }
 
 /* --- PROFILE ACCORDION STYLES --- */

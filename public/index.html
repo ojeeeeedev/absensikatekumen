@@ -164,6 +164,12 @@
               <!-- Dynamically populated via script -->
               <div class="queue-empty-state">Belum ada data pemindaian.</div>
             </div>
+            <!-- Clear History Button -->
+            <button id="floating-clear-btn" class="floating-clear-btn" style="display: none;" onclick="handleFloatingClearClick(event)" aria-label="Hapus semua riwayat pemindaian">
+              <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
+              <span class="clear-text">Hapus Riwayat Scan</span>
+              <span class="clear-confirm-text">Yakin hapus?</span>
+            </button>
           </div>
         </div>
 
@@ -207,11 +213,7 @@
       </div>
     </div>
 
-    <!-- Floating Clear History Button -->
-    <button id="floating-clear-btn" class="floating-clear-btn" style="display: none;" onclick="handleFloatingClearClick(event)" aria-label="Hapus semua riwayat pemindaian">
-      <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
-      <span class="clear-confirm-text">Hapus riwayat scan?</span>
-    </button>
+
 
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
