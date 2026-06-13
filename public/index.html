@@ -2,151 +2,225 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Sistem Presensi Katekumen Dewasa</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      })();
+    </script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://yqguiiczpluljethcopn.supabase.co">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&family=Inter:wght@300;400;500&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
 
   <body>
+
     <div class="liquid-background">
       <div class="liquid-shape shape1"></div>
       <div class="liquid-shape shape2"></div>
     </div>
 
     <!-- Loading screen for login -->
-    <div id="login-loader">
+    <div id="login-loader" style="display: none;">
       <div class="spinner"></div>
     </div>
 
-    <!-- <div id="login-header">
-      <img src="assets/katedral_invert.png" alt="Logo Paroki Katedral Bandung">
-    </div> -->
+    <nav class="app-nav" id="app-nav" style="display: none;">
+      <a href="/" class="nav-item active">
+        <span class="material-icons-outlined">qr_code_scanner</span>
+        <span>Scan Presensi</span>
+      </a>
+      <a href="/profile" class="nav-item">
+        <span class="material-icons-outlined">people_alt</span>
+        <span>Profil Katekumen</span>
+      </a>
+      <a href="#" class="nav-item logout-btn" onclick="handleLogout(event)" aria-label="Keluar">
+        <span class="material-icons-outlined">logout</span>
+      </a>
+    </nav>
 
     <main id="app-container" class="glass-container">
-      <div id="login-container">
-        <h1 class="login-header-title">Login Fasilitator</h1>
-        <!-- Error container -->
+      <script>
+        (function() {
+          const sessionToken = sessionStorage.getItem('authToken');
+          const container = document.currentScript.parentElement;
+          if (sessionToken) {
+            container.classList.add('state-scanning');
+            const savedWeek = localStorage.getItem('selectedWeek');
+            if (!savedWeek) {
+              container.classList.add('needs-topic');
+            }
+            const nav = document.getElementById('app-nav');
+            if (nav) nav.style.display = 'flex';
+          } else {
+            container.classList.add('state-auth');
+          }
+        })();
+      </script>
+      
+      <!-- ==========================================
+           1. STATE: AUTH (LOGIN SCREEN)
+           ========================================== -->
+      <div id="login-section" class="app-section">
+        <div class="login-header-branding">
+          <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" width="64" height="64" class="theme-logo" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;">
+          <div class="branding-text">
+            <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
+            <div>Paroki St. Petrus - Katedral</div>
+            <div>Keuskupan Bandung</div>
+          </div>
+        </div>
         <div id="login-error-box" class="login-error-message" style="display: none;" onmouseover="hideLoginError()"></div>
         <div class="input-wrapper">
           <label for="login-input" class="sr-only">Password</label>
           <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
           <span id="login-success-icon" class="material-icons-outlined" style="display: none;">check_circle</span>
-          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()">visibility_off</span>
+          <span id="password-toggle" class="material-icons-outlined password-toggle-icon" onclick="togglePasswordVisibility()" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); togglePasswordVisibility(); }">visibility_off</span>
         </div>
-        <button id="login-btn" onclick="handleLogin()"><b>Masuk</b></button>
-      </div>
-
-      <div id="scanner-ui">
-        <div class="scanner-content-body">
-  
-        <div class="header-container" style="position: relative;">
-          <img src="assets/pewartaan_invert.png" class="header-logo" alt="Logo Pewartaan">
-          <div class="header-text">
-            <h1>Sistem Presensi<br>
-Katekumen Dewasa
-</h1>
-            <h2>Paroki St. Petrus - Katedral 
-              <br>Keuskupan Bandung
-            </h2>
-          </div>
-        </div>
-  
-        <button id="topic-trigger" class="topic-selector-btn" onclick="openTopicModal()">
-            Pilih Topik...
+        <button id="login-btn" onclick="handleLogin()">
+          <span>Masuk</span>
+          <span class="material-icons-outlined">arrow_circle_right</span>
         </button>
-  
-        <div id="reader-container">
-            <div id="camera-loader">
-                <div class="spinner"></div>
-                <span>Memuat Kamera...</span>
-            </div>
-            <div id="reader"></div>
-        </div>
-  
-        <div id="status" class="idle"></div> 
-  
-        <!-- Expandable Dashboard Button -->
-        <!--<div id="dashboard-pill" onclick="handleDashboardClick(event, this)">
-            <span class="material-icons-outlined">dashboard</span>
-            <span class="pill-text">Akses Dashboard</span>
-        </div>
-        !-->
-
-        <footer class="app-footer">
-          <div class="footer-text">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link">v1.8.0</a> © 2026 Tim Katekumen Dewasa
-            <br><a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
-          </div>
-        </footer>
-          
-        </div>
-      </div>
-      
-      <!-- This footer is only for the login screen -->
-      <div id="login-footer">
-        <div>
+        <div id="login-footer">
           <a href="https://wa.link/3yg0ug">Lupa password?</a>
         </div>
       </div>
+
+      <!-- ==========================================
+           2. STATE: SELECTION & SCANNING (SHARED)
+           ========================================== -->
+      <div id="main-app-section" class="app-section">
+
+        <!-- Brand Header (Kecil di scan state, besar di selection state) -->
+        <div class="header-container">
+          <img src="assets/pewartaan_normal.png" class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" style="cursor: pointer;">
+          <div class="header-text">
+            <h1>Sistem Presensi</h1>
+            <h2>Katekumen Dewasa</h2>
+            <h3>Paroki St. Petrus - Bandung</h3>
+          </div>
+        </div>
+
+        <!-- STATE 1: TOPIC SELECTION -->
+        <div id="selection-panel" class="panel-state">
+          <div class="instruction-box">
+            <span class="material-icons-outlined">info</span>
+            <p>Silakan pilih topik pertemuan hari ini sebelum memulai pemindaian QR katekumen.</p>
+          </div>
+          <button id="topic-trigger-large" class="topic-selector-btn-large" onclick="openTopicModal()">
+            <span>Pilih Topik Pertemuan...</span>
+            <span class="material-icons-outlined">arrow_drop_down</span>
+          </button>
+        </div>
+
+        <!-- STATE 2: ACTIVE SCANNING -->
+        <div id="scanning-panel" class="panel-state">
+          <!-- Mini Active Topic Bar (Acts as a dropdown) -->
+          <div class="active-topic-bar" 
+               role="button" 
+               tabindex="0" 
+               aria-haspopup="dialog" 
+               onclick="openTopicModal()"
+               onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); openTopicModal(); }">
+            <div class="topic-info">
+              <span class="material-icons-outlined">event_note</span>
+              <span id="active-topic-name">Belum memilih topik</span>
+            </div>
+            <span class="material-icons-outlined dropdown-arrow-icon">arrow_drop_down</span>
+          </div>
+
+          <!-- Camera Viewer -->
+          <div id="reader-container">
+            <div id="camera-loader">
+              <div class="spinner"></div>
+              <span>Memuat Kamera...</span>
+            </div>
+            <div id="reader"></div>
+          </div>
+
+          <!-- Status Indicator -->
+          <div id="status" class="idle"></div>
+
+          <!-- Sync Queue Warning Bar -->
+          <div id="queue-warning-bar" class="queue-warning-banner" style="display: none;">
+            <span id="queue-progress-text" class="queue-progress-text">0/0 Selesai</span>
+            <div class="queue-progress-bar-container">
+              <div id="queue-progress-bar-fill" class="queue-progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <div class="spinner-small"></div>
+          </div>
+
+          <!-- Queue History List -->
+          <div id="queue-history-panel">
+            <div id="queue-list" class="queue-list-container">
+              <!-- Dynamically populated via script -->
+              <div class="queue-empty-state">Belum ada data pemindaian.</div>
+              <!-- Clear History Button -->
+              <button id="floating-clear-btn" class="floating-clear-btn" style="display: none;" onclick="handleFloatingClearClick(event)" aria-label="Hapus semua riwayat pemindaian">
+                <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
+                <span class="clear-text">Hapus Riwayat Scan</span>
+                <span class="clear-confirm-text">Yakin hapus?</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+          <div class="footer-text">
+            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.0.5</a> © 2026 Tim Katekumen Dewasa
+            &bull; <a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
+          </div>
+        </footer>
+      </div>
     </main>
 
-    <!-- Bottom Branding (Fixed Footer) -->
-    <div id="bottom-branding" class="fixed-bottom-branding">
-        <img src="assets/pewartaan_invert.png" alt="Logo Pewartaan" width="56" height="56" style="margin-right: 12px;">
-        <div style="text-align: left; font-size: 0.65rem; color: #ccc; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
-            <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
-            <div>Bidang Pewartaan</div>
-            <div>Paroki St. Petrus - Katedral</div>
-            <div>Keuskupan Bandung</div>
-        </div>
-    </div>
-
+    <!-- Modal Topic Selection -->
     <div id="topic-modal">
-        <div class="modal-content">
-            <h3>Pilih Topik Pertemuan</h3>
-            <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="Cari topik...">
-            <div id="topic-list-container">
-                <div class="topic-loading-placeholder">Memuat topik...</div>
-            </div>
-            <div class="modal-close-btn" onclick="closeTopicModal()">Tutup</div>
+      <div class="modal-content">
+        <h3>Pilih Topik Pertemuan</h3>
+        <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="Cari topik...">
+        <div id="topic-list-container">
+          <div class="topic-loading-placeholder">Memuat topik...</div>
         </div>
+        <div class="modal-close-btn" onclick="closeTopicModal()" role="button" tabindex="0" aria-label="Tutup modal" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeTopicModal(); }">Tutup</div>
+      </div>
     </div>
 
-    <!-- Profile Modal -->
-    <div id="profile-modal">
-        <div class="profile-card">
-            <div class="timeout-spinner">
-              <svg viewBox="0 0 36 36">
-                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                <path class="circle-progress" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              </svg>
-            </div>
-            <div class="profile-img-wrapper">
-                <img id="profile-image" alt="Foto Profil">
-            </div>
-            <div id="profile-name" class="profile-name"></div>
-            <div id="profile-id" class="profile-id"></div>
-            <div class="profile-close-btn" onclick="closeProfileModal()">Tutup</div>
+    <!-- Modal Student Detail -->
+    <div id="student-detail-modal" class="student-modal" style="display: none;" onclick="closeStudentModal(event)">
+      <div class="modal-content student-modal-content" onclick="event.stopPropagation()">
+        <div class="student-modal-header">
+          <span class="student-modal-close-icon material-icons-outlined" onclick="closeStudentModal(event)" role="button" tabindex="0" aria-label="Tutup detail katekumen" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeStudentModal(event); }">close</span>
         </div>
+        <div class="student-modal-body">
+          <img id="modal-student-photo" class="modal-student-photo" src="/assets/favicon.png" alt="Foto Katekumen">
+          <div class="student-modal-info">
+            <h3 id="modal-student-name" class="modal-student-name">Nama Katekumen</h3>
+            <p id="modal-student-id" class="modal-student-id">2025/SAB/000</p>
+            <p id="modal-student-topic" class="modal-student-topic">Topik Pertemuan</p>
+            <span id="modal-student-status" class="status-badge">Status</span>
+          </div>
+        </div>
+      </div>
     </div>
 
+
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
+
+    <script src="image-cache.js"></script>
     <script src="topics.js"></script>
     <script src="script.js"></script>
-    <script>
-       window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-    </script>
-  <script defer src="/_vercel/speed-insights/script.js"></script>
-    <script>
-       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
-  <script defer src="/_vercel/insights/script.js"></script>
+    <script src="onboarding.js" defer></script>
   </body>
 </html>

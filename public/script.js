@@ -1,119 +1,205 @@
-let html5QrcodeScanner; // Will be initialized later
-let scanCooldown = false;
-let selectedWeek = null; 
-let profileModalTimeout; // To store the timeout ID for auto-closing the profile modal
+let html5QrcodeScanner = null;
+let selectedWeek = null;
+
+// Expose handleLogout globally
+window.handleLogout = function(e) {
+  if (e) e.preventDefault();
+  document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+  sessionStorage.removeItem('authToken');
+  localStorage.setItem('logoutTimestamp', Date.now().toString());
+  window.location.href = '/';
+};
+
+// Throttled active state update
+let lastActivityUpdate = 0;
+function updateActivity() {
+  const now = Date.now();
+  if (now - lastActivityUpdate > 30000) { // throttle to 30s
+    lastActivityUpdate = now;
+    if (sessionStorage.getItem('authToken')) {
+      localStorage.setItem('lastActiveTimestamp', now.toString());
+    }
+  }
+}
+
+// Attach listener for common interactions to track activity
+window.addEventListener('click', updateActivity);
+window.addEventListener('keydown', updateActivity);
+window.addEventListener('touchstart', updateActivity);
+
+function checkTopicExpiry() {
+  const loggedIn = !!sessionStorage.getItem('authToken');
+  const now = Date.now();
+  const tenMinutes = 10 * 60 * 1000;
+
+  if (loggedIn) {
+    const logoutTime = localStorage.getItem('logoutTimestamp');
+    if (logoutTime) {
+      if (now - parseInt(logoutTime) > tenMinutes) {
+        localStorage.removeItem('selectedWeek');
+        localStorage.removeItem('selectedTopicName');
+      }
+      localStorage.removeItem('logoutTimestamp');
+    }
+    localStorage.setItem('lastActiveTimestamp', now.toString());
+  } else {
+    const lastActive = localStorage.getItem('lastActiveTimestamp');
+    if (lastActive) {
+      if (now - parseInt(lastActive) > tenMinutes) {
+        localStorage.removeItem('selectedWeek');
+        localStorage.removeItem('selectedTopicName');
+      }
+      localStorage.removeItem('lastActiveTimestamp');
+    }
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkTopicExpiry);
+} else {
+  checkTopicExpiry();
+}
+
+let scannerStartPromise = null;
+
+// --- STATE MANAGEMENT ---
+// State 0: Auth, State 1: Selection, State 2: Scanning
+window.setAppState = async function(state) {
+  const container = document.getElementById('app-container');
+  container.className = 'glass-container';
+  const nav = document.getElementById('app-nav');
+  
+  if (state === 0) {
+    container.classList.add('state-auth');
+    await stopScanner();
+    if (nav) nav.style.display = 'none';
+  } else if (state === 1) {
+    container.classList.add('state-selection');
+    await stopScanner();
+    if (nav) nav.style.display = 'flex';
+  } else if (state === 2) {
+    container.classList.add('state-scanning');
+    if (nav) nav.style.display = 'flex';
+    
+    if (!selectedWeek) {
+      container.classList.add('needs-topic');
+      const activeTopicText = document.getElementById('active-topic-name');
+      if (activeTopicText) {
+        activeTopicText.textContent = "Ketuk di sini untuk memilih topik...";
+      }
+    } else {
+      container.classList.remove('needs-topic');
+      const topicTrigger = document.getElementById('topic-trigger-large');
+      const activeTopicText = document.getElementById('active-topic-name');
+      if (activeTopicText && topicTrigger) {
+        activeTopicText.textContent = topicTrigger.textContent.replace('arrow_drop_down', '').trim();
+      }
+    }
+
+    if (selectedWeek) {
+      startScanner();
+    } else {
+      const loader = document.getElementById("camera-loader");
+      if (loader) {
+        loader.innerHTML = '<span style="color:var(--text-secondary); text-align:center;">Silakan pilih topik terlebih dahulu</span>';
+        loader.style.display = "flex";
+      }
+    }
+  }
+}
+
+// --- THEME MANAGEMENT ---
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateLogos(savedTheme);
+}
+
+// Global toggle theme function (referenced in HTML button)
+window.toggleTheme = function() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateLogos(newTheme);
+}
+
+function updateLogos(theme) {
+  const logos = document.querySelectorAll('.theme-logo');
+  logos.forEach(logo => {
+    if (theme === 'light') {
+      logo.src = 'assets/pewartaan_normal.png';
+    } else {
+      logo.src = 'assets/pewartaan_invert.png';
+    }
+  });
+}
 
 // --- SAFARI VIEWPORT FIX ---
 function setViewportHeight() {
   let vh = window.innerHeight * 0.01;
   document.documentElement.style.setProperty('--vh', `${vh}px`);
 }
-// Set on initial load
 setViewportHeight();
-// Reset on resize or orientation change
 window.addEventListener('resize', setViewportHeight);
 
-// --- DASHBOARD INTERACTION ---
-function handleDashboardClick(event, element) {
-  window.open('/api/dashboard', '_blank');
-}
-
 // --- MODAL FUNCTIONS ---
-function openTopicModal() { document.getElementById('topic-modal').style.display = 'flex'; }
-function closeTopicModal() { document.getElementById('topic-modal').style.display = 'none'; }
+window.openTopicModal = function() { document.getElementById('topic-modal').style.display = 'flex'; }
+window.closeTopicModal = function() { document.getElementById('topic-modal').style.display = 'none'; }
 
-function showProfileModal(name, id, topic, imageUrl) {
-  // Clear any existing timeout to prevent premature closing if a new scan happens quickly
-  clearTimeout(profileModalTimeout);
-
-  document.getElementById('profile-name').textContent = name;
-  document.getElementById('profile-id').innerHTML = `ID: ${id} &bull; Topik ${topic}`;
-  const img = document.getElementById('profile-image');
-
-  // Set placeholder/loading image first in case network is slow
-  img.src = imageUrl || '/assets/favicon.png';
-
-  // Handle image load error gracefully (e.g. if the image doesn't exist on Supabase bucket)
-  img.onerror = () => {
-    img.src = '/assets/favicon.png'; // Fallback avatar/placeholder
-  };
-
-  document.getElementById('profile-modal').style.display = 'flex';
-
-  // Reset spinner animation to provide visual feedback for the new timeout
-  const spinner = document.querySelector('.circle-progress');
-  if (spinner) {
-    spinner.style.animation = 'none';
-    spinner.offsetHeight; // Trigger reflow to restart animation
-    spinner.style.animation = '';
-  }
-
-  // Set timeout to close the modal after 4 seconds (4000 milliseconds)
-  profileModalTimeout = setTimeout(closeProfileModal, 4000);
-}
-
-function closeProfileModal() {
-  const profileModal = document.getElementById('profile-modal');
-  const profileCard = profileModal.querySelector('.profile-card');
-
-  profileCard.style.animation = 'fadeOut 0.3s ease-out forwards'; // Apply fade-out animation
-  
-  // After the animation, hide the modal completely
-  setTimeout(() => {
-    profileModal.style.display = 'none';
-    profileCard.style.animation = ''; // Reset animation for next time it opens
-  }, 300); // Match this duration to the CSS animation duration
-}
-
-function selectTopic(week, name, element) {
+window.selectTopic = function(week, name, element) {
   selectedWeek = week;
-  document.getElementById('topic-trigger').innerText = `${week}. ${name}`;
-  document.getElementById('topic-trigger').style.borderColor = "#9A2126";
+  localStorage.setItem('selectedWeek', week);
+  localStorage.setItem('selectedTopicName', name);
+  const btn = document.getElementById('topic-trigger-large');
+  if (btn) {
+    btn.innerHTML = `<span>${week}. ${name}</span><span class="material-icons-outlined">arrow_drop_down</span>`;
+  }
+  const activeTopicText = document.getElementById('active-topic-name');
+  if (activeTopicText) {
+    activeTopicText.textContent = `${week}. ${name}`;
+  }
   document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
   element.classList.add('active');
-  setTimeout(closeTopicModal, 200);
+  setTimeout(() => {
+    window.closeTopicModal();
+    setAppState(2); // Go straight to scanner state on selection
+  }, 200);
 }
 
-function filterTopics() {
+window.filterTopics = function() {
   const searchTerm = document.getElementById('topic-search-input').value.toLowerCase();
   const topics = document.querySelectorAll('.topic-option');
   topics.forEach(topic => {
     const topicText = topic.textContent.toLowerCase();
-    if (topicText.includes(searchTerm)) {
-      topic.style.display = 'block';
-    } else {
-      topic.style.display = 'none';
-    }
+    topic.style.display = topicText.includes(searchTerm) ? 'block' : 'none';
   });
 }
 
-function togglePasswordVisibility() {
+window.togglePasswordVisibility = function() {
   const input = document.getElementById('login-input');
   const icon = document.getElementById('password-toggle');
   if (input.type === 'password') {
     input.type = 'text';
-    icon.textContent = 'visibility'; // Icon to hide the password
+    icon.textContent = 'visibility';
+    icon.setAttribute('aria-pressed', 'true');
+    icon.setAttribute('aria-label', 'Sembunyikan password');
   } else {
     input.type = 'password';
-    icon.textContent = 'visibility_off'; // Icon to show the password
+    icon.textContent = 'visibility_off';
+    icon.setAttribute('aria-pressed', 'false');
+    icon.setAttribute('aria-label', 'Tampilkan password');
   }
 }
 
-function hideLoginError() {
+window.hideLoginError = function() {
   const errorBox = document.getElementById('login-error-box');
-  if (errorBox.style.display === 'block') {
-    // Animate out
-    errorBox.style.animation = 'fadeOutDown 0.3s ease-in forwards';
-    setTimeout(() => {
-      errorBox.style.display = 'none';
-      errorBox.style.animation = 'fadeInUp 0.3s ease-out forwards'; // Reset for next time
-    }, 300);
+  if (errorBox) {
+    errorBox.style.display = 'none';
   }
 }
 
 // --- AUTHENTICATION ---
-async function handleLogin() {
-  let errorTimeout; // Variable to hold the timeout
+window.handleLogin = async function() {
   const secret = document.getElementById('login-input').value;
   const errorBox = document.getElementById('login-error-box');
   const successIcon = document.getElementById('login-success-icon');
@@ -125,8 +211,7 @@ async function handleLogin() {
     return;
   }
 
-  // Hide previous errors smoothly
-  hideLoginError();
+  window.hideLoginError();
 
   try {
     const response = await fetch("/api/absensi", {
@@ -137,261 +222,875 @@ async function handleLogin() {
     const data = await response.json();
 
     if (data.status === 'ok' && data.token) {
-      // 1. Fade in the green checkmark and keep it for 1 second.
-      successIcon.style.animation = 'fadeIn 0.5s forwards'; // A slightly longer fade-in
       successIcon.style.display = 'block';
-
-      setTimeout(() => { // This timeout ensures the checkmark is visible for 1 second before proceeding
-        successIcon.style.display = 'none'; // Hide checkmark
-
-        // 2. Show loading spinner for 0.25s
+      
+      setTimeout(() => {
+        successIcon.style.display = 'none';
         loginLoader.style.display = 'flex';
 
         setTimeout(() => {
-          const loginContainer = document.getElementById('login-container');
-          const loginFooter = document.getElementById('login-footer');
-          const loginHeader = document.getElementById('login-header');
-          const bottomBranding = document.getElementById('bottom-branding');
+          sessionStorage.setItem('authToken', data.token);
+          // Set the cookie for server-side middleware and profile page access
+          document.cookie = `auth_token=${data.token}; path=/; max-age=28800; SameSite=Lax`;
+          loginLoader.style.display = 'none';
+          
+          // Switch to Selection State
+          setAppState(2);
+          initializeApp();
 
-          // 3. Animate login screen out
-          loginContainer.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          loginFooter.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          if (loginHeader) loginHeader.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-          if (bottomBranding) bottomBranding.style.animation = 'fadeOutDown 0.4s ease-in forwards';
-
-          // 4. After fade out, hide it and show scanner UI
-          setTimeout(() => {
-            sessionStorage.setItem('authToken', data.token); // Store token
-            loginContainer.style.display = 'none';
-            loginFooter.style.display = 'none';
-            if (loginHeader) loginHeader.style.display = 'none';
-            if (bottomBranding) bottomBranding.style.display = 'none';
-            loginLoader.style.display = 'none'; // Hide loader
-            document.getElementById('scanner-ui').style.display = 'flex';
-            initializeApp(); // Load the main app
-          }, 400);
-        }, 250); // Wait for 0.25 seconds
-      }, 1000); // Wait for 1 second
+          // Safe trigger for onboarding
+          if (typeof window.checkOnboarding === 'function') {
+            window.checkOnboarding();
+          }
+        }, 250);
+      }, 800);
     } else {
-      // Wrong password: show red error box
       errorBox.textContent = data.message || 'Login gagal.';
       errorBox.style.display = 'block';
-      // Shake the input box
-      document.getElementById('login-input').style.animation = 'shake 0.5s';
-      setTimeout(() => document.getElementById('login-input').style.animation = '', 500);
-      // Set a timeout to hide the error box after 2 seconds
-      errorTimeout = setTimeout(hideLoginError, 2000);
+      document.getElementById('login-input').style.animation = 'shake 0.4s';
+      setTimeout(() => document.getElementById('login-input').style.animation = '', 400);
     }
   } catch (e) {
     console.error("Login request failed:", e);
-    // Also set timeout for connection errors
     errorBox.textContent = 'Error koneksi ke server.';
     errorBox.style.display = 'block';
-    errorTimeout = setTimeout(hideLoginError, 2000);
   }
 }
 
-async function loadTopikList() {
-  const listContainer = document.getElementById("topic-list-container");
-  try {
-    // Use STATIC_TOPICS from topics.js
-    if (typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS)) {
-      listContainer.innerHTML = "";
-      STATIC_TOPICS.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "topic-option";
-        if (item.name.includes("(P)")) {
-          div.classList.add("topic-p");
-        } else if (item.name.includes("(KI)")) {
-          div.classList.add("topic-ki");
-        }
-        if (item.week === "R1" || item.week === "R2") {
-          div.classList.add("topic-rekoleksi");
-        }
-        div.textContent = `${item.week}. ${item.name}`;
-        div.onclick = () => selectTopic(item.week, item.name, div);
-        listContainer.appendChild(div);
-      });
-    } else {
-      listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:#d32f2f;">Data topik tidak ditemukan.</div>`;
+
+
+// --- BACKGROUND SCAN QUEUE ENGINE ---
+class ScanQueue {
+  constructor() {
+    try {
+      this.queue = JSON.parse(localStorage.getItem('scan_queue') || '[]');
+    } catch (e) {
+      console.error("Failed to read localStorage:", e);
+      this.queue = [];
     }
-  } catch (err) {
-    console.error(err);
-    listContainer.innerHTML = `<div class="topic-loading-placeholder" style="color:#d32f2f;">Gagal memuat topik.</div>`;
+
+    // Self-healing: Reset any stuck 'processing' status back to 'pending' on load
+    let modified = false;
+    this.queue.forEach(item => {
+      if (item.status === 'processing') {
+        item.status = 'pending';
+        modified = true;
+      }
+    });
+    if (modified) this.save();
+
+    this.isProcessing = false;
+    this.cooldowns = {}; // For preventing duplicate double scans
+    const initialPending = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+    this.totalInBatch = initialPending;
+    this.cleanExpiredItems();
+    this.expireTimer = setInterval(() => this.cleanExpiredItems(), 15000);
+  }
+
+  save() {
+    this.clearOldHistory(); // Slice first
+    try {
+      localStorage.setItem('scan_queue', JSON.stringify(this.queue));
+    } catch (e) {
+      console.error("Failed to write localStorage:", e);
+    }
+    this.render();
+  }
+
+  add(studentId, week) {
+    const timestamp = Date.now();
+    
+    // Prevent double scan check (cooldown 3s for same studentId)
+    if (this.cooldowns[studentId] && (timestamp - this.cooldowns[studentId] < 3000)) {
+      console.log(`Scan blocked by cooldown: ${studentId}`);
+      return;
+    }
+    this.cooldowns[studentId] = timestamp;
+
+    const id = 'scan_' + Math.random().toString(36).substring(2, 9) + '_' + timestamp;
+    const item = {
+      id,
+      studentId,
+      week,
+      status: 'pending',
+      name: '',
+      image: '',
+      errorMsg: '',
+      timestamp
+    };
+
+    this.queue.unshift(item); // Add to the top of list
+    const pendingCount = this.queue.filter(q => q.status === 'pending' || q.status === 'processing').length;
+    if (this.totalInBatch === 0 || this.totalInBatch < pendingCount) {
+      this.totalInBatch = pendingCount;
+    } else {
+      this.totalInBatch += 1;
+    }
+    this.save();
+    
+    // Trigger immediate sequential processing loop
+    this.process();
+  }
+
+  async process() {
+    if (this.isProcessing) return;
+
+    // Find the oldest pending item
+    const pendingItem = [...this.queue].reverse().find(item => item.status === 'pending');
+    if (!pendingItem) {
+      this.isProcessing = false;
+      this.updateBanner();
+      resetStatus(); // Revert status bar back to idle when sync queue is empty
+      return;
+    }
+
+    this.isProcessing = true;
+    pendingItem.status = 'processing';
+    this.save();
+
+    try {
+      const token = sessionStorage.getItem('authToken');
+      const response = await fetch("/api/absensi", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify({ studentId: pendingItem.studentId, week: pendingItem.week }),
+      });
+
+      if (!response.ok) {
+        // Insert this check in process() immediately after checking response status:
+        if (response.status === 401) {
+          pendingItem.status = 'pending';
+          this.isProcessing = false;
+          this.save();
+          sessionStorage.removeItem('authToken');
+          // Clear the auth_token cookie
+          document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          showStatus("Sesi Habis", "error", "Silakan login kembali.");
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          triggerVisualFlash('error');
+          if (typeof setAppState === 'function') setAppState(0);
+          return; // Stop queue loop
+        }
+
+        // Transient server errors (5xx) or rate limits (429) should be retried.
+        if (response.status >= 500 || response.status === 429) {
+          pendingItem.status = 'pending';
+          pendingItem.errorMsg = `HTTP ${response.status} (Menunggu retry)`;
+          this.isProcessing = false;
+          this.save();
+          // Trigger retry after 5 seconds
+          setTimeout(() => this.process(), 5000);
+          return; // Stop current loop
+        } else {
+          // Permanent client errors (e.g. 400, 404)
+          pendingItem.status = 'error';
+          pendingItem.errorMsg = `HTTP ${response.status}`;
+          
+          showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
+
+          triggerVisualFlash('error');
+          const container = document.getElementById('app-container');
+          if (!container || !container.classList.contains('state-scanning')) {
+            showStatus("Gagal", "error", pendingItem.errorMsg);
+          }
+        }
+      } else {
+        const data = await response.json();
+        
+        if (data.status === "ok") {
+          pendingItem.status = 'success';
+          pendingItem.name = data.name;
+          const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
+          pendingItem.image = data.image || (localMatch ? localMatch.image : '');
+          
+          showToast(`Berhasil: ${data.name} hadir!`, 'success');
+
+          const container = document.getElementById('app-container');
+          if (container && container.classList.contains('state-scanning')) {
+            triggerVisualFlash('success');
+            if (navigator.vibrate) navigator.vibrate(200);
+          } else {
+            showStatus(data.name, "success", `Hadir - Topik ${pendingItem.week}`);
+            if (navigator.vibrate) navigator.vibrate(200);
+          }
+        } else if (data.status === "duplicate") {
+          pendingItem.status = 'duplicate';
+          pendingItem.name = data.name || 'Presensi Sudah Tercatat';
+          const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
+          pendingItem.image = data.image || (localMatch ? localMatch.image : '');
+          
+          showToast(`Sudah Hadir - Topik ${pendingItem.week} - ${data.name || 'Katekumen'}`, 'info');
+
+          const container = document.getElementById('app-container');
+          if (container && container.classList.contains('state-scanning')) {
+            triggerVisualFlash('duplicate');
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          } else {
+            showStatus("Sudah Hadir", "error", data.message);
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          }
+        } else {
+          pendingItem.status = 'error';
+          pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
+          
+          showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
+
+          const container = document.getElementById('app-container');
+          if (container && container.classList.contains('state-scanning')) {
+            triggerVisualFlash('error');
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          } else {
+            showStatus("Gagal", "error", pendingItem.errorMsg);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Queue sync network error:", error);
+      pendingItem.status = 'pending'; // Revert back to pending to retry when online
+      this.save();
+      
+      this.isProcessing = false;
+      this.updateBanner();
+      setTimeout(() => this.process(), 5000);
+      return; // Stop processing loop until back online
+    }
+
+    this.isProcessing = false;
+    this.save();
+    
+    // Continue processing remaining items in queue
+    setTimeout(() => this.process(), 500);
+  }
+
+  updateBanner() {
+    const warningBar = document.getElementById('queue-warning-bar');
+    const progressText = document.getElementById('queue-progress-text');
+    const progressBarFill = document.getElementById('queue-progress-bar-fill');
+
+    const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+
+    if (pendingCount === 0) {
+      this.totalInBatch = 0;
+    } else if (this.totalInBatch < pendingCount) {
+      this.totalInBatch = pendingCount;
+    }
+
+    if (warningBar) {
+      if (pendingCount > 0) {
+        warningBar.style.display = 'flex';
+        
+        const completedCount = this.totalInBatch - pendingCount;
+        const progressPercent = this.totalInBatch > 0 ? (completedCount / this.totalInBatch) * 100 : 0;
+        
+        if (progressText) {
+          progressText.textContent = `${completedCount}/${this.totalInBatch} Selesai`;
+        }
+        if (progressBarFill) {
+          progressBarFill.style.width = `${progressPercent}%`;
+        }
+      } else {
+        warningBar.style.display = 'none';
+        if (progressBarFill) {
+          progressBarFill.style.width = '0%';
+        }
+      }
+    }
+  }
+
+  render() {
+    this.updateBanner();
+    const listContainer = document.getElementById('queue-list');
+    if (!listContainer) return;
+
+    const floatingClearBtn = document.getElementById('floating-clear-btn');
+    const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+    const completedCount = this.queue.length - pendingCount;
+
+    if (completedCount > 0) {
+      if (floatingClearBtn) floatingClearBtn.style.display = 'flex';
+    } else {
+      if (floatingClearBtn) {
+        floatingClearBtn.style.display = 'none';
+        floatingClearBtn.classList.remove('expanded');
+      }
+    }
+
+    if (this.queue.length === 0) {
+      listContainer.innerHTML = '';
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'queue-empty-state';
+      emptyDiv.textContent = 'Belum ada data pemindaian.';
+      listContainer.appendChild(emptyDiv);
+      return;
+    }
+
+    // Keep only the most recent 10 items in DOM to save performance
+    const renderItems = this.queue.slice(0, 10);
+    listContainer.innerHTML = '';
+
+    renderItems.forEach(item => {
+      const row = document.createElement('div');
+      row.className = `queue-row ${item.status}`;
+      row.style.cursor = 'pointer';
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}`);
+      
+      row.onclick = () => {
+        showStudentModal(item);
+      };
+      row.onkeydown = (event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.preventDefault();
+          showStudentModal(item);
+        }
+      };
+
+      const cachedPhoto = window.ImageCache ? window.ImageCache.get(item.studentId) : null;
+      const avatarSrc = cachedPhoto || item.image || '/assets/favicon.png';
+      
+      const studentInfo = document.createElement('div');
+      studentInfo.className = 'student-info';
+
+      const studentPhoto = document.createElement('img');
+      studentPhoto.className = 'student-photo';
+      studentPhoto.setAttribute('crossorigin', 'anonymous');
+      studentPhoto.setAttribute('data-student-id', item.studentId || '');
+      studentPhoto.alt = 'Foto';
+      studentPhoto.onload = function() {
+        if (!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) {
+          window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);
+        }
+      };
+      studentPhoto.onerror = function() {
+        this.onerror = null;
+        this.src = '/assets/favicon.png';
+      };
+      studentPhoto.src = avatarSrc;
+      studentInfo.appendChild(studentPhoto);
+
+      const studentText = document.createElement('div');
+      studentText.className = 'student-text';
+
+      const studentName = document.createElement('span');
+      studentName.className = 'student-name';
+      studentName.textContent = item.name || 'Katekumen';
+      studentText.appendChild(studentName);
+
+      const studentIdSpan = document.createElement('span');
+      studentIdSpan.className = 'student-id';
+      studentIdSpan.textContent = `${item.studentId} • Topik ${item.week}`;
+      studentText.appendChild(studentIdSpan);
+
+      studentInfo.appendChild(studentText);
+      row.appendChild(studentInfo);
+
+      const statusBadge = document.createElement('span');
+      statusBadge.className = `status-badge ${item.status}`;
+      
+      const icon = document.createElement('span');
+      icon.className = 'material-icons-outlined';
+      
+      if (item.status === 'success') {
+        icon.textContent = 'check';
+      } else if (item.status === 'error') {
+        icon.textContent = 'close';
+      } else if (item.status === 'duplicate') {
+        icon.textContent = 'refresh';
+      } else if (item.status === 'processing') {
+        icon.textContent = 'sync';
+      } else {
+        icon.textContent = 'schedule';
+      }
+      
+      statusBadge.appendChild(icon);
+      row.appendChild(statusBadge);
+
+      listContainer.appendChild(row);
+    });
+
+    // Re-append the clear button at the end of the list container if it exists and there are completed items
+    if (floatingClearBtn && completedCount > 0) {
+      listContainer.appendChild(floatingClearBtn);
+    }
+  }
+
+  clearOldHistory() {
+    if (this.queue.length > 20) {
+      // Separate pending/processing items and completed items
+      const pendingItems = this.queue.filter(item => item.status === 'pending' || item.status === 'processing');
+      const completedItems = this.queue.filter(item => item.status !== 'pending' && item.status !== 'processing');
+      
+      // Calculate how many completed items we are allowed to keep
+      const allowedCompletedCount = Math.max(0, 20 - pendingItems.length);
+      const prunedCompleted = completedItems.slice(0, allowedCompletedCount);
+      
+      // Combine them using a Set of allowed IDs to preserve original order
+      const allowedIds = new Set([
+        ...pendingItems.map(item => item.id),
+        ...prunedCompleted.map(item => item.id)
+      ]);
+      this.queue = this.queue.filter(item => allowedIds.has(item.id));
+    }
+  }
+
+  cleanExpiredItems() {
+    const now = Date.now();
+    const thirtyMinutes = 30 * 60 * 1000;
+    const initialLength = this.queue.length;
+
+    // Keep items if they are pending/processing (so offline scans are not lost before syncing),
+    // or if they are less than 30 minutes old.
+    this.queue = this.queue.filter(item => {
+      const isPendingOrProcessing = item.status === 'pending' || item.status === 'processing';
+      const itemTime = item.timestamp || 0;
+      const isExpired = (now - itemTime) >= thirtyMinutes;
+      return isPendingOrProcessing || !isExpired;
+    });
+
+    if (this.queue.length !== initialLength) {
+      this.save();
+    }
   }
 }
 
-// --- STATUS HANDLER (Text Only) ---
+// Instantiate globally
+window.scanQueue = new ScanQueue();
+
+// --- TOAST NOTIFICATIONS ---
+window.showToast = function(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  let iconName = 'check_circle';
+  if (type === 'error') iconName = 'error';
+  if (type === 'info') iconName = 'info';
+
+  // Safe element construction to prevent XSS
+  const icon = document.createElement('span');
+  icon.className = 'material-icons-outlined toast-icon';
+  icon.textContent = iconName;
+
+  const text = document.createElement('span');
+  text.className = 'toast-message';
+  text.textContent = message;
+
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  container.appendChild(toast);
+
+  let autoDismissTimer;
+
+  // Smooth dismiss helper
+  const dismiss = () => {
+    if (toast.classList.contains('hide')) return;
+    if (autoDismissTimer) clearTimeout(autoDismissTimer);
+    toast.removeEventListener('click', dismiss);
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 400);
+  };
+
+  // Click to dismiss early
+  toast.addEventListener('click', dismiss);
+
+  // Trigger entry animation
+  setTimeout(() => toast.classList.add('show'), 10);
+
+  // Auto-remove timer
+  autoDismissTimer = setTimeout(dismiss, 3000);
+}
+
+// --- STATUS HANDLER ---
 function showStatus(mainText, type, subText = "") {
   const el = document.getElementById("status");
+  if (!el) return;
   
-  // Using Material Icons for visual indicators
-  let iconName = "";
+  let iconName = "qr_code_scanner";
   if (type === 'success') iconName = "check_circle_outline";
   else if (type === 'error') iconName = "error_outline";
   else if (type === 'processing') iconName = "hourglass_empty";
-  else iconName = "qr_code_scanner"; // Default for idle/camera
+
+  el.innerHTML = "";
+
+  const iconSpan = document.createElement("span");
+  iconSpan.className = "material-icons-outlined";
+  iconSpan.style.fontSize = "1.25rem";
+  iconSpan.textContent = iconName;
+  el.appendChild(iconSpan);
 
   if (subText) {
-      el.innerHTML = `
-          <span class="material-icons-outlined" style="font-size: 1.5rem;">${iconName}</span>
-          <div class="status-text-container">
-              <div class="main-text">${mainText}</div>
-              <div class="sub-text">${subText}</div>
-          </div>
-      `;
+    const textContainer = document.createElement("div");
+    textContainer.className = "status-text-container";
+
+    const mainDiv = document.createElement("div");
+    mainDiv.className = "main-text";
+    mainDiv.textContent = mainText;
+
+    const subDiv = document.createElement("div");
+    subDiv.className = "sub-text";
+    subDiv.textContent = subText;
+
+    textContainer.appendChild(mainDiv);
+    textContainer.appendChild(subDiv);
+    el.appendChild(textContainer);
   } else {
-      el.innerHTML = `
-          <span class="material-icons-outlined" style="font-size: 1.5rem;">${iconName}</span>
-          <div class="main-text">${mainText}</div>
-      `;
+    const mainDiv = document.createElement("div");
+    mainDiv.className = "main-text";
+    mainDiv.textContent = mainText;
+    el.appendChild(mainDiv);
   }
   el.className = type;
 }
 
-function resetStatus() { showStatus("Silakan pindai kode QR berikutnya", "idle"); }
+function resetStatus() { 
+  if (typeof scanQueue !== 'undefined') {
+    const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+    if (pendingCount > 0) {
+      showStatus("Sinkronisasi sedang berjalan...", "processing", `${pendingCount} item tersisa di antrean.`);
+      return;
+    }
+  }
+  showStatus("Silakan pindai kode QR berikutnya", "idle");
+}
 
 function safeAtob(str) {
-  // Remove all whitespace
-  let cleaned = str.replace(/\s/g, '');
-  // Convert URL-safe base64 to standard base64
-  cleaned = cleaned.replace(/-/g, '+').replace(/_/g, '/');
-  // Pad with '=' if the length is not a multiple of 4
+  let cleaned = str.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
   const pad = cleaned.length % 4;
   if (pad) {
-    if (pad === 1) {
-      throw new Error("Invalid base64 structure");
-    }
+    if (pad === 1) throw new Error("Invalid base64 structure");
     cleaned += '='.repeat(4 - pad);
   }
   return atob(cleaned);
 }
 
+function triggerVisualFlash(type) {
+  const readerContainer = document.getElementById('reader-container');
+  if (!readerContainer) return;
+  
+  // Create a temporary overlay element
+  const flash = document.createElement('div');
+  flash.style.position = 'absolute';
+  flash.style.inset = '0';
+  flash.style.zIndex = '5';
+  flash.style.pointerEvents = 'none';
+  flash.style.opacity = '0.35';
+  flash.style.transition = 'opacity 0.4s ease';
+  
+  if (type === 'success') {
+    flash.style.backgroundColor = '#2e7d32'; // Green
+  } else if (type === 'duplicate') {
+    flash.style.backgroundColor = '#f57c00'; // Orange
+  } else {
+    flash.style.backgroundColor = '#c62828'; // Red
+  }
+  
+  readerContainer.appendChild(flash);
+  
+  // Trigger reflow and fade out
+  setTimeout(() => {
+    flash.style.opacity = '0';
+    setTimeout(() => flash.remove(), 400);
+  }, 100);
+}
+
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
-  if (scanCooldown) return; // Prevent multiple scans at once
-
-  // Check if a topic is selected
-  if (!selectedWeek) { 
+  if (!selectedWeek) {
     showStatus("Pilih topik terlebih dahulu!", "error");
-    openTopicModal(); 
+    openTopicModal();
     return;
   }
 
   let originalStudentId;
   try {
-    // DECODE the Base64 string from the QR code using the robust helper
     originalStudentId = safeAtob(decodedText);
   } catch (e) {
-    // This catches errors if the QR code is not a valid Base64 string
     showStatus("Kode QR Tidak Valid", "error", "Format kode tidak dikenali.");
-    scanCooldown = true; // Start cooldown to prevent spamming invalid codes
-    setTimeout(() => { scanCooldown = false; resetStatus(); }, 4000);
+    if (navigator.vibrate) navigator.vibrate([100, 50]);
+    triggerVisualFlash('error');
+    setTimeout(() => resetStatus(), 3000); // Revert back to idle/processing status
     return;
   }
 
-  scanCooldown = true;
-  
-  // OPTIMISTIC UI: Give immediate feedback
-  if (navigator.vibrate) navigator.vibrate(100); 
-  showStatus("Memproses...", "processing", `ID: ${originalStudentId}`);
+  // Optimistic tactile feedback on read
+  if (navigator.vibrate) navigator.vibrate(80);
 
-  try {
-    const token = sessionStorage.getItem('authToken');
-    const response = await fetch("/api/absensi", {
-      method: "POST", 
-      headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` }, 
-      body: JSON.stringify({ studentId: originalStudentId, week: selectedWeek }),
-    });
-
-    if (!response.ok) {
-      const responseText = await response.text();
-      let errMsg = `HTTP ${response.status}`;
-      try {
-        const errJson = JSON.parse(responseText);
-        if (errJson.message) {
-          errMsg += `: ${errJson.message}`;
-          if (errJson.details) {
-            errMsg += ` (${errJson.details})`;
-          }
-        }
-      } catch (jsonErr) {
-        errMsg += `: ${responseText.substring(0, 80)}`;
-      }
-      throw new Error(errMsg);
-    }
-
-    const data = await response.json();
-
-    if (data.status === "ok") {
-      // Haptic feedback for server confirmation
-      if (navigator.vibrate) navigator.vibrate(200); 
-      showStatus(data.name, "success", `ID: ${data.studentId} • Topik ${selectedWeek}`);
-      showProfileModal(data.name, data.studentId, selectedWeek, data.image);
-    } else if (data.status === "duplicate") {
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
-      showStatus("Sudah Hadir", "error", data.message);
-    } else {
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
-      showStatus("Gagal", "error", data.message || "Terjadi kesalahan");
-    }
-  } catch (error) {
-    console.error("Scan request failed:", error);
-    showStatus("Error Koneksi", "error", error.message || "Gagal menghubungi server");
-  } finally {
-    // Shorter cooldown for better UX
-    setTimeout(() => { scanCooldown = false; resetStatus(); }, 3000);
-  }
+  // Add scan to queue instantly and keep camera running!
+  scanQueue.add(originalStudentId, selectedWeek);
 }
 
 async function startScanner() {
+  if (html5QrcodeScanner) return; // Guard against duplicate instantiations
+
   const scanConfig = { 
-      fps: 30, // Increased for faster recognition
-      qrbox: { width: 250, height: 250 },
-      aspectRatio: 1.0,
-      disableFlip: false,
-      experimentalFeatures: {
-          // Use native BarcodeDetector if supported, for faster scans
-          useBarCodeDetectorIfSupported: true
-      },
-      // Pass video constraints directly into the config object
-      videoConstraints: {
-          facingMode: "environment",
-          width: { ideal: 720 },
-          height: { ideal: 720 }
-      }
+    fps: 30,
+    aspectRatio: 1.0,
+    disableFlip: false,
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true
+    },
+    videoConstraints: {
+      facingMode: "environment",
+      width: { ideal: 640 },
+      height: { ideal: 640 }
+    }
   };
 
   html5QrcodeScanner = new Html5Qrcode("reader", /* verbose= */ false);
-  html5QrcodeScanner.start(
-    { facingMode: "environment" }, // Request rear camera
+  scannerStartPromise = html5QrcodeScanner.start(
+    { facingMode: "environment" },
     scanConfig,
     handleScan
-  ).then(() => {
-      document.getElementById("camera-loader").style.display = "none";
-      resetStatus();
+  );
+
+  scannerStartPromise.then(() => {
+    scannerStartPromise = null;
+    const loader = document.getElementById("camera-loader");
+    if (loader) loader.style.display = "none";
+    resetStatus();
   }).catch(err => {
-      const loader = document.getElementById("camera-loader");
-      loader.innerHTML = '<div style="color:#d32f2f; text-align:center">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
+    scannerStartPromise = null;
+    console.error("Camera start failed:", err);
+    html5QrcodeScanner = null; // Reset reference so retry can be attempted
+    const loader = document.getElementById("camera-loader");
+    if (loader) {
+      loader.innerHTML = '<div style="color:var(--status-duplicate-text); text-align:center; padding:10px;">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
+    }
   });
 }
 
-async function initializeApp() {
-  showStatus("Memuat sistem...", "processing");
-  await loadTopikList();
-  startScanner();
-}
+async function stopScanner() {
+  if (html5QrcodeScanner) {
+    // If still starting, wait for the start promise to resolve first
+    if (scannerStartPromise) {
+      try {
+        await scannerStartPromise;
+      } catch (e) {
+        // start failed, startScanner already cleared html5QrcodeScanner
+        return;
+      }
+    }
 
-// Check if user is already logged in on page load
-window.onload = () => {
-  if (sessionStorage.getItem('authToken')) {
-      document.getElementById('login-container').style.display = 'none';
-      const loginHeader = document.getElementById('login-header');
-      if (loginHeader) loginHeader.style.display = 'none';
-      const bottomBranding = document.getElementById('bottom-branding');
-      if (bottomBranding) bottomBranding.style.display = 'none';
-      document.getElementById('scanner-ui').style.display = 'flex';
-      document.getElementById('login-footer').style.display = 'none';
-      initializeApp();
+    const scanner = html5QrcodeScanner;
+    html5QrcodeScanner = null; // Reset reference immediately to avoid race conditions
+    scannerStartPromise = null;
+    try {
+      await scanner.stop();
+    } catch (err) {
+      console.error("Failed to stop scanner:", err);
+    } finally {
+      const loader = document.getElementById("camera-loader");
+      if (loader) loader.style.display = "flex";
+    }
   }
 }
+
+async function loadTopikList() {
+  const listContainer = document.getElementById("topic-list-container");
+  if (!listContainer) return;
+
+  try {
+    if (typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS)) {
+      listContainer.innerHTML = "";
+      STATIC_TOPICS.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "topic-option";
+        if (item.name.includes("(P)")) div.classList.add("topic-p");
+        else if (item.name.includes("(KI)")) div.classList.add("topic-ki");
+        
+        if (item.week === "R1" || item.week === "R2") {
+          div.classList.add("topic-rekoleksi");
+        }
+        div.textContent = `${item.week}. ${item.name}`;
+        
+        if (item.week === selectedWeek) {
+          div.classList.add("active");
+        }
+        
+        // Accessibility attributes
+        div.setAttribute("role", "button");
+        div.tabIndex = 0;
+        
+        div.onclick = () => selectTopic(item.week, item.name, div);
+        div.onkeydown = (event) => {
+          if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            selectTopic(item.week, item.name, div);
+          }
+        };
+        
+        listContainer.appendChild(div);
+      });
+    } else {
+      listContainer.innerHTML = "";
+      const errorDiv = document.createElement("div");
+      errorDiv.className = "topic-loading-placeholder";
+      errorDiv.style.color = "var(--status-duplicate-text)";
+      errorDiv.textContent = "Data topik tidak ditemukan.";
+      listContainer.appendChild(errorDiv);
+    }
+  } catch (err) {
+    console.error(err);
+    listContainer.innerHTML = "";
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "topic-loading-placeholder";
+    errorDiv.style.color = "var(--status-duplicate-text)";
+    errorDiv.textContent = "Gagal memuat topik.";
+    listContainer.appendChild(errorDiv);
+  }
+}
+
+async function loadVersion() {
+  try {
+    const res = await fetch('/api/version');
+    if (res.ok) {
+      const data = await res.json();
+      const versionEl = document.getElementById('footer-version');
+      if (versionEl && data.version) {
+        versionEl.textContent = `v${data.version}`;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load version:", error);
+  }
+}
+
+async function initializeApp() {
+  await loadTopikList();
+  scanQueue.render();
+  scanQueue.process(); // Process any leftover queue from last load
+}
+
+// Initial triggers
+window.onload = () => {
+  initTheme();
+  loadVersion();
+  
+  // Connect background queue trigger for online state detection
+  window.addEventListener('online', () => {
+    scanQueue.process();
+  });
+
+  const sessionToken = sessionStorage.getItem('authToken');
+  if (sessionToken) {
+    // Sync the auth_token cookie with the sessionStorage token
+    document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
+    
+    const savedWeek = localStorage.getItem('selectedWeek');
+    const savedTopicName = localStorage.getItem('selectedTopicName');
+    if (savedWeek && savedTopicName) {
+      selectedWeek = savedWeek;
+      const btn = document.getElementById('topic-trigger-large');
+      if (btn) {
+        btn.innerHTML = `<span>${savedWeek}. ${savedTopicName}</span><span class="material-icons-outlined">arrow_drop_down</span>`;
+      }
+      const activeTopicText = document.getElementById('active-topic-name');
+      if (activeTopicText) {
+        activeTopicText.textContent = `${savedWeek}. ${savedTopicName}`;
+      }
+    }
+    
+    setAppState(2); // Set to scanner page initially
+    initializeApp();
+  } else {
+    setAppState(0); // Authentication screen
+  }
+}
+
+window.showStudentModal = function(item) {
+  const modal = document.getElementById('student-detail-modal');
+  const photoEl = document.getElementById('modal-student-photo');
+  const nameEl = document.getElementById('modal-student-name');
+  const idEl = document.getElementById('modal-student-id');
+  const topicEl = document.getElementById('modal-student-topic');
+  const statusEl = document.getElementById('modal-student-status');
+
+  if (!modal) return;
+
+  const cachedPhoto = window.ImageCache ? window.ImageCache.get(item.studentId) : null;
+  const modalImgSrc = cachedPhoto || item.image || '/assets/favicon.png';
+
+  photoEl.setAttribute('crossorigin', 'anonymous');
+  photoEl.setAttribute('data-student-id', item.studentId || '');
+  photoEl.onload = function() {
+    if (!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) {
+      window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);
+    }
+  };
+  photoEl.onerror = function() {
+    this.onerror = null;
+    this.src = '/assets/favicon.png';
+  };
+  photoEl.src = modalImgSrc;
+
+  nameEl.textContent = item.name || 'Katekumen';
+  idEl.textContent = item.studentId;
+  
+  topicEl.textContent = `Topik ${item.week}`;
+
+  statusEl.className = `status-badge ${item.status}`;
+  
+  let statusText = item.status;
+  if (item.status === 'success') statusText = 'HADIR';
+  if (item.status === 'duplicate') statusText = 'PRESENSI SUDAH TERCATAT';
+  if (item.status === 'error') statusText = 'GAGAL';
+  if (item.status === 'pending') statusText = 'MENUNGGU...';
+  if (item.status === 'processing') statusText = 'SYNCING...';
+  statusEl.textContent = statusText;
+
+  modal.style.display = 'flex';
+};
+
+window.closeStudentModal = function(event) {
+  const modal = document.getElementById('student-detail-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+};
+
+window.handleFloatingClearClick = function(event) {
+  event.stopPropagation();
+  const btn = document.getElementById('floating-clear-btn');
+  if (!btn) return;
+
+  if (!btn.classList.contains('expanded')) {
+    btn.classList.add('expanded');
+    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
+    window.clearBtnTimeout = setTimeout(() => {
+      btn.classList.remove('expanded');
+    }, 4000);
+  } else {
+    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
+    btn.classList.remove('expanded');
+    
+    if (typeof scanQueue !== 'undefined') {
+      const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+      const completedCount = scanQueue.queue.length - pendingCount;
+      
+      if (completedCount === 0) {
+        showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
+        return;
+      }
+      
+      scanQueue.queue = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing');
+      scanQueue.save();
+      showToast("Riwayat pemindaian berhasil dibersihkan", "info");
+    }
+  }
+};
+
+// Document click listener to auto-collapse floating clear history button if clicking outside
+document.addEventListener('click', () => {
+  const btn = document.getElementById('floating-clear-btn');
+  if (btn && btn.classList.contains('expanded')) {
+    btn.classList.remove('expanded');
+    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
+  }
+});
