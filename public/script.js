@@ -611,6 +611,11 @@ class ScanQueue {
 
       listContainer.appendChild(row);
     });
+
+    // Re-append the clear button at the end of the list container if it exists and there are completed items
+    if (floatingClearBtn && completedCount > 0) {
+      listContainer.appendChild(floatingClearBtn);
+    }
   }
 
   clearOldHistory() {

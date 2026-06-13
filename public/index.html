@@ -163,13 +163,13 @@
             <div id="queue-list" class="queue-list-container">
               <!-- Dynamically populated via script -->
               <div class="queue-empty-state">Belum ada data pemindaian.</div>
+              <!-- Clear History Button -->
+              <button id="floating-clear-btn" class="floating-clear-btn" style="display: none;" onclick="handleFloatingClearClick(event)" aria-label="Hapus semua riwayat pemindaian">
+                <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
+                <span class="clear-text">Hapus Riwayat Scan</span>
+                <span class="clear-confirm-text">Yakin hapus?</span>
+              </button>
             </div>
-            <!-- Clear History Button -->
-            <button id="floating-clear-btn" class="floating-clear-btn" style="display: none;" onclick="handleFloatingClearClick(event)" aria-label="Hapus semua riwayat pemindaian">
-              <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
-              <span class="clear-text">Hapus Riwayat Scan</span>
-              <span class="clear-confirm-text">Yakin hapus?</span>
-            </button>
           </div>
         </div>
 
