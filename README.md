@@ -1,4 +1,4 @@
-# Presensi Katekumen Digital (v2.3.1)
+# Presensi Katekumen Digital (v2.3.5)
 
 A modern, responsive, and secure digital attendance system designed for the Catechumenate program at St. Peter's Cathedral, Bandung. This application streamlines the attendance process using QR codes, real-time data synchronization with Google Sheets, and secure image retrieval from Supabase.
 
@@ -8,6 +8,8 @@ A modern, responsive, and secure digital attendance system designed for the Cate
 
 - **📱 Modern Mobile-First UI**: "Liquid glass" aesthetic with a fully responsive design optimized for all devices.
 - **⚡ Fast QR Code Scanning**: Integrated `html5-qrcode` library for rapid and accurate attendance taking via device camera.
+- **📴 Offline Scan Queueing & Auto-Sync**: Allows facilitators to take attendance even when offline or during intermittent internet connectivity. Scans are stored in a local queue and automatically synchronized in the background once network access is restored.
+- **💾 Local Image Caching**: Stores compressed student profile images locally to reduce network data usage and speed up subsequent profile rendering on mobile devices.
 - **🚀 Optimized Backend**: Implements Server-Side Caching (Google Apps Script `CacheService`) to speed up attendance lookups and reduce sheet read operations.
 - **🔐 Secure Facilitator Login**: Shared secret authentication mechanism with JWT (JSON Web Token) session management.
 - **🚪 Quick Logout Navigation**: A dedicated logout button in the navigation bar to securely terminate sessions.
@@ -16,6 +18,7 @@ A modern, responsive, and secure digital attendance system designed for the Cate
     - Dynamically loads and displays catechumen profiles based on Class Selection.
     - Real-time client-side search box (`Cari nama atau ID...`) for quick student filtering.
     - Live registration summary counts (**Total**, **Aktif**, **Nonaktif**) computed dynamically.
+    - Distinct **Nonaktif** status badge rendered on the right side next to the expand/collapse arrow for clear visual differentiation.
     - Sticky selector header that collapses smoothly into a compact frosted glass panel on scroll.
 - **📊 Real-time Data Sync**: Attendance records are instantly pushed to Google Sheets via a secure Vercel proxy.
 - **🖼️ Dynamic Profile Images**: Automatically fetches and displays student profile photos from Supabase Storage using signed URLs.
