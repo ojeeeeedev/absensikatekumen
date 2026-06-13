@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Profil Katekumen - Presensi Katekumen Digital</title>
+    <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body id="profile-page">
+    <script>
+      (function() {
+        const getCookie = (name) => {
+          const value = '; ' + document.cookie;
+          const parts = value.split('; ' + name + '=');
+          if (parts.length === 2) return parts.pop().split(';').shift();
+          return null;
+        };
+        if (!getCookie('auth_token')) {
+          window.location.href = '/';
+        }
+      })();
+    </script>
+    <div class="liquid-background">
+      <div class="liquid-shape shape1"></div>
+      <div class="liquid-shape shape2"></div>
+    </div>
+
+    <nav class="app-nav" id="app-nav">
+      <a href="/" class="nav-item">
+        <span class="material-icons-outlined">qr_code_scanner</span>
+        <span>Scan Presensi</span>
+      </a>
+      <a href="/profile" class="nav-item active">
+        <span class="material-icons-outlined">people_alt</span>
+        <span>Profil Katekumen</span>
+      </a>
+      <a href="#" class="nav-item logout-btn" onclick="handleLogout(event)" aria-label="Keluar">
+        <span class="material-icons-outlined">logout</span>
+      </a>
+    </nav>
+
+    <main id="app-container" class="glass-container">
+      <div class="app-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto;">
+
+        <div class="header-container">
+          <img src="assets/pewartaan_normal.png" class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;">
+          <div class="header-text">
+            <h1>Profil Katekumen</h1>
+            <h2>Katekumen Dewasa</h2>
+            <h3>Paroki St. Petrus - Bandung</h3>
+          </div>
+        </div>
+
+        <div class="profile-selector-container">
+          <select id="class-selector">
+            <option value="" disabled selected>Memuat kelas...</option>
+          </select>
+          
+          <div id="students-summary" class="students-summary-container" style="display: none;">
+            <div class="summary-badge summary-total">
+              <span class="material-icons-outlined">group</span>
+              <span id="summary-total-text">Total: 0</span>
+            </div>
+            <div class="summary-badge summary-active">
+              <span class="material-icons-outlined">check_circle</span>
+              <span id="summary-active-text">Aktif: 0</span>
+            </div>
+            <div class="summary-badge summary-inactive">
+              <span class="material-icons-outlined">cancel</span>
+              <span id="summary-inactive-text">Nonaktif: 0</span>
+            </div>
+          </div>
+          
+          <input type="text" id="search-input" placeholder="Cari nama atau ID..." style="display: none;">
+        </div>
+
+        <div id="students-loader" style="display: none;">
+          <div class="spinner"></div>
+          <span style="font-size: 0.85rem; color: var(--text-primary); opacity: 0.8;">Memuat katekumen...</span>
+        </div>
+
+        <div id="students-list" class="students-list-container">
+          <div class="welcome-placeholder">
+            <span class="material-icons-outlined welcome-icon">menu_book</span>
+            <h3>Daftar Katekumen</h3>
+            <p>Silakan pilih kelas terlebih dahulu untuk melihat daftar katekumen.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
+
+    <script src="image-cache.js"></script>
+    <script src="profile.js"></script>
+  </body>
+</html>

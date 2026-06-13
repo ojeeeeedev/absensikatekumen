@@ -1,16 +1,22 @@
 {
   "name": "absensikatekumen",
-  "version": "1.8.0",
+  "version": "2.3.4",
   "type": "module",
   "scripts": {
     "start": "vercel dev",
-    "build": "echo 'No build step needed'"
+    "dev": "node app.js",
+    "build": "echo 'No build step needed'",
+    "clasp-push-all": "node scripts/clasp-push-all.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.2.0",
-    "jsonwebtoken": "^9.0.2"
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "playwright": "^1.60.0"
   },
   "devDependencies": {
     "@google/clasp": "^3.1.3",

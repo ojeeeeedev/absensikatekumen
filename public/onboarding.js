@@ -1,0 +1,228 @@
+(function() {
+  const checkOnboarding = () => {
+    // Check if they already saw onboarding
+    if (localStorage.getItem('hasSeenOnboardingV2')) return;
+
+    const sessionToken = sessionStorage.getItem('authToken');
+    if (!sessionToken) return;
+
+    // Dynamically inject stylesheet if not already loaded
+    if (!document.getElementById('onboarding-style')) {
+      const link = document.createElement('link');
+      link.id = 'onboarding-style';
+      link.rel = 'stylesheet';
+      link.href = 'onboarding.css';
+      document.head.appendChild(link);
+    }
+
+    // Dynamically inject onboarding modal HTML
+    if (!document.getElementById('onboarding-modal')) {
+      const modal = document.createElement('div');
+      modal.id = 'onboarding-modal';
+      modal.className = 'student-modal';
+      modal.style.display = 'flex';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      
+      // Close modal on click outside content
+      modal.onclick = (e) => closeOnboardingModal(e);
+      
+      modal.innerHTML = `
+        <div class="modal-content onboarding-modal-content">
+          <!-- Small Pewartaan Logo -->
+          <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" class="onboarding-logo">
+
+          <!-- Welcome Header (Inter Font) -->
+          <h2 class="onboarding-title">Selamat datang di Sistem Presensi v2</h2>
+
+          <div class="onboarding-scroll-area">
+            <!-- Section 1: Fitur Baru yang Memudahkan -->
+            <h3 class="onboarding-section-header updates-header">
+              <span class="material-icons-outlined" aria-hidden="true">auto_awesome</span>
+              Fitur Baru yang Memudahkan
+            </h3>
+            <div class="updates-list">
+              
+              <!-- Row 1: Scan QR Berturut-turut -->
+              <div class="row-accordion" id="row-scan">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">bolt</span>
+                    <span>Scan QR Berturut-turut</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Scan peserta berikutnya langsung tanpa jeda. Data otomatis dikirim di latar belakang.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 2: Simpan Offline Otomatis -->
+              <div class="row-accordion" id="row-offline">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">wifi_off</span>
+                    <span>Simpan Offline Otomatis</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Scan tetap jalan walau internet lambat/putus. Data aman dan terkirim otomatis saat online.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 3: Daftar & Profil Katekumen -->
+              <div class="row-accordion" id="row-profile">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">badge</span>
+                    <span>Daftar & Profil Katekumen</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Halaman khusus untuk melihat daftar seluruh peserta kelas, katekis, kelompok KI, dan foto mereka.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 4: Tampilan Informasi Rapi -->
+              <div class="row-accordion" id="row-detail">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">layers</span>
+                    <span>Tampilan Informasi Rapi</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Detail data katekumen kini langsung muncul di bagian bawah layar secara instan.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Section 2: Penyederhanaan Sistem -->
+            <h3 class="onboarding-section-header removals-header">
+              <span class="material-icons-outlined" aria-hidden="true">published_with_changes</span>
+              Penyederhanaan Sistem
+            </h3>
+            <div class="removals-list">
+              
+              <!-- Row 5: Buka Scanner Lebih Cepat -->
+              <div class="row-accordion" id="row-speed">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">speed</span>
+                    <span>Buka Scanner Lebih Cepat</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Topik pertemuan terakhir otomatis disimpan. Tidak perlu memilih ulang setiap membuka web.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 6: Navigasi Menu Simpel -->
+              <div class="row-accordion" id="row-nav">
+                <div class="row-accordion-header">
+                  <div class="row-accordion-title">
+                    <span class="material-icons-outlined" aria-hidden="true">navigation</span>
+                    <span>Navigasi Menu Simpel</span>
+                  </div>
+                  <span class="material-icons-outlined chevron">expand_more</span>
+                </div>
+                <div class="row-accordion-content">
+                  <div class="row-accordion-body">
+                    Menu bawah layar baru memudahkan ganti halaman secara instan tanpa tombol ribet.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <button class="onboarding-btn" id="onboarding-dismiss-btn">Mulai Gunakan</button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      // Stop propagation programmatically
+      const content = modal.querySelector('.onboarding-modal-content');
+      if (content) {
+        content.onclick = (e) => e.stopPropagation();
+      }
+
+      // Bind row click handlers programmatically
+      const rows = modal.querySelectorAll('.row-accordion');
+      rows.forEach(row => {
+        const header = row.querySelector('.row-accordion-header');
+        if (header) {
+          header.onclick = () => toggleOnboardingRow(row.id);
+        }
+      });
+
+      // Bind dismiss button
+      const dismissBtn = document.getElementById('onboarding-dismiss-btn');
+      if (dismissBtn) {
+        dismissBtn.onclick = () => closeOnboardingModal(null);
+      }
+
+      // Register escape key handler
+      window.addEventListener('keydown', handleEscapeKey);
+    }
+  };
+
+  const toggleOnboardingRow = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    const isOpen = el.classList.contains('open');
+    
+    // Close all other rows
+    const container = document.querySelector('.onboarding-scroll-area');
+    if (container) {
+      const all = container.querySelectorAll('.row-accordion');
+      all.forEach(acc => acc.classList.remove('open'));
+    }
+    
+    // Toggle selected row
+    if (!isOpen) {
+      el.classList.add('open');
+    }
+  };
+
+  const handleEscapeKey = (e) => {
+    if (e.key === 'Escape') {
+      closeOnboardingModal(null);
+    }
+  };
+
+  const closeOnboardingModal = (event) => {
+    if (event && event.stopPropagation) {
+      event.stopPropagation();
+    }
+    const modal = document.getElementById('onboarding-modal');
+    if (modal) {
+      modal.remove();
+      localStorage.setItem('hasSeenOnboardingV2', 'true');
+    }
+    window.removeEventListener('keydown', handleEscapeKey);
+  };
+
+  // Expose check function globally
+  window.checkOnboarding = checkOnboarding;
+
+  // Run on load if token already exists
+  window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(checkOnboarding, 600);
+  });
+})();

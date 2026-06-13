@@ -1,4 +1,4 @@
-# Presensi Katekumen Digital (v1.8.0)
+# Presensi Katekumen Digital (v2.3.1)
 
 A modern, responsive, and secure digital attendance system designed for the Catechumenate program at St. Peter's Cathedral, Bandung. This application streamlines the attendance process using QR codes, real-time data synchronization with Google Sheets, and secure image retrieval from Supabase.
 
@@ -10,9 +10,16 @@ A modern, responsive, and secure digital attendance system designed for the Cate
 - **⚡ Fast QR Code Scanning**: Integrated `html5-qrcode` library for rapid and accurate attendance taking via device camera.
 - **🚀 Optimized Backend**: Implements Server-Side Caching (Google Apps Script `CacheService`) to speed up attendance lookups and reduce sheet read operations.
 - **🔐 Secure Facilitator Login**: Shared secret authentication mechanism with JWT (JSON Web Token) session management.
+- **🚪 Quick Logout Navigation**: A dedicated logout button in the navigation bar to securely terminate sessions.
+- **🕒 Automatic Topic Expiry**: 10-minute inactivity tracker that auto-clears the weekly topic selection to prevent stale/incorrect submissions.
+- **👥 Enhanced Profile Browsing**:
+    - Dynamically loads and displays catechumen profiles based on Class Selection.
+    - Real-time client-side search box (`Cari nama atau ID...`) for quick student filtering.
+    - Live registration summary counts (**Total**, **Aktif**, **Nonaktif**) computed dynamically.
+    - Sticky selector header that collapses smoothly into a compact frosted glass panel on scroll.
 - **📊 Real-time Data Sync**: Attendance records are instantly pushed to Google Sheets via a secure Vercel proxy.
 - **🖼️ Dynamic Profile Images**: Automatically fetches and displays student profile photos from Supabase Storage using signed URLs.
-- **📅 Dynamic Topic Selection**: Facilitators can select weekly topics (now statically defined for speed) to mark attendance against specific columns.
+- **📅 Dynamic Topic Selection**: Facilitators can select weekly topics (statically defined for speed) to mark attendance against specific columns.
 - **✅ Instant Feedback**: 
     - Visual status indicators.
     - **Haptic Feedback**: Vibration patterns for success (single) and errors (double) on supported Android devices.

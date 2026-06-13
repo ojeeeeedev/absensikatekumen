@@ -7,6 +7,13 @@ function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
 
+    // Handle getStudentList action
+    if (data.action === "getStudentList") {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const students = getStudentList_(ss);
+      return buildResponse_({ status: "ok", students: students });
+    }
+
     // 2. Extract Data
     const rawId = data.studentId || "";
     const weekRaw = data.week;
@@ -168,3 +175,54 @@ function buildResponse_(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+/**
+ * Retrieves all registered students with DOB (TTL) from Google Sheets
+ */
+function getStudentList_(ss) {
+  const students = [];
+  const sheetPresensi = ss.getSheetByName("Presensi");
+  const sheetSiswa = ss.getSheetByName("Data Siswa");
+  
+  if (!sheetPresensi) return [];
+  
+  // Read Presensi Data (Fast bulk read)
+  const presensiData = sheetPresensi.getDataRange().getValues();
+  const studentMap = {};
+  
+  // Start from row 1 (skip header)
+  for (let i = 1; i < presensiData.length; i++) {
+    const id = String(presensiData[i][11] || "").trim(); // Column L (Index 11)
+    const name = String(presensiData[i][1] || "").trim(); // Column B (Index 1)
+    if (id) {
+      studentMap[id.toLowerCase()] = {
+        studentId: id,
+        name: name,
+        dob: "", // Default empty
+        kelasKi: "", // Default empty
+        katekisKk: "" // Default empty
+      };
+    }
+  }
+  
+  // Read Data Siswa (for TTL in Column F - Index 5, Kelas KI in Column R - Index 17, Katekis KK in Column S - Index 18)
+  if (sheetSiswa) {
+    const siswaData = sheetSiswa.getDataRange().getValues();
+    for (let k = 1; k < siswaData.length; k++) {
+      const sId = String(siswaData[k][11] || "").trim().toLowerCase(); // Column L
+      if (studentMap[sId]) {
+        studentMap[sId].dob = String(siswaData[k][5] || "").trim(); // Column F (TTL)
+        studentMap[sId].kelasKi = String(siswaData[k][17] || "").trim(); // Column R (Index 17)
+        studentMap[sId].katekisKk = String(siswaData[k][18] || "").trim(); // Column S (Index 18)
+      }
+    }
+  }
+  
+  // Convert map to array
+  for (const key in studentMap) {
+    students.push(studentMap[key]);
+  }
+  
+  return students;
+}
+
