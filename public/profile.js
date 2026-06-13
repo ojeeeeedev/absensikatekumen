@@ -270,14 +270,16 @@ function renderStudents(students) {
       <div class="header-left">
         ${photoHtml}
         <div class="student-meta">
-          <div class="student-name-text-wrapper" style="display: flex; align-items: center; gap: 8px;">
+          <div class="student-name-text-wrapper">
             <div class="student-name-text">${escapeHTML(student.name)}</div>
-            ${inactiveBadge}
           </div>
           <div class="student-id-text">${escapeHTML(student.studentId)}</div>
         </div>
       </div>
-      <span class="material-icons-outlined expand-arrow">expand_more</span>
+      <div class="header-right">
+        ${inactiveBadge}
+        <span class="material-icons-outlined expand-arrow">expand_more</span>
+      </div>
     `;
     
     const body = document.createElement('div');

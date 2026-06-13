@@ -1059,6 +1059,12 @@ input:focus-visible,
   gap: 12px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .student-thumb {
   width: 40px;
   height: 40px;
