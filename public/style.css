@@ -1208,10 +1208,9 @@ input:focus-visible,
 
 /* Summary Box */
 .students-summary-container {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
-  justify-content: space-between;
-  align-items: center;
   background: transparent;
   border: none;
   padding: 0;
@@ -1219,7 +1218,6 @@ input:focus-visible,
 }
 
 .summary-badge {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1230,6 +1228,12 @@ input:focus-visible,
   font-weight: 600;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+
+.summary-badge.summary-total {
+  grid-column: span 2;
+  padding: 10px;
+  font-size: 0.8rem;
 }
 
 .summary-badge span.material-icons-outlined {
