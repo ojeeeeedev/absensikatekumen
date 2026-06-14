@@ -323,12 +323,12 @@ body {
    STATE 2: ACTIVE SCANNING PANEL
    ========================================= */
 .active-topic-bar {
-  background: var(--bg-body); border: 1px solid var(--border-glass);
-  padding: 0.65rem 0.85rem; border-radius: 10px;
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 0.75rem;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0.65rem 0.85rem; border-radius: 12px;
+  background: var(--bg-glass); border: 1px solid var(--border-glass);
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  flex-shrink: 0;
 }
 .active-topic-bar:hover {
   border-color: var(--accent);
@@ -361,6 +361,7 @@ body {
   background: #000; box-shadow: inset 0 4px 12px rgba(0,0,0,0.2);
   margin: 0 auto 0.75rem auto;
   pointer-events: none;
+  flex-shrink: 0; /* Prevents vertical shrinking */
 }
 #reader { width: 100%; height: 100%; object-fit: cover; }
 
@@ -376,6 +377,7 @@ body {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   font-size: 0.8rem; font-weight: 500; text-align: center;
   margin-bottom: 0.75rem;
+  flex-shrink: 0;
 }
 #status.idle { background: var(--status-idle-bg); border: 1px dashed var(--status-idle-border); color: var(--status-idle-text); }
 #status.success { background: var(--status-success-bg); border: 1px solid var(--status-success-border); color: var(--status-success-text); }
@@ -398,6 +400,7 @@ body {
   gap: 12px;
   font-size: 0.7rem;
   margin-bottom: 0.75rem;
+  flex-shrink: 0;
 }
 
 .queue-progress-text {
