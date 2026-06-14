@@ -173,7 +173,10 @@ body {
 }
 
 #app-container {
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 72px);
+  max-height: calc(var(--vh, 1vh) * 100 - 72px);
+  margin-top: auto;
+  margin-bottom: 0;
 }
 
 .app-section {
@@ -359,7 +362,7 @@ body {
 #active-topic-name { font-weight: 500; color: var(--text-primary); }
 
 #reader-container {
-  width: 260px;
+  width: 245px;
   max-width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
@@ -379,21 +382,34 @@ body {
   font-size: 0.8rem; gap: 12px; z-index: 10;
 }
 
-#status {
-  width: 100%; padding: 0.65rem; border-radius: 10px; min-height: 42px;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  font-size: 0.8rem; font-weight: 500; text-align: center;
-  margin-bottom: 0.75rem;
-  flex-shrink: 0;
+/* Scanner Ready Pulsing Indicator */
+.scanner-ready-dot {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 12px;
+  height: 12px;
+  background-color: #4ade80;
+  border-radius: 50%;
+  z-index: 8;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+  animation: pulse-green 1.5s infinite;
 }
-#status.idle { background: var(--status-idle-bg); border: 1px dashed var(--status-idle-border); color: var(--status-idle-text); }
-#status.success { background: var(--status-success-bg); border: 1px solid var(--status-success-border); color: var(--status-success-text); }
-#status.error { background: var(--status-duplicate-bg); border: 1px solid var(--status-duplicate-border); color: var(--status-duplicate-text); }
-#status.processing { background: var(--status-pending-bg); border: 1px solid var(--status-pending-border); color: var(--status-pending-text); }
 
-.status-text-container { display: flex; flex-direction: column; align-items: center; }
-.main-text { font-weight: 600; }
-.sub-text { font-size: 0.65rem; opacity: 0.85; margin-top: 1px; }
+@keyframes pulse-green {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(74, 222, 128, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
 
 /* Queue Warning Banner */
 .queue-warning-banner {
@@ -482,6 +498,7 @@ body {
 .queue-list-container {
   overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
   padding-right: 2px;
+  padding-bottom: 40px;
   flex: 1 1 auto;
   min-height: 115px; /* Ensures visual cue showing 1 + 0.2 card height */
 }
@@ -1467,7 +1484,6 @@ input:focus-visible,
    TOPIC NOT SELECTED DIMMING STATE
    ========================================= */
 .needs-topic #reader-container,
-.needs-topic #status,
 .needs-topic #queue-warning-bar,
 .needs-topic #queue-history-panel {
   opacity: 0.2;

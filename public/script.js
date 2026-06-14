@@ -278,7 +278,7 @@ class ScanQueue {
     // Prevent double scan check (cooldown 3s for same studentId)
     if (this.cooldowns[studentId] && (timestamp - this.cooldowns[studentId] < 3000)) {
       console.log(`Scan blocked by cooldown: ${studentId}`);
-      return;
+      return false;
     }
     this.cooldowns[studentId] = timestamp;
 
@@ -305,6 +305,7 @@ class ScanQueue {
     
     // Trigger immediate sequential processing loop
     this.process();
+    return true;
   }
 
   async process() {
@@ -758,7 +759,7 @@ function triggerVisualFlash(type) {
   } else if (type === 'duplicate') {
     flash.style.backgroundColor = '#f57c00'; // Orange
   } else if (type === 'scan') {
-    flash.style.backgroundColor = '#ffffff'; // White
+    flash.style.backgroundColor = '#86efac'; // Light green
     flash.style.opacity = '0.5';
   } else {
     flash.style.backgroundColor = '#c62828'; // Red
@@ -776,7 +777,7 @@ function triggerVisualFlash(type) {
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
   if (!selectedWeek) {
-    showStatus("Pilih topik terlebih dahulu!", "error");
+    showToast("Pilih topik terlebih dahulu!", "error");
     openTopicModal();
     return;
   }
@@ -785,21 +786,21 @@ async function handleScan(decodedText) {
   try {
     originalStudentId = safeAtob(decodedText);
   } catch (e) {
-    showStatus("Kode QR Tidak Valid", "error", "Format kode tidak dikenali.");
+    showToast("Kode QR Tidak Valid", "error");
     if (navigator.vibrate) navigator.vibrate([100, 50]);
     triggerVisualFlash('error');
-    setTimeout(() => resetStatus(), 3000); // Revert back to idle/processing status
     return;
   }
 
-  // Optimistic tactile feedback on read
-  if (navigator.vibrate) navigator.vibrate(80);
-
-  // Trigger visual flash feedback immediately on scan
-  triggerVisualFlash('scan');
-
   // Add scan to queue instantly and keep camera running!
-  scanQueue.add(originalStudentId, selectedWeek);
+  const added = scanQueue.add(originalStudentId, selectedWeek);
+  if (added) {
+    // Optimistic tactile feedback on read
+    if (navigator.vibrate) navigator.vibrate(80);
+
+    // Trigger visual flash feedback immediately on scan
+    triggerVisualFlash('scan');
+  }
 }
 
 async function startScanner() {
@@ -830,11 +831,15 @@ async function startScanner() {
     scannerStartPromise = null;
     const loader = document.getElementById("camera-loader");
     if (loader) loader.style.display = "none";
+    const readyDot = document.querySelector(".scanner-ready-dot");
+    if (readyDot) readyDot.style.display = "block";
     resetStatus();
   }).catch(err => {
     scannerStartPromise = null;
     console.error("Camera start failed:", err);
     html5QrcodeScanner = null; // Reset reference so retry can be attempted
+    const readyDot = document.querySelector(".scanner-ready-dot");
+    if (readyDot) readyDot.style.display = "none";
     const loader = document.getElementById("camera-loader");
     if (loader) {
       loader.innerHTML = '<div style="color:var(--status-duplicate-text); text-align:center; padding:10px;">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
@@ -843,6 +848,9 @@ async function startScanner() {
 }
 
 async function stopScanner() {
+  const readyDot = document.querySelector(".scanner-ready-dot");
+  if (readyDot) readyDot.style.display = "none";
+
   if (html5QrcodeScanner) {
     // If still starting, wait for the start promise to resolve first
     if (scannerStartPromise) {
