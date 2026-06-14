@@ -27,7 +27,7 @@ const STATIC_TOPICS = [
   { "week": "24", "name": "Yesus bersama Orang Miskin, Menderita, dan Berdosa" },
   { "week": "25", "name": "Peranan Doa dalam Hidup Yesus" },
   { "week": "26", "name": "Perjamuan Terakhir (P)" },
-  { "week": "27", "name": "Sengsara dan Wafat Yesus" },
+  { "week": "27", "name": "Sengsara dan Wafat Yesus (KI)" },
   { "week": "28", "name": "Kebangkitan Yesus" },
   { "week": "29", "name": "Pentakosta" },
   { "week": "30", "name": "Yesus Sungguh Allah dan Sungguh Manusia (P)" },

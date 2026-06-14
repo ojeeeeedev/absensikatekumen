@@ -359,7 +359,7 @@ body {
 #active-topic-name { font-weight: 500; color: var(--text-primary); }
 
 #reader-container {
-  width: 300px;
+  width: 275px;
   max-width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
