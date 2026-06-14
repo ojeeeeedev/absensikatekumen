@@ -956,6 +956,10 @@ async function loadVersion() {
       if (versionEl && data.version) {
         versionEl.textContent = `v${data.version}`;
       }
+      const loginVersionEl = document.getElementById('login-version');
+      if (loginVersionEl && data.version) {
+        loginVersionEl.textContent = `v${data.version}`;
+      }
     }
   } catch (error) {
     console.error("Failed to load version:", error);

@@ -257,6 +257,12 @@ body {
 #login-footer a {
   color: var(--accent); text-decoration: none; font-weight: 500;
 }
+.login-version-divider {
+  color: var(--text-secondary); margin: 0 6px; opacity: 0.5;
+}
+#login-version {
+  color: var(--text-secondary); opacity: 0.8;
+}
 
 .login-error-message {
   padding: 0.75rem 1rem; background: var(--status-duplicate-bg);
