@@ -345,7 +345,6 @@ class ScanQueue {
           document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           showStatus("Sesi Habis", "error", "Silakan login kembali.");
           if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-          triggerVisualFlash('error');
           if (typeof setAppState === 'function') setAppState(0);
           return; // Stop queue loop
         }
@@ -366,7 +365,6 @@ class ScanQueue {
           
           showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
 
-          triggerVisualFlash('error');
           const container = document.getElementById('app-container');
           if (!container || !container.classList.contains('state-scanning')) {
             showStatus("Gagal", "error", pendingItem.errorMsg);
@@ -385,7 +383,6 @@ class ScanQueue {
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
-            triggerVisualFlash('success');
             if (navigator.vibrate) navigator.vibrate(200);
           } else {
             showStatus(data.name, "success", `Hadir - Topik ${pendingItem.week}`);
@@ -401,7 +398,6 @@ class ScanQueue {
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
-            triggerVisualFlash('duplicate');
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           } else {
             showStatus("Sudah Hadir", "error", data.message);
@@ -415,7 +411,6 @@ class ScanQueue {
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
-            triggerVisualFlash('error');
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           } else {
             showStatus("Gagal", "error", pendingItem.errorMsg);
@@ -732,7 +727,7 @@ function resetStatus() {
       return;
     }
   }
-  showStatus("Silakan pindai kode QR berikutnya", "idle");
+  showStatus("Siap memindai", "idle");
 }
 
 function safeAtob(str) {
@@ -762,6 +757,9 @@ function triggerVisualFlash(type) {
     flash.style.backgroundColor = '#2e7d32'; // Green
   } else if (type === 'duplicate') {
     flash.style.backgroundColor = '#f57c00'; // Orange
+  } else if (type === 'scan') {
+    flash.style.backgroundColor = '#ffffff'; // White
+    flash.style.opacity = '0.5';
   } else {
     flash.style.backgroundColor = '#c62828'; // Red
   }
@@ -796,6 +794,9 @@ async function handleScan(decodedText) {
 
   // Optimistic tactile feedback on read
   if (navigator.vibrate) navigator.vibrate(80);
+
+  // Trigger visual flash feedback immediately on scan
+  triggerVisualFlash('scan');
 
   // Add scan to queue instantly and keep camera running!
   scanQueue.add(originalStudentId, selectedWeek);
