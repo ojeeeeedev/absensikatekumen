@@ -58,7 +58,10 @@ export default async function handler(req, res) {
     const gasResponse = await fetch(scriptURL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getStudentList" })
+      body: JSON.stringify({
+        action: "getStudentList",
+        api_secret: process.env.GAS_SECRET_KEY || "default_development_secret"
+      })
     });
 
     const text = await gasResponse.text();
