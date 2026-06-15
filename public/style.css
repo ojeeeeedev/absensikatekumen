@@ -855,6 +855,110 @@ input:focus-visible,
   margin: 0;
 }
 
+.carousel-container-outer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.carousel-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Carousel Navigation Buttons */
+.carousel-nav-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: absolute;
+  z-index: 10;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.carousel-nav-btn.prev { left: -10px; }
+.carousel-nav-btn.next { right: -10px; }
+.carousel-nav-btn:hover {
+  background: var(--bg-hover);
+  transform: scale(1.08);
+}
+.carousel-nav-btn:active {
+  transform: scale(0.95);
+}
+.carousel-nav-btn[disabled], .carousel-nav-btn.disabled {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* Simple White Pagination Dots */
+.carousel-dots-container {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.35); /* Simple semi-transparent white */
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.carousel-dot.active {
+  background-color: rgba(255, 255, 255, 1); /* Full opaque white */
+  transform: scale(1.2);
+}
+
+/* Skeleton Loading Placeholder */
+.queue-row.skeleton {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 1px dashed var(--border-glass) !important;
+  border-left: 4px solid var(--border-glass) !important;
+  cursor: default !important;
+  pointer-events: none;
+}
+.skeleton-pulse {
+  background: linear-gradient(90deg, var(--border-glass) 25%, var(--bg-hover) 50%, var(--border-glass) 75%);
+  background-size: 200% 100%;
+  animation: skeletonLoading 1.5s infinite;
+}
+@keyframes skeletonLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.student-photo.skeleton-pulse {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none !important;
+}
+.skeleton-line {
+  height: 12px;
+  border-radius: 4px;
+}
+.skeleton-line.name {
+  width: 120px;
+  margin-bottom: 6px;
+}
+.skeleton-line.id {
+  width: 80px;
+}
+.status-badge.skeleton-pulse {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
 .history-header-row {
   display: flex;
   justify-content: space-between;
@@ -960,24 +1064,6 @@ input:focus-visible,
 [data-theme="dark"] .compact-trash-btn.confirm-delete {
   background: #c62828 !important;
   border-color: #c62828 !important;
-}
-.carousel-dots-container {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 8px;
-  margin-bottom: 4px;
-}
-.carousel-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--border-glass);
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-.carousel-dot.active {
-  background-color: var(--accent);
-  transform: scale(1.2);
 }
 
 /* --- PROFILE ACCORDION STYLES --- */
