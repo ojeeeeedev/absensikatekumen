@@ -146,31 +146,57 @@
             <div id="reader"></div>
           </div>
 
-          <!-- Status Indicator -->
-          <div id="status" class="idle"></div>
+            <!-- Note: #status and #queue-warning-bar containers are removed from here -->
 
-          <!-- Sync Queue Warning Bar -->
-          <div id="queue-warning-bar" class="queue-warning-banner" style="display: none;">
-            <span id="queue-progress-text" class="queue-progress-text">0/0 Selesai</span>
-            <div class="queue-progress-bar-container">
-              <div id="queue-progress-bar-fill" class="queue-progress-bar-fill" style="width: 0%;"></div>
-            </div>
-            <div class="spinner-small"></div>
-          </div>
+            <!-- Queue History List -->
+            <div id="queue-history-panel">
+              <!-- Integrated Header (Title, Sync Spinner, and Trash Can) -->
+              <div id="history-header" class="history-header-row" style="display: none;">
+                <div class="history-title-area">
+                  <span class="history-title-text">Riwayat Scan</span>
+                  <div id="history-sync-spinner" class="spinner-small" style="display: none;"></div>
+                </div>
+                <button id="history-trash-btn" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" onclick="handleTrashClick(event)">
+                  <span class="material-icons-outlined icon-default">delete_outline</span>
+                  <span class="material-icons-outlined icon-confirm" style="display: none;">delete_forever</span>
+                </button>
+              </div>
 
-          <!-- Queue History List -->
-          <div id="queue-history-panel">
-            <div id="queue-list" class="queue-list-container">
-              <!-- Dynamically populated via script -->
-              <div class="queue-empty-state">Belum ada data pemindaian.</div>
-              <!-- Clear History Button -->
-              <button id="floating-clear-btn" class="floating-clear-btn" style="display: none;" onclick="handleFloatingClearClick(event)" aria-label="Hapus semua riwayat pemindaian">
-                <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
-                <span class="clear-text">Hapus Riwayat Scan</span>
-                <span class="clear-confirm-text">Yakin hapus?</span>
-              </button>
+              <!-- Segmented Progress Bar Area -->
+              <div id="history-progress-area" class="history-progress-container" style="display: none;">
+                <div class="segmented-progress-bar">
+                  <div id="segment-success" class="progress-segment success" style="width: 0%;"></div>
+                  <div id="segment-duplicate" class="progress-segment duplicate" style="width: 0%;"></div>
+                  <div id="segment-error" class="progress-segment error" style="width: 0%;"></div>
+                  <div id="segment-pending" class="progress-segment pending" style="width: 0%;"></div>
+                </div>
+                <div class="progress-legend">
+                  <span id="legend-success" class="legend-item success" style="display: none;">
+                    <span class="dot"></span> <span class="text">0 Hadir</span>
+                  </span>
+                  <span id="legend-duplicate" class="legend-item duplicate" style="display: none;">
+                    <span class="dot"></span> <span class="text">0 Duplikat</span>
+                  </span>
+                  <span id="legend-error" class="legend-item error" style="display: none;">
+                    <span class="dot"></span> <span class="text">0 Gagal</span>
+                  </span>
+                  <span id="legend-pending" class="legend-item pending" style="display: none;">
+                    <span class="dot"></span> <span class="text">0 Sinkronisasi</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Carousel Wrapper -->
+              <div class="carousel-container">
+                <div id="queue-list" class="queue-list-container horizontal-carousel">
+                  <!-- Dynamically populated via script -->
+                  <div class="queue-empty-state">Belum ada data pemindaian.</div>
+                </div>
+              </div>
+
+              <!-- Carousel Pagination Dots -->
+              <div id="carousel-dots" class="carousel-dots-container" style="display: none;"></div>
             </div>
-          </div>
         </div>
 
         <!-- Footer -->
