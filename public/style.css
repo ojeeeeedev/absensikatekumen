@@ -1050,15 +1050,95 @@ input:focus-visible,
   background: rgba(198, 40, 40, 0.08);
   border-color: var(--status-duplicate-text);
 }
-.compact-trash-btn.confirm-delete {
-  background: var(--status-duplicate-text) !important;
-  color: white !important;
-  border-color: var(--status-duplicate-text) !important;
+/* Trash Delete Confirmation Overlay */
+.confirm-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-[data-theme="dark"] .compact-trash-btn.confirm-delete {
-  background: #c62828 !important;
-  border-color: #c62828 !important;
+
+.confirm-overlay.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
+
+.confirm-content {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.confirm-message {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.confirm-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.confirm-btn.yes {
+  background: var(--status-duplicate-text);
+  color: white;
+  border-color: var(--status-duplicate-text);
+}
+
+.confirm-btn.yes:hover {
+  background: var(--status-duplicate-text);
+  filter: brightness(0.9);
+}
+
+[data-theme="dark"] .confirm-btn.yes {
+  background: #c62828;
+  border-color: #c62828;
+}
+
+[data-theme="dark"] .confirm-btn.yes:hover {
+  background: #b71c1c;
+}
+
+.confirm-btn.no {
+  background: var(--status-idle-bg);
+  border: 1px solid var(--status-idle-border);
+  color: var(--text-primary);
+}
+
+.confirm-btn.no:hover {
+  background: var(--bg-hover);
+}
+
 
 /* --- PROFILE ACCORDION STYLES --- */
 .profile-selector-container {

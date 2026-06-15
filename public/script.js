@@ -1185,60 +1185,69 @@ window.closeStudentModal = function(event) {
   }
 };
 
-window.handleTrashClick = function(event) {
-  event.stopPropagation();
-  const btn = document.getElementById('history-trash-btn');
-  if (!btn) return;
+window.openDeleteConfirm = function(event) {
+  if (event) event.stopPropagation();
 
-  const defaultIcon = btn.querySelector('.icon-default');
-  const confirmIcon = btn.querySelector('.icon-confirm');
-
-  if (!btn.classList.contains('confirm-delete')) {
-    btn.classList.add('confirm-delete');
-    btn.setAttribute('aria-label', 'Konfirmasi hapus semua riwayat pemindaian');
-    if (defaultIcon) defaultIcon.style.display = 'none';
-    if (confirmIcon) confirmIcon.style.display = 'inline-block';
-
-    if (window.trashBtnTimeout) clearTimeout(window.trashBtnTimeout);
-    window.trashBtnTimeout = setTimeout(() => {
-      btn.classList.remove('confirm-delete');
-      btn.setAttribute('aria-label', 'Hapus riwayat pemindaian');
-      if (defaultIcon) defaultIcon.style.display = 'inline-block';
-      if (confirmIcon) confirmIcon.style.display = 'none';
-    }, 4000);
-  } else {
-    if (window.trashBtnTimeout) clearTimeout(window.trashBtnTimeout);
-    btn.classList.remove('confirm-delete');
-    btn.setAttribute('aria-label', 'Hapus riwayat pemindaian');
-    if (defaultIcon) defaultIcon.style.display = 'inline-block';
-    if (confirmIcon) confirmIcon.style.display = 'none';
+  if (typeof scanQueue !== 'undefined') {
+    const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+    const completedCount = scanQueue.queue.length - pendingCount;
     
-    if (typeof scanQueue !== 'undefined') {
-      const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-      const completedCount = scanQueue.queue.length - pendingCount;
-      
-      if (completedCount === 0) {
-        showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
-        return;
-      }
-      
-      scanQueue.queue = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing');
-      scanQueue.save();
-      showToast("Riwayat pemindaian berhasil dibersihkan", "info");
+    if (completedCount === 0) {
+      showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
+      return;
     }
+  }
+
+  const overlay = document.getElementById('history-confirm-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    // Force a reflow to trigger transition animation
+    overlay.offsetHeight;
+    overlay.classList.add('show');
   }
 };
 
-// Document click listener to auto-collapse trash button if clicking outside
-document.addEventListener('click', () => {
-  const btn = document.getElementById('history-trash-btn');
-  if (btn && btn.classList.contains('confirm-delete')) {
-    btn.classList.remove('confirm-delete');
-    btn.setAttribute('aria-label', 'Hapus riwayat pemindaian');
-    const defaultIcon = btn.querySelector('.icon-default');
-    const confirmIcon = btn.querySelector('.icon-confirm');
-    if (defaultIcon) defaultIcon.style.display = 'inline-block';
-    if (confirmIcon) confirmIcon.style.display = 'none';
-    if (window.trashBtnTimeout) clearTimeout(window.trashBtnTimeout);
+window.closeDeleteConfirm = function(event) {
+  if (event) event.stopPropagation();
+  const overlay = document.getElementById('history-confirm-overlay');
+  if (overlay) {
+    overlay.classList.remove('show');
+    setTimeout(() => {
+      if (!overlay.classList.contains('show')) {
+        overlay.style.display = 'none';
+      }
+    }, 300);
+  }
+};
+
+window.confirmDeleteHistory = function(event) {
+  if (event) event.stopPropagation();
+  
+  if (typeof scanQueue !== 'undefined') {
+    const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
+    const completedCount = scanQueue.queue.length - pendingCount;
+    
+    if (completedCount === 0) {
+      showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
+      window.closeDeleteConfirm();
+      return;
+    }
+    
+    scanQueue.queue = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing');
+    scanQueue.save();
+    showToast("Riwayat pemindaian berhasil dibersihkan", "info");
+  }
+  
+  window.closeDeleteConfirm();
+};
+
+// Document click listener to close delete confirmation overlay when clicking outside
+document.addEventListener('click', (event) => {
+  const overlay = document.getElementById('history-confirm-overlay');
+  if (overlay && overlay.classList.contains('show')) {
+    const trashBtn = document.getElementById('history-trash-btn');
+    if (!overlay.contains(event.target) && (!trashBtn || !trashBtn.contains(event.target))) {
+      window.closeDeleteConfirm();
+    }
   }
 });

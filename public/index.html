@@ -161,9 +161,8 @@
                     <div id="segment-pending" class="progress-segment pending" style="width: 0%;"></div>
                   </div>
                   <div id="history-sync-spinner" class="spinner-small" style="display: none; margin-right: 4px;"></div>
-                  <button id="history-trash-btn" type="button" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" style="display: none;" onclick="handleTrashClick(event)">
+                  <button id="history-trash-btn" type="button" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" style="display: none;" onclick="openDeleteConfirm(event)">
                     <span class="material-icons-outlined icon-default" aria-hidden="true">delete_outline</span>
-                    <span class="material-icons-outlined icon-confirm" style="display: none;" aria-hidden="true">delete_forever</span>
                   </button>
                 </div>
                 <div class="progress-legend">
@@ -184,6 +183,17 @@
 
               <!-- Carousel Wrapper -->
               <div class="carousel-container-outer">
+                <!-- Trash Delete Confirmation Overlay -->
+                <div id="history-confirm-overlay" class="confirm-overlay" style="display: none;">
+                  <div class="confirm-content">
+                    <span class="confirm-message">Hapus riwayat pindaian?</span>
+                    <div class="confirm-actions">
+                      <button id="confirm-btn-yes" class="confirm-btn yes" onclick="confirmDeleteHistory(event)">Ya, hapus</button>
+                      <button id="confirm-btn-no" class="confirm-btn no" onclick="closeDeleteConfirm(event)">Tidak</button>
+                    </div>
+                  </div>
+                </div>
+
                 <button id="carousel-prev-btn" type="button" class="carousel-nav-btn prev" aria-label="Slide sebelumnya" style="display: none;" onclick="scrollCarousel(-1)">
                   <span class="material-icons-outlined" aria-hidden="true">chevron_left</span>
                 </button>
@@ -207,7 +217,7 @@
         <!-- Footer -->
         <footer class="app-footer">
           <div class="footer-text">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.3.11</a> © 2026 Tim Katekumen Dewasa
+            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.3.12</a> © 2026 Tim Katekumen Dewasa
             &bull; <a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
           </div>
         </footer>
