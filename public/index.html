@@ -151,19 +151,19 @@
             <!-- Queue History List -->
             <div id="queue-history-panel">
               <!-- Integrated Header (Title, Sync Spinner, and Trash Can) -->
-              <div id="history-header" class="history-header-row" style="display: none;">
+              <div id="history-header" class="history-header-row">
                 <div class="history-title-area">
                   <span class="history-title-text">Riwayat Scan</span>
                   <div id="history-sync-spinner" class="spinner-small" style="display: none;"></div>
                 </div>
-                <button id="history-trash-btn" type="button" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" onclick="handleTrashClick(event)">
+                <button id="history-trash-btn" type="button" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" style="display: none;" onclick="handleTrashClick(event)">
                   <span class="material-icons-outlined icon-default" aria-hidden="true">delete_outline</span>
                   <span class="material-icons-outlined icon-confirm" style="display: none;" aria-hidden="true">delete_forever</span>
                 </button>
               </div>
 
               <!-- Segmented Progress Bar Area -->
-              <div id="history-progress-area" class="history-progress-container" style="display: none;">
+              <div id="history-progress-area" class="history-progress-container">
                 <div class="segmented-progress-bar" aria-hidden="true">
                   <div id="segment-success" class="progress-segment success" style="width: 0%;"></div>
                   <div id="segment-duplicate" class="progress-segment duplicate" style="width: 0%;"></div>
@@ -187,11 +187,20 @@
               </div>
 
               <!-- Carousel Wrapper -->
-              <div class="carousel-container">
-                <div id="queue-list" class="queue-list-container horizontal-carousel">
-                  <!-- Dynamically populated via script -->
-                  <div class="queue-empty-state">Belum ada data pemindaian.</div>
+              <div class="carousel-container-outer">
+                <button id="carousel-prev-btn" type="button" class="carousel-nav-btn prev" aria-label="Slide sebelumnya" style="display: none;" onclick="scrollCarousel(-1)">
+                  <span class="material-icons-outlined" aria-hidden="true">chevron_left</span>
+                </button>
+                
+                <div class="carousel-container">
+                  <div id="queue-list" class="queue-list-container horizontal-carousel">
+                    <!-- Dynamically populated via script -->
+                  </div>
                 </div>
+                
+                <button id="carousel-next-btn" type="button" class="carousel-nav-btn next" aria-label="Slide berikutnya" style="display: none;" onclick="scrollCarousel(1)">
+                  <span class="material-icons-outlined" aria-hidden="true">chevron_right</span>
+                </button>
               </div>
 
               <!-- Carousel Pagination Dots -->
