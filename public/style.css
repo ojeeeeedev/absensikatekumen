@@ -536,10 +536,16 @@ body {
 
 .student-text { display: flex; flex-direction: column; gap: 2px; }
 .student-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
+.student-topic {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+}
 .student-id {
   font-family: 'Google Sans Code', monospace;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .status-badge {

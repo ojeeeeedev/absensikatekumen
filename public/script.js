@@ -654,9 +654,14 @@ class ScanQueue {
       studentName.textContent = item.name || 'Katekumen';
       studentText.appendChild(studentName);
 
+      const studentTopic = document.createElement('span');
+      studentTopic.className = 'student-topic';
+      studentTopic.textContent = `Topik ${item.week}`;
+      studentText.appendChild(studentTopic);
+
       const studentIdSpan = document.createElement('span');
       studentIdSpan.className = 'student-id';
-      studentIdSpan.textContent = `${item.studentId} • Topik ${item.week}`;
+      studentIdSpan.textContent = item.studentId;
       studentText.appendChild(studentIdSpan);
 
       studentInfo.appendChild(studentText);
