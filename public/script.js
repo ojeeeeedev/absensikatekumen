@@ -1,6 +1,52 @@
 let html5QrcodeScanner = null;
 let selectedWeek = null;
 
+window.scrollCarousel = function(direction) {
+  const listContainer = document.getElementById('queue-list');
+  if (!listContainer) return;
+  const itemWidth = (listContainer.clientWidth || 0) + 12; // clientWidth + 12px gap
+  listContainer.scrollBy({
+    left: direction * itemWidth,
+    behavior: 'smooth'
+  });
+};
+
+function updateNavButtons(listContainer, renderItemsLength) {
+  const prevBtn = document.getElementById('carousel-prev-btn');
+  const nextBtn = document.getElementById('carousel-next-btn');
+  if (!prevBtn || !nextBtn) return;
+  
+  if (renderItemsLength <= 1) {
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    return;
+  }
+
+  const scrollLeft = listContainer.scrollLeft;
+  const clientWidth = listContainer.clientWidth;
+  const scrollWidth = listContainer.scrollWidth;
+
+  prevBtn.style.display = 'flex';
+  nextBtn.style.display = 'flex';
+  
+  if (scrollLeft <= 5) {
+    prevBtn.classList.add('disabled');
+    prevBtn.setAttribute('disabled', 'true');
+  } else {
+    prevBtn.classList.remove('disabled');
+    prevBtn.removeAttribute('disabled');
+  }
+
+  if (scrollLeft + clientWidth >= scrollWidth - 5) {
+    nextBtn.classList.add('disabled');
+    nextBtn.setAttribute('disabled', 'true');
+  } else {
+    nextBtn.classList.remove('disabled');
+    nextBtn.removeAttribute('disabled');
+  }
+}
+
+
 // Expose handleLogout globally
 window.handleLogout = function(e) {
   if (e) e.preventDefault();
@@ -490,23 +536,54 @@ class ScanQueue {
     const progressArea = document.getElementById('history-progress-area');
     const dotsContainer = document.getElementById('carousel-dots');
     const trashBtn = document.getElementById('history-trash-btn');
+    const prevBtn = document.getElementById('carousel-prev-btn');
+    const nextBtn = document.getElementById('carousel-next-btn');
+
+    // Ensure header and progress areas are always visible (V3 Spec)
+    if (historyHeader) historyHeader.style.display = 'flex';
+    if (progressArea) progressArea.style.display = 'block';
 
     if (queueLength === 0) {
-      if (historyHeader) historyHeader.style.display = 'none';
-      if (progressArea) progressArea.style.display = 'none';
+      if (trashBtn) trashBtn.style.display = 'none';
       if (dotsContainer) dotsContainer.style.display = 'none';
+      if (prevBtn) prevBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
       
-      listContainer.innerHTML = '';
-      const emptyDiv = document.createElement('div');
-      emptyDiv.className = 'queue-empty-state';
-      emptyDiv.textContent = 'Belum ada data pemindaian.';
-      listContainer.appendChild(emptyDiv);
+      // Render 0% progress bar
+      const segSuccess = document.getElementById('segment-success');
+      const segDuplicate = document.getElementById('segment-duplicate');
+      const segError = document.getElementById('segment-error');
+      const segPending = document.getElementById('segment-pending');
+      if (segSuccess) segSuccess.style.width = '0%';
+      if (segDuplicate) segDuplicate.style.width = '0%';
+      if (segError) segError.style.width = '0%';
+      if (segPending) segPending.style.width = '0%';
+
+      // Hide all legend tags
+      const legends = ['legend-success', 'legend-duplicate', 'legend-error', 'legend-pending'];
+      legends.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+
+      // Render Skeleton Card Placeholder (V3 Spec)
+      listContainer.innerHTML = `
+        <div class="queue-row skeleton" aria-hidden="true">
+          <div class="student-info">
+            <div class="student-photo skeleton-pulse"></div>
+            <div class="student-text">
+              <div class="skeleton-line name skeleton-pulse"></div>
+              <div class="skeleton-line id skeleton-pulse"></div>
+            </div>
+          </div>
+          <div class="status-badge skeleton-pulse"></div>
+        </div>
+      `;
       return;
     }
 
-    // Show headers and progress area
-    if (historyHeader) historyHeader.style.display = 'flex';
-    if (progressArea) progressArea.style.display = 'block';
+    // Show trash button if at least one scan has been conducted
+    if (trashBtn) trashBtn.style.display = 'flex';
 
     // 1. Calculate counters
     let successCount = 0;
@@ -679,11 +756,16 @@ class ScanQueue {
             }
             currentActiveIndex = activeIndex;
           }
+          updateNavButtons(listContainer, renderItems.length);
         };
       } else {
         dotsContainer.style.display = 'none';
+        listContainer.onscroll = null;
       }
     }
+
+    // Update navigation buttons initially
+    updateNavButtons(listContainer, renderItems.length);
   }
 
   clearOldHistory() {
