@@ -941,14 +941,14 @@ input:focus-visible,
 
 
 .history-progress-container {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 .progress-bar-row {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  margin: 6px 0;
+  margin: 2px 0 4px 0;
 }
 .segmented-progress-bar {
   flex: 1;
