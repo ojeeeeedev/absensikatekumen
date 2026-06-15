@@ -647,31 +647,38 @@ class ScanQueue {
         dotsContainer.style.display = 'flex';
         renderItems.forEach((_, index) => {
           const dot = document.createElement('button');
+          dot.setAttribute('type', 'button');
           dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
           dot.setAttribute('aria-label', `Halaman ${index + 1}`);
+          if (index === 0) dot.setAttribute('aria-current', 'step');
           dot.onclick = () => {
-            const cardWidth = listContainer.clientWidth;
+            const itemWidth = (listContainer.clientWidth || 0) + 12; // cardWidth + 12px gap
             listContainer.scrollTo({
-              left: index * cardWidth,
+              left: index * itemWidth,
               behavior: 'smooth'
             });
           };
           dotsContainer.appendChild(dot);
         });
 
-        // Add scroll listener to update active dots (cache dot elements to avoid high-frequency DOM query)
+        // Add scroll listener to update active dots (cache dot elements and active index to avoid high-frequency DOM mutations)
         const dots = Array.from(dotsContainer.querySelectorAll('.carousel-dot'));
+        let currentActiveIndex = 0;
         listContainer.onscroll = () => {
           const scrollLeft = listContainer.scrollLeft;
-          const cardWidth = listContainer.clientWidth || 1;
-          const activeIndex = Math.round(scrollLeft / cardWidth);
-          dots.forEach((dot, idx) => {
-            if (idx === activeIndex) {
-              dot.classList.add('active');
-            } else {
-              dot.classList.remove('active');
+          const itemWidth = (listContainer.clientWidth || 1) + 12; // cardWidth + 12px gap
+          const activeIndex = Math.max(0, Math.min(renderItems.length - 1, Math.round(scrollLeft / itemWidth)));
+          if (activeIndex !== currentActiveIndex) {
+            if (dots[currentActiveIndex]) {
+              dots[currentActiveIndex].classList.remove('active');
+              dots[currentActiveIndex].removeAttribute('aria-current');
             }
-          });
+            if (dots[activeIndex]) {
+              dots[activeIndex].classList.add('active');
+              dots[activeIndex].setAttribute('aria-current', 'step');
+            }
+            currentActiveIndex = activeIndex;
+          }
         };
       } else {
         dotsContainer.style.display = 'none';

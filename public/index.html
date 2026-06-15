@@ -156,15 +156,15 @@
                   <span class="history-title-text">Riwayat Scan</span>
                   <div id="history-sync-spinner" class="spinner-small" style="display: none;"></div>
                 </div>
-                <button id="history-trash-btn" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" onclick="handleTrashClick(event)">
-                  <span class="material-icons-outlined icon-default">delete_outline</span>
-                  <span class="material-icons-outlined icon-confirm" style="display: none;">delete_forever</span>
+                <button id="history-trash-btn" type="button" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" onclick="handleTrashClick(event)">
+                  <span class="material-icons-outlined icon-default" aria-hidden="true">delete_outline</span>
+                  <span class="material-icons-outlined icon-confirm" style="display: none;" aria-hidden="true">delete_forever</span>
                 </button>
               </div>
 
               <!-- Segmented Progress Bar Area -->
               <div id="history-progress-area" class="history-progress-container" style="display: none;">
-                <div class="segmented-progress-bar">
+                <div class="segmented-progress-bar" aria-hidden="true">
                   <div id="segment-success" class="progress-segment success" style="width: 0%;"></div>
                   <div id="segment-duplicate" class="progress-segment duplicate" style="width: 0%;"></div>
                   <div id="segment-error" class="progress-segment error" style="width: 0%;"></div>
@@ -172,16 +172,16 @@
                 </div>
                 <div class="progress-legend">
                   <span id="legend-success" class="legend-item success" style="display: none;">
-                    <span class="dot"></span> <span class="text">0 Hadir</span>
+                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Hadir</span>
                   </span>
                   <span id="legend-duplicate" class="legend-item duplicate" style="display: none;">
-                    <span class="dot"></span> <span class="text">0 Duplikat</span>
+                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Duplikat</span>
                   </span>
                   <span id="legend-error" class="legend-item error" style="display: none;">
-                    <span class="dot"></span> <span class="text">0 Gagal</span>
+                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Gagal</span>
                   </span>
                   <span id="legend-pending" class="legend-item pending" style="display: none;">
-                    <span class="dot"></span> <span class="text">0 Sinkronisasi</span>
+                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Sinkronisasi</span>
                   </span>
                 </div>
               </div>
