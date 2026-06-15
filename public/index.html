@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://yqguiiczpluljethcopn.supabase.co">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Google+Sans+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
 
@@ -91,8 +91,7 @@
         </button>
         <div id="login-footer">
           <a href="https://wa.link/3yg0ug">Lupa password?</a>
-          <span class="login-version-divider">&bull;</span>
-          <span id="login-version">v2.3.6</span>
+          <span class="login-version-span">&bull; v2.3.11</span>
         </div>
       </div>
 
@@ -148,37 +147,67 @@
             <div id="reader"></div>
           </div>
 
-          <!-- Status Indicator -->
-          <div id="status" class="idle"></div>
+            <!-- Note: #status and #queue-warning-bar containers are removed from here -->
 
-          <!-- Sync Queue Warning Bar -->
-          <div id="queue-warning-bar" class="queue-warning-banner" style="display: none;">
-            <span id="queue-progress-text" class="queue-progress-text">0/0 Selesai</span>
-            <div class="queue-progress-bar-container">
-              <div id="queue-progress-bar-fill" class="queue-progress-bar-fill" style="width: 0%;"></div>
-            </div>
-            <div class="spinner-small"></div>
-          </div>
+            <!-- Queue History List -->
+            <div id="queue-history-panel">
+              <!-- Segmented Progress Bar Area -->
+              <div id="history-progress-area" class="history-progress-container">
+                <div class="progress-bar-row">
+                  <div class="segmented-progress-bar" aria-hidden="true">
+                    <div id="segment-success" class="progress-segment success" style="width: 0%;"></div>
+                    <div id="segment-duplicate" class="progress-segment duplicate" style="width: 0%;"></div>
+                    <div id="segment-error" class="progress-segment error" style="width: 0%;"></div>
+                    <div id="segment-pending" class="progress-segment pending" style="width: 0%;"></div>
+                  </div>
+                  <div id="history-sync-spinner" class="spinner-small" style="display: none; margin-right: 4px;"></div>
+                  <button id="history-trash-btn" type="button" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" style="display: none;" onclick="handleTrashClick(event)">
+                    <span class="material-icons-outlined icon-default" aria-hidden="true">delete_outline</span>
+                    <span class="material-icons-outlined icon-confirm" style="display: none;" aria-hidden="true">delete_forever</span>
+                  </button>
+                </div>
+                <div class="progress-legend">
+                  <span id="legend-success" class="legend-item success" style="display: none;">
+                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Hadir</span>
+                  </span>
+                  <span id="legend-duplicate" class="legend-item duplicate" style="display: none;">
+                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Duplikat</span>
+                  </span>
+                  <span id="legend-error" class="legend-item error" style="display: none;">
+                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Gagal</span>
+                  </span>
+                  <span id="legend-pending" class="legend-item pending" style="display: none;">
+                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Memproses</span>
+                  </span>
+                </div>
+              </div>
 
-          <!-- Queue History List -->
-          <div id="queue-history-panel">
-            <div id="queue-list" class="queue-list-container">
-              <!-- Dynamically populated via script -->
-              <div class="queue-empty-state">Belum ada data pemindaian.</div>
-              <!-- Clear History Button -->
-              <button id="floating-clear-btn" class="floating-clear-btn" style="display: none;" onclick="handleFloatingClearClick(event)" aria-label="Hapus semua riwayat pemindaian">
-                <span class="material-icons-outlined" aria-hidden="true">delete_outline</span>
-                <span class="clear-text">Hapus Riwayat Scan</span>
-                <span class="clear-confirm-text">Yakin hapus?</span>
-              </button>
+              <!-- Carousel Wrapper -->
+              <div class="carousel-container-outer">
+                <button id="carousel-prev-btn" type="button" class="carousel-nav-btn prev" aria-label="Slide sebelumnya" style="display: none;" onclick="scrollCarousel(-1)">
+                  <span class="material-icons-outlined" aria-hidden="true">chevron_left</span>
+                </button>
+                
+                <div class="carousel-container">
+                  <div id="queue-list" class="queue-list-container horizontal-carousel">
+                    <!-- Dynamically populated via script -->
+                  </div>
+                </div>
+                
+                <button id="carousel-next-btn" type="button" class="carousel-nav-btn next" aria-label="Slide berikutnya" style="display: none;" onclick="scrollCarousel(1)">
+                  <span class="material-icons-outlined" aria-hidden="true">chevron_right</span>
+                </button>
+              </div>
+
+              <!-- Carousel Pagination Dots -->
+              <div id="carousel-dots" class="carousel-dots-container" style="display: none;"></div>
             </div>
-          </div>
         </div>
 
         <!-- Footer -->
         <footer class="app-footer">
           <div class="footer-text">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.3.8</a> © 2026 Tim Katekumen Dewasa
+            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.3.11</a> © 2026 Tim Katekumen Dewasa
             &bull; <a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
           </div>
         </footer>

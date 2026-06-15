@@ -254,6 +254,12 @@ body {
 #login-footer {
   text-align: center; font-size: 0.85rem; margin-top: 0.5rem;
 }
+.login-version-span {
+  font-family: 'Google Sans Code', monospace;
+  color: var(--text-secondary);
+  margin-left: 6px;
+  opacity: 0.75;
+}
 #login-footer a {
   color: var(--accent); text-decoration: none; font-weight: 500;
 }
@@ -479,11 +485,29 @@ body {
   font-size: 1.1rem;
 }
 
-.queue-list-container {
-  overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-  padding-right: 2px;
+.queue-list-container.horizontal-carousel {
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  padding: 4px 5%;
+  box-sizing: border-box;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   flex: 1 1 auto;
-  min-height: 115px; /* Ensures visual cue showing 1 + 0.2 card height */
+  min-height: 0;
+  width: 100%;
+}
+.queue-list-container.horizontal-carousel::-webkit-scrollbar {
+  display: none;
+}
+.queue-list-container.horizontal-carousel .queue-row {
+  flex: 0 0 90%;
+  scroll-snap-align: center;
+  box-sizing: border-box;
+  margin-bottom: 0;
 }
 
 .queue-empty-state {
@@ -498,9 +522,9 @@ body {
   border: 1px solid var(--border-glass);
 }
 .queue-row.success { border-left: 4px solid var(--status-success-text); }
-.queue-row.duplicate { border-left: 4px solid var(--status-duplicate-text); }
+.queue-row.duplicate { border-left: 4px solid var(--status-pending-text); }
 .queue-row.error { border-left: 4px solid var(--status-duplicate-text); }
-.queue-row.processing, .queue-row.pending { border-left: 4px solid var(--status-pending-text); }
+.queue-row.processing, .queue-row.pending { border-left: 4px solid var(--accent); }
 
 .student-info { display: flex; align-items: center; gap: 12px; }
 
@@ -613,6 +637,7 @@ body {
   margin-top: auto;
 }
 .footer-link { color: var(--accent); text-decoration: none; font-weight: 500; }
+#footer-version { font-family: 'Google Sans Code', monospace; }
 
 .branding-text {
   text-align: left; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.3;
@@ -848,80 +873,180 @@ input:focus-visible,
   margin: 0;
 }
 
-/* Inline Clear History Button */
-.floating-clear-btn {
+.carousel-container-outer {
   position: relative;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
   width: 100%;
-  height: 44px;
-  margin-top: 12px;
-  background: var(--status-duplicate-bg);
-  border: 1px solid var(--status-duplicate-border);
-  color: var(--status-duplicate-text);
-  cursor: pointer;
+}
+.carousel-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Carousel Navigation Buttons */
+.carousel-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  cursor: pointer;
+  position: absolute;
+  z-index: 10;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  padding: 0 16px;
+  box-shadow: none;
+}
+.carousel-nav-btn.prev { left: -6px; }
+.carousel-nav-btn.next { right: -6px; }
+.carousel-nav-btn:hover {
+  background: transparent;
+  color: var(--accent);
+  transform: scale(1.15);
+}
+.carousel-nav-btn:active {
+  transform: scale(0.9);
+}
+.carousel-nav-btn[disabled], .carousel-nav-btn.disabled {
+  opacity: 0 !important;
+  pointer-events: none;
 }
 
-[data-theme="dark"] .floating-clear-btn {
+/* Simple White Pagination Dots */
+.carousel-dots-container {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.35); /* Simple semi-transparent white */
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.carousel-dot.active {
+  background-color: rgba(255, 255, 255, 1); /* Full opaque white */
+  transform: scale(1.2);
+}
+
+/* Skeleton Loading Placeholder */
+.queue-row.skeleton {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1.5px dotted var(--border-glass) !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  min-height: 74px; /* Matches standard card height */
+  cursor: default !important;
+  pointer-events: none;
+  width: 100%;
+}
+.skeleton-empty-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-weight: 500;
+}
+
+
+.history-progress-container {
+  margin-bottom: 6px;
+}
+.progress-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 2px 0 4px 0;
+}
+.segmented-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border-glass);
+  display: flex;
+  overflow: hidden;
+}
+.progress-segment {
+  height: 100%;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.progress-segment.success { background-color: var(--status-success-text); }
+.progress-segment.duplicate { background-color: var(--status-pending-text); }
+.progress-segment.error { background-color: var(--status-duplicate-text); }
+.progress-segment.pending {
+  background-color: var(--accent);
+  animation: pendingPulse 1.5s infinite ease-in-out;
+}
+@keyframes pendingPulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.progress-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.legend-item .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.legend-item.success .dot { background-color: var(--status-success-text); }
+.legend-item.duplicate .dot { background-color: var(--status-pending-text); }
+.legend-item.error .dot { background-color: var(--status-duplicate-text); }
+.legend-item.pending .dot { background-color: var(--accent); }
+
+/* Compact Trash Button */
+.compact-trash-btn {
+  background: var(--status-duplicate-bg);
+  border: 1px solid var(--status-duplicate-border);
+  color: var(--status-duplicate-text);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="dark"] .compact-trash-btn {
   background: rgba(198, 40, 40, 0.15);
   border-color: rgba(198, 40, 40, 0.35);
   color: #ef5350;
 }
-
-.floating-clear-btn:hover {
+.compact-trash-btn:hover {
   background: rgba(198, 40, 40, 0.08);
   border-color: var(--status-duplicate-text);
 }
-
-[data-theme="dark"] .floating-clear-btn:hover {
-  background: rgba(198, 40, 40, 0.25);
+.compact-trash-btn.confirm-delete {
+  background: var(--status-duplicate-text) !important;
+  color: white !important;
+  border-color: var(--status-duplicate-text) !important;
 }
-
-.floating-clear-btn:active {
-  transform: scale(0.98);
-}
-
-.floating-clear-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.floating-clear-btn .clear-text {
-  display: inline;
-}
-
-.floating-clear-btn .clear-confirm-text {
-  display: none;
-}
-
-/* Expanded Confirmation State */
-.floating-clear-btn.expanded {
-  background: var(--status-duplicate-text);
-  color: white;
-  border-color: var(--status-duplicate-text);
-}
-
-[data-theme="dark"] .floating-clear-btn.expanded {
-  background: #c62828;
-  border-color: #c62828;
-  color: #fff;
-}
-
-.floating-clear-btn.expanded .clear-text {
-  display: none;
-}
-
-.floating-clear-btn.expanded .clear-confirm-text {
-  display: inline;
+[data-theme="dark"] .compact-trash-btn.confirm-delete {
+  background: #c62828 !important;
+  border-color: #c62828 !important;
 }
 
 /* --- PROFILE ACCORDION STYLES --- */
@@ -1095,6 +1220,7 @@ input:focus-visible,
 }
 
 .student-id-text {
+  font-family: 'Google Sans Code', monospace;
   font-size: 0.75rem;
   color: var(--text-primary);
   opacity: 0.7;
@@ -1166,7 +1292,7 @@ input:focus-visible,
 }
 
 .detail-id {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Google Sans Code', monospace;
   font-size: 0.85rem;
   color: var(--accent);
   font-weight: 500;

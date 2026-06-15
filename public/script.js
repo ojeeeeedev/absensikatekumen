@@ -1,6 +1,53 @@
 let html5QrcodeScanner = null;
 let selectedWeek = null;
 
+window.scrollCarousel = function(direction) {
+  const listContainer = document.getElementById('queue-list');
+  if (!listContainer) return;
+  const cards = listContainer.querySelectorAll('.queue-row');
+  const itemWidth = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) : listContainer.clientWidth;
+  listContainer.scrollBy({
+    left: direction * itemWidth,
+    behavior: 'smooth'
+  });
+};
+
+function updateNavButtons(listContainer, renderItemsLength) {
+  const prevBtn = document.getElementById('carousel-prev-btn');
+  const nextBtn = document.getElementById('carousel-next-btn');
+  if (!prevBtn || !nextBtn) return;
+  
+  if (renderItemsLength <= 1) {
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    return;
+  }
+
+  const scrollLeft = listContainer.scrollLeft;
+  const clientWidth = listContainer.clientWidth;
+  const scrollWidth = listContainer.scrollWidth;
+
+  prevBtn.style.display = 'flex';
+  nextBtn.style.display = 'flex';
+  
+  if (scrollLeft <= 5) {
+    prevBtn.classList.add('disabled');
+    prevBtn.setAttribute('disabled', 'true');
+  } else {
+    prevBtn.classList.remove('disabled');
+    prevBtn.removeAttribute('disabled');
+  }
+
+  if (scrollLeft + clientWidth >= scrollWidth - 5) {
+    nextBtn.classList.add('disabled');
+    nextBtn.setAttribute('disabled', 'true');
+  } else {
+    nextBtn.classList.remove('disabled');
+    nextBtn.removeAttribute('disabled');
+  }
+}
+
+
 // Expose handleLogout globally
 window.handleLogout = function(e) {
   if (e) e.preventDefault();
@@ -441,37 +488,17 @@ class ScanQueue {
   }
 
   updateBanner() {
-    const warningBar = document.getElementById('queue-warning-bar');
-    const progressText = document.getElementById('queue-progress-text');
-    const progressBarFill = document.getElementById('queue-progress-bar-fill');
-
     const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-
+    const syncSpinner = document.getElementById('history-sync-spinner');
+    
     if (pendingCount === 0) {
       this.totalInBatch = 0;
     } else if (this.totalInBatch < pendingCount) {
       this.totalInBatch = pendingCount;
     }
 
-    if (warningBar) {
-      if (pendingCount > 0) {
-        warningBar.style.display = 'flex';
-        
-        const completedCount = this.totalInBatch - pendingCount;
-        const progressPercent = this.totalInBatch > 0 ? (completedCount / this.totalInBatch) * 100 : 0;
-        
-        if (progressText) {
-          progressText.textContent = `${completedCount}/${this.totalInBatch} Selesai`;
-        }
-        if (progressBarFill) {
-          progressBarFill.style.width = `${progressPercent}%`;
-        }
-      } else {
-        warningBar.style.display = 'none';
-        if (progressBarFill) {
-          progressBarFill.style.width = '0%';
-        }
-      }
+    if (syncSpinner) {
+      syncSpinner.style.display = pendingCount > 0 ? 'inline-block' : 'none';
     }
   }
 
@@ -480,30 +507,102 @@ class ScanQueue {
     const listContainer = document.getElementById('queue-list');
     if (!listContainer) return;
 
-    const floatingClearBtn = document.getElementById('floating-clear-btn');
-    const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-    const completedCount = this.queue.length - pendingCount;
+    const queueLength = this.queue.length;
+    const progressArea = document.getElementById('history-progress-area');
+    const dotsContainer = document.getElementById('carousel-dots');
+    const trashBtn = document.getElementById('history-trash-btn');
+    const prevBtn = document.getElementById('carousel-prev-btn');
+    const nextBtn = document.getElementById('carousel-next-btn');
 
-    if (completedCount > 0) {
-      if (floatingClearBtn) floatingClearBtn.style.display = 'flex';
-    } else {
-      if (floatingClearBtn) {
-        floatingClearBtn.style.display = 'none';
-        floatingClearBtn.classList.remove('expanded');
-      }
-    }
+    // Ensure progress area is always visible (V3 Spec)
+    if (progressArea) progressArea.style.display = 'block';
 
-    if (this.queue.length === 0) {
-      listContainer.innerHTML = '';
-      const emptyDiv = document.createElement('div');
-      emptyDiv.className = 'queue-empty-state';
-      emptyDiv.textContent = 'Belum ada data pemindaian.';
-      listContainer.appendChild(emptyDiv);
+    if (queueLength === 0) {
+      if (trashBtn) trashBtn.style.display = 'none';
+      if (dotsContainer) dotsContainer.style.display = 'none';
+      if (prevBtn) prevBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
+      
+      // Render 0% progress bar
+      const segSuccess = document.getElementById('segment-success');
+      const segDuplicate = document.getElementById('segment-duplicate');
+      const segError = document.getElementById('segment-error');
+      const segPending = document.getElementById('segment-pending');
+      if (segSuccess) segSuccess.style.width = '0%';
+      if (segDuplicate) segDuplicate.style.width = '0%';
+      if (segError) segError.style.width = '0%';
+      if (segPending) segPending.style.width = '0%';
+
+      // Hide all legend tags
+      const legends = ['legend-success', 'legend-duplicate', 'legend-error', 'legend-pending'];
+      legends.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+
+      // Render Skeleton Card Placeholder
+      listContainer.style.justifyContent = 'center';
+      listContainer.innerHTML = `
+        <div class="queue-row skeleton" aria-hidden="true">
+          <span class="skeleton-empty-text">Belum ada riwayat pemindaian</span>
+        </div>
+      `;
       return;
     }
 
-    // Keep only the most recent 10 items in DOM to save performance
+    // Show trash button if at least one scan has been conducted
+    if (trashBtn) trashBtn.style.display = 'flex';
+
+    // 1. Calculate counters
+    let successCount = 0;
+    let duplicateCount = 0;
+    let errorCount = 0;
+    let pendingCount = 0;
+
+    this.queue.forEach(item => {
+      if (item.status === 'success') successCount++;
+      else if (item.status === 'duplicate') duplicateCount++;
+      else if (item.status === 'error') errorCount++;
+      else if (item.status === 'pending' || item.status === 'processing') pendingCount++;
+    });
+
+    // 2. Set segmented widths
+    const successPct = (successCount / queueLength) * 100;
+    const duplicatePct = (duplicateCount / queueLength) * 100;
+    const errorPct = (errorCount / queueLength) * 100;
+    const pendingPct = (pendingCount / queueLength) * 100;
+
+    const segSuccess = document.getElementById('segment-success');
+    const segDuplicate = document.getElementById('segment-duplicate');
+    const segError = document.getElementById('segment-error');
+    const segPending = document.getElementById('segment-pending');
+
+    if (segSuccess) segSuccess.style.width = `${successPct}%`;
+    if (segDuplicate) segDuplicate.style.width = `${duplicatePct}%`;
+    if (segError) segError.style.width = `${errorPct}%`;
+    if (segPending) segPending.style.width = `${pendingPct}%`;
+
+    // 3. Update legend counts and visibility
+    const updateLegend = (id, count, singularTerm) => {
+      const el = document.getElementById(id);
+      if (el) {
+        if (count > 0) {
+          el.style.display = 'flex';
+          el.querySelector('.text').textContent = `${count} ${singularTerm}`;
+        } else {
+          el.style.display = 'none';
+        }
+      }
+    };
+
+    updateLegend('legend-success', successCount, 'Hadir');
+    updateLegend('legend-duplicate', duplicateCount, 'Duplikat');
+    updateLegend('legend-error', errorCount, 'Gagal');
+    updateLegend('legend-pending', pendingCount, 'Memproses');
+
+    // 4. Render items (up to 10 items)
     const renderItems = this.queue.slice(0, 10);
+    listContainer.style.justifyContent = renderItems.length <= 1 ? 'center' : 'flex-start';
     listContainer.innerHTML = '';
 
     renderItems.forEach(item => {
@@ -587,10 +686,57 @@ class ScanQueue {
       listContainer.appendChild(row);
     });
 
-    // Re-append the clear button at the end of the list container if it exists and there are completed items
-    if (floatingClearBtn && completedCount > 0) {
-      listContainer.appendChild(floatingClearBtn);
+    // 5. Render carousel pagination dots
+    if (dotsContainer) {
+      dotsContainer.innerHTML = '';
+      if (renderItems.length > 1) {
+        dotsContainer.style.display = 'flex';
+        renderItems.forEach((_, index) => {
+          const dot = document.createElement('button');
+          dot.setAttribute('type', 'button');
+          dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
+          dot.setAttribute('aria-label', `Halaman ${index + 1}`);
+          if (index === 0) dot.setAttribute('aria-current', 'step');
+          dot.onclick = () => {
+            const cards = listContainer.querySelectorAll('.queue-row');
+            const itemWidth = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) : listContainer.clientWidth;
+            listContainer.scrollTo({
+              left: index * itemWidth,
+              behavior: 'smooth'
+            });
+          };
+          dotsContainer.appendChild(dot);
+        });
+
+        // Add scroll listener to update active dots (cache dot elements and active index to avoid high-frequency DOM mutations)
+        const dots = Array.from(dotsContainer.querySelectorAll('.carousel-dot'));
+        let currentActiveIndex = 0;
+        listContainer.onscroll = () => {
+          const scrollLeft = listContainer.scrollLeft;
+          const cards = listContainer.querySelectorAll('.queue-row');
+          const itemWidth = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) : (listContainer.clientWidth || 1);
+          const activeIndex = Math.max(0, Math.min(renderItems.length - 1, Math.round(scrollLeft / itemWidth)));
+          if (activeIndex !== currentActiveIndex) {
+            if (dots[currentActiveIndex]) {
+              dots[currentActiveIndex].classList.remove('active');
+              dots[currentActiveIndex].removeAttribute('aria-current');
+            }
+            if (dots[activeIndex]) {
+              dots[activeIndex].classList.add('active');
+              dots[activeIndex].setAttribute('aria-current', 'step');
+            }
+            currentActiveIndex = activeIndex;
+          }
+          updateNavButtons(listContainer, renderItems.length);
+        };
+      } else {
+        dotsContainer.style.display = 'none';
+        listContainer.onscroll = null;
+      }
     }
+
+    // Update navigation buttons initially
+    updateNavButtons(listContainer, renderItems.length);
   }
 
   clearOldHistory() {
@@ -1034,20 +1180,33 @@ window.closeStudentModal = function(event) {
   }
 };
 
-window.handleFloatingClearClick = function(event) {
+window.handleTrashClick = function(event) {
   event.stopPropagation();
-  const btn = document.getElementById('floating-clear-btn');
+  const btn = document.getElementById('history-trash-btn');
   if (!btn) return;
 
-  if (!btn.classList.contains('expanded')) {
-    btn.classList.add('expanded');
-    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
-    window.clearBtnTimeout = setTimeout(() => {
-      btn.classList.remove('expanded');
+  const defaultIcon = btn.querySelector('.icon-default');
+  const confirmIcon = btn.querySelector('.icon-confirm');
+
+  if (!btn.classList.contains('confirm-delete')) {
+    btn.classList.add('confirm-delete');
+    btn.setAttribute('aria-label', 'Konfirmasi hapus semua riwayat pemindaian');
+    if (defaultIcon) defaultIcon.style.display = 'none';
+    if (confirmIcon) confirmIcon.style.display = 'inline-block';
+
+    if (window.trashBtnTimeout) clearTimeout(window.trashBtnTimeout);
+    window.trashBtnTimeout = setTimeout(() => {
+      btn.classList.remove('confirm-delete');
+      btn.setAttribute('aria-label', 'Hapus riwayat pemindaian');
+      if (defaultIcon) defaultIcon.style.display = 'inline-block';
+      if (confirmIcon) confirmIcon.style.display = 'none';
     }, 4000);
   } else {
-    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
-    btn.classList.remove('expanded');
+    if (window.trashBtnTimeout) clearTimeout(window.trashBtnTimeout);
+    btn.classList.remove('confirm-delete');
+    btn.setAttribute('aria-label', 'Hapus riwayat pemindaian');
+    if (defaultIcon) defaultIcon.style.display = 'inline-block';
+    if (confirmIcon) confirmIcon.style.display = 'none';
     
     if (typeof scanQueue !== 'undefined') {
       const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
@@ -1065,11 +1224,16 @@ window.handleFloatingClearClick = function(event) {
   }
 };
 
-// Document click listener to auto-collapse floating clear history button if clicking outside
+// Document click listener to auto-collapse trash button if clicking outside
 document.addEventListener('click', () => {
-  const btn = document.getElementById('floating-clear-btn');
-  if (btn && btn.classList.contains('expanded')) {
-    btn.classList.remove('expanded');
-    if (window.clearBtnTimeout) clearTimeout(window.clearBtnTimeout);
+  const btn = document.getElementById('history-trash-btn');
+  if (btn && btn.classList.contains('confirm-delete')) {
+    btn.classList.remove('confirm-delete');
+    btn.setAttribute('aria-label', 'Hapus riwayat pemindaian');
+    const defaultIcon = btn.querySelector('.icon-default');
+    const confirmIcon = btn.querySelector('.icon-confirm');
+    if (defaultIcon) defaultIcon.style.display = 'inline-block';
+    if (confirmIcon) confirmIcon.style.display = 'none';
+    if (window.trashBtnTimeout) clearTimeout(window.trashBtnTimeout);
   }
 });
