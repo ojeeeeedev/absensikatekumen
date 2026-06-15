@@ -475,7 +475,8 @@ body {
   display: flex;
   flex-direction: row;
   gap: 12px;
-  padding: 4px 0;
+  padding: 4px 5%;
+  box-sizing: border-box;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -487,7 +488,7 @@ body {
   display: none;
 }
 .queue-list-container.horizontal-carousel .queue-row {
-  flex: 0 0 100%;
+  flex: 0 0 90%;
   scroll-snap-align: center;
   box-sizing: border-box;
   margin-bottom: 0;
@@ -868,12 +869,11 @@ input:focus-visible,
 
 /* Carousel Navigation Buttons */
 .carousel-nav-btn {
-  background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  color: var(--text-primary);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -881,16 +881,17 @@ input:focus-visible,
   position: absolute;
   z-index: 10;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: none;
 }
-.carousel-nav-btn.prev { left: -10px; }
-.carousel-nav-btn.next { right: -10px; }
+.carousel-nav-btn.prev { left: -6px; }
+.carousel-nav-btn.next { right: -6px; }
 .carousel-nav-btn:hover {
-  background: var(--bg-hover);
-  transform: scale(1.08);
+  background: transparent;
+  color: var(--accent);
+  transform: scale(1.15);
 }
 .carousel-nav-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.9);
 }
 .carousel-nav-btn[disabled], .carousel-nav-btn.disabled {
   opacity: 0 !important;
@@ -921,76 +922,41 @@ input:focus-visible,
 
 /* Skeleton Loading Placeholder */
 .queue-row.skeleton {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border: 1px dashed var(--border-glass) !important;
-  border-left: 4px solid var(--border-glass) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1.5px dotted var(--border-glass) !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  min-height: 74px; /* Matches standard card height */
   cursor: default !important;
   pointer-events: none;
+  width: 100%;
 }
-.skeleton-pulse {
-  background: linear-gradient(90deg, var(--border-glass) 25%, var(--bg-hover) 50%, var(--border-glass) 75%);
-  background-size: 200% 100%;
-  animation: skeletonLoading 1.5s infinite;
-}
-@keyframes skeletonLoading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-.student-photo.skeleton-pulse {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none !important;
-}
-.skeleton-line {
-  height: 12px;
-  border-radius: 4px;
-}
-.skeleton-line.name {
-  width: 120px;
-  margin-bottom: 6px;
-}
-.skeleton-line.id {
-  width: 80px;
-}
-.status-badge.skeleton-pulse {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+.skeleton-empty-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-weight: 500;
 }
 
-.history-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px;
-  margin-bottom: 4px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-glass);
-}
-.history-title-area {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.history-title-text {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+
 .history-progress-container {
   margin-bottom: 12px;
 }
-.segmented-progress-bar {
+.progress-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
+  margin: 6px 0;
+}
+.segmented-progress-bar {
+  flex: 1;
   height: 6px;
   border-radius: 3px;
   background: var(--border-glass);
   display: flex;
   overflow: hidden;
-  margin: 6px 0;
 }
 .progress-segment {
   height: 100%;

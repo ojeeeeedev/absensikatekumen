@@ -4,7 +4,8 @@ let selectedWeek = null;
 window.scrollCarousel = function(direction) {
   const listContainer = document.getElementById('queue-list');
   if (!listContainer) return;
-  const itemWidth = (listContainer.clientWidth || 0) + 12; // clientWidth + 12px gap
+  const cards = listContainer.querySelectorAll('.queue-row');
+  const itemWidth = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) : listContainer.clientWidth;
   listContainer.scrollBy({
     left: direction * itemWidth,
     behavior: 'smooth'
@@ -532,15 +533,13 @@ class ScanQueue {
     if (!listContainer) return;
 
     const queueLength = this.queue.length;
-    const historyHeader = document.getElementById('history-header');
     const progressArea = document.getElementById('history-progress-area');
     const dotsContainer = document.getElementById('carousel-dots');
     const trashBtn = document.getElementById('history-trash-btn');
     const prevBtn = document.getElementById('carousel-prev-btn');
     const nextBtn = document.getElementById('carousel-next-btn');
 
-    // Ensure header and progress areas are always visible (V3 Spec)
-    if (historyHeader) historyHeader.style.display = 'flex';
+    // Ensure progress area is always visible (V3 Spec)
     if (progressArea) progressArea.style.display = 'block';
 
     if (queueLength === 0) {
@@ -566,17 +565,11 @@ class ScanQueue {
         if (el) el.style.display = 'none';
       });
 
-      // Render Skeleton Card Placeholder (V3 Spec)
+      // Render Skeleton Card Placeholder
+      listContainer.style.justifyContent = 'center';
       listContainer.innerHTML = `
         <div class="queue-row skeleton" aria-hidden="true">
-          <div class="student-info">
-            <div class="student-photo skeleton-pulse"></div>
-            <div class="student-text">
-              <div class="skeleton-line name skeleton-pulse"></div>
-              <div class="skeleton-line id skeleton-pulse"></div>
-            </div>
-          </div>
-          <div class="status-badge skeleton-pulse"></div>
+          <span class="skeleton-empty-text">Belum ada riwayat pemindaian</span>
         </div>
       `;
       return;
@@ -630,10 +623,11 @@ class ScanQueue {
     updateLegend('legend-success', successCount, 'Hadir');
     updateLegend('legend-duplicate', duplicateCount, 'Duplikat');
     updateLegend('legend-error', errorCount, 'Gagal');
-    updateLegend('legend-pending', pendingCount, 'Sinkronisasi');
+    updateLegend('legend-pending', pendingCount, 'Memproses');
 
     // 4. Render items (up to 10 items)
     const renderItems = this.queue.slice(0, 10);
+    listContainer.style.justifyContent = renderItems.length <= 1 ? 'center' : 'flex-start';
     listContainer.innerHTML = '';
 
     renderItems.forEach(item => {
@@ -729,7 +723,8 @@ class ScanQueue {
           dot.setAttribute('aria-label', `Halaman ${index + 1}`);
           if (index === 0) dot.setAttribute('aria-current', 'step');
           dot.onclick = () => {
-            const itemWidth = (listContainer.clientWidth || 0) + 12; // cardWidth + 12px gap
+            const cards = listContainer.querySelectorAll('.queue-row');
+            const itemWidth = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) : listContainer.clientWidth;
             listContainer.scrollTo({
               left: index * itemWidth,
               behavior: 'smooth'
@@ -743,7 +738,8 @@ class ScanQueue {
         let currentActiveIndex = 0;
         listContainer.onscroll = () => {
           const scrollLeft = listContainer.scrollLeft;
-          const itemWidth = (listContainer.clientWidth || 1) + 12; // cardWidth + 12px gap
+          const cards = listContainer.querySelectorAll('.queue-row');
+          const itemWidth = cards.length > 1 ? (cards[1].offsetLeft - cards[0].offsetLeft) : (listContainer.clientWidth || 1);
           const activeIndex = Math.max(0, Math.min(renderItems.length - 1, Math.round(scrollLeft / itemWidth)));
           if (activeIndex !== currentActiveIndex) {
             if (dots[currentActiveIndex]) {
