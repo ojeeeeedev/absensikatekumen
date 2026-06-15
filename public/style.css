@@ -1110,23 +1110,16 @@ input:focus-visible,
 }
 
 .confirm-btn.yes {
-  background: var(--status-duplicate-text);
-  color: white;
-  border-color: var(--status-duplicate-text);
+  background: var(--status-duplicate-bg);
+  border: 1px solid var(--status-duplicate-border);
+  color: var(--status-duplicate-text);
 }
 
 .confirm-btn.yes:hover {
+  color: #fff;
   background: var(--status-duplicate-text);
-  filter: brightness(0.9);
-}
-
-[data-theme="dark"] .confirm-btn.yes {
-  background: #c62828;
-  border-color: #c62828;
-}
-
-[data-theme="dark"] .confirm-btn.yes:hover {
-  background: #b71c1c;
+  border-color: var(--status-duplicate-text);
+  transform: translateY(-1px);
 }
 
 .confirm-btn.no {
