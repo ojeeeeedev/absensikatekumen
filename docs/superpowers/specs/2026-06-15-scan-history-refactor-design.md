@@ -20,11 +20,11 @@ This specification describes the changes to refactor the scan history feature in
 ### C. Integrated Segmented Progress Bar (Option B)
 * Add a progress bar section inside the history header.
 * The bar will be a segmented horizontal line where the colored segments represent the proportions of:
-  * **Sukses** (Green segment)
+  * **Hadir** (Green segment)
   * **Rescan/Duplicate** (Orange segment)
   * **Gagal** (Red segment)
   * **Pending Sync** (Blue pulsing segment, visible when `pendingCount > 0`)
-* Display labels/legend text beneath the progress bar showing the count breakdown (e.g. "2 Sukses", "1 Duplikat", "1 Gagal").
+* Display labels/legend text beneath the progress bar showing the count breakdown (e.g. "2 Hadir", "1 Duplikat", "1 Gagal").
 * Show a small spinning sync icon next to the "Riwayat Scan" title when syncing is active.
 
 ### D. Sleek Trash Can Button
@@ -82,7 +82,7 @@ Modify `public/index.html` to remove the old `#status` and `#queue-warning-bar` 
                 </div>
                 <div class="progress-legend">
                   <span id="legend-success" class="legend-item success" style="display: none;">
-                    <span class="dot"></span> <span class="text">0 Sukses</span>
+                    <span class="dot"></span> <span class="text">0 Hadir</span>
                   </span>
                   <span id="legend-duplicate" class="legend-item duplicate" style="display: none;">
                     <span class="dot"></span> <span class="text">0 Duplikat</span>
