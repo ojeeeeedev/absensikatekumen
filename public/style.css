@@ -505,9 +505,9 @@ body {
   border: 1px solid var(--border-glass);
 }
 .queue-row.success { border-left: 4px solid var(--status-success-text); }
-.queue-row.duplicate { border-left: 4px solid var(--status-duplicate-text); }
+.queue-row.duplicate { border-left: 4px solid var(--status-pending-text); }
 .queue-row.error { border-left: 4px solid var(--status-duplicate-text); }
-.queue-row.processing, .queue-row.pending { border-left: 4px solid var(--status-pending-text); }
+.queue-row.processing, .queue-row.pending { border-left: 4px solid var(--accent); }
 
 .student-info { display: flex; align-items: center; gap: 12px; }
 
