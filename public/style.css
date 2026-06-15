@@ -536,7 +536,11 @@ body {
 
 .student-text { display: flex; flex-direction: column; gap: 2px; }
 .student-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
-.student-id { font-size: 0.7rem; color: var(--text-secondary); }
+.student-id {
+  font-family: 'Google Sans Code', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
 
 .status-badge {
   font-size: 0.7rem; font-weight: 700; padding: 4px 8px; border-radius: 6px;
@@ -861,6 +865,7 @@ input:focus-visible,
 }
 
 .modal-student-id {
+  font-family: 'Google Sans Code', monospace;
   font-size: 0.8rem;
   color: var(--text-secondary);
   margin: 0;
