@@ -66,7 +66,12 @@ export default async function handler(req, res) {
       // If not login, handle it as an attendance submission
       // --- Token validation for this specific action is required ---
       const token = req.headers.authorization?.split(' ')[1];
-      if (!token || !jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })) {
+      if (!token) {
+        return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
+      }
+      try {
+        jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+      } catch (err) {
         return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
       }
 
@@ -89,7 +94,10 @@ export default async function handler(req, res) {
       const gasPromise = fetch(scriptURL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body),
+        body: JSON.stringify({
+          ...req.body,
+          api_secret: process.env.GAS_SECRET_KEY || "default_development_secret"
+        }),
       });
 
       // Start Supabase Image preparation (Search then Sign)
@@ -134,7 +142,7 @@ export default async function handler(req, res) {
         return res.status(502).json({
           status: "error",
           message: `Google Apps Script for class "${classCode}" returned invalid JSON (HTML or plain text instead)`,
-          details: `URL: ${scriptURL}. Response: ${text.substring(0, 100)}`
+          details: `Response: ${text.substring(0, 100)}`
         });
       }
 

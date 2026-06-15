@@ -1,6 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -30,7 +34,7 @@ export default async function handler(req, res) {
   try {
     let classNames = {};
     try {
-      const classCodePath = resolve(process.cwd(), 'classcode.json');
+      const classCodePath = join(__dirname, '../classcode.json');
       classNames = JSON.parse(readFileSync(classCodePath, 'utf8'));
     } catch (err) {
       console.error("Error reading classcode.json:", err);

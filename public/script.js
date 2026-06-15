@@ -154,32 +154,7 @@ window.setAppState = async function(state) {
   }
 }
 
-// --- THEME MANAGEMENT ---
-function initTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'light';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  updateLogos(savedTheme);
-}
 
-// Global toggle theme function (referenced in HTML button)
-window.toggleTheme = function() {
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
-  updateLogos(newTheme);
-}
-
-function updateLogos(theme) {
-  const logos = document.querySelectorAll('.theme-logo');
-  logos.forEach(logo => {
-    if (theme === 'light') {
-      logo.src = 'assets/pewartaan_normal.png';
-    } else {
-      logo.src = 'assets/pewartaan_invert.png';
-    }
-  });
-}
 
 // --- SAFARI VIEWPORT FIX ---
 function setViewportHeight() {
@@ -1101,6 +1076,10 @@ async function loadVersion() {
       const versionEl = document.getElementById('footer-version');
       if (versionEl && data.version) {
         versionEl.textContent = `v${data.version}`;
+      }
+      const loginVersionEl = document.getElementById('login-version');
+      if (loginVersionEl && data.version) {
+        loginVersionEl.textContent = `v${data.version}`;
       }
     }
   } catch (error) {
