@@ -257,7 +257,6 @@ body {
 .login-version-span {
   font-family: 'Google Sans Code', monospace;
   color: var(--text-secondary);
-  margin-left: 6px;
   opacity: 0.75;
 }
 #login-footer a {
