@@ -87,8 +87,8 @@ describe('/api/classes', () => {
     // Assert that 'YOUR_CLASS_CODE_HERE' is filtered out,
     // and SAB/TOM names are looked up from classcode.json
     expect(res.body.classes).toEqual([
-      { code: 'SAB', name: 'St. Sabinus' },
-      { code: 'TOM', name: 'St. Tomasz' }
+      { code: 'SAB', name: 'Santo Sabinus' },
+      { code: 'TOM', name: 'Santo Tomasz' }
     ]);
   });
 });
