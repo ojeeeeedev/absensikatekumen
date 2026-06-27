@@ -12,6 +12,220 @@ let allStudents = [];
 
 
 
+// ============================================================
+// Photo Upload Manager
+// ============================================================
+const PhotoUploader = (() => {
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+  let currentStudentId = null;
+  let currentStudentName = null;
+  let selectedFile = null;
+
+  // DOM refs (resolved lazily after DOMContentLoaded)
+  let modal, sheet, dropzone, fileInput, previewImg, studentLabel,
+      dropzoneIcon, dropzoneText, dropzoneSubtext,
+      progressWrap, progressBar,
+      confirmBtn, cancelBtn, closeBtn;
+
+  function init() {
+    modal        = document.getElementById('upload-preview-modal');
+    dropzone     = document.getElementById('upload-dropzone');
+    fileInput    = document.getElementById('upload-file-input');
+    previewImg   = document.getElementById('upload-preview-img');
+    studentLabel = document.getElementById('upload-student-label');
+    dropzoneIcon = document.getElementById('upload-dropzone-icon');
+    dropzoneText = document.getElementById('upload-dropzone-text');
+    dropzoneSubtext = document.getElementById('upload-dropzone-subtext');
+    progressWrap = document.getElementById('upload-progress-wrap');
+    progressBar  = document.getElementById('upload-progress-bar');
+    confirmBtn   = document.getElementById('upload-confirm-btn');
+    cancelBtn    = document.getElementById('upload-cancel-btn');
+    closeBtn     = document.getElementById('upload-close-btn');
+
+    if (!modal) return; // not on profile page
+
+    // Close actions
+    closeBtn.addEventListener('click', close);
+    cancelBtn.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+    // Keyboard close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('open')) close();
+    });
+
+    // Dropzone click → open native file picker
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); fileInput.click(); }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) handleFileSelect(fileInput.files[0]);
+    });
+
+    // Drag & drop
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleFileSelect(file);
+    });
+
+    // Confirm upload
+    confirmBtn.addEventListener('click', doUpload);
+  }
+
+  function open(studentId, studentName) {
+    currentStudentId = studentId;
+    currentStudentName = studentName;
+    selectedFile = null;
+
+    // Reset UI
+    resetDropzone();
+    progressWrap.classList.remove('visible');
+    progressBar.style.width = '0%';
+    confirmBtn.disabled = true;
+    confirmBtn.classList.remove('uploading');
+    fileInput.value = '';
+
+    // Set student label
+    studentLabel.textContent = `${studentName} · ${studentId}`;
+
+    // Show modal
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Focus close button for accessibility
+    setTimeout(() => closeBtn.focus(), 50);
+  }
+
+  function close() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    selectedFile = null;
+    currentStudentId = null;
+    currentStudentName = null;
+    fileInput.value = '';
+  }
+
+  function resetDropzone() {
+    previewImg.style.display = 'none';
+    previewImg.src = '';
+    dropzoneIcon.style.display = '';
+    dropzoneText.style.display = '';
+    dropzoneSubtext.style.display = '';
+  }
+
+  function handleFileSelect(file) {
+    // Validate type
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      showToast('Format tidak didukung. Gunakan JPG, PNG, atau WebP.', 'error');
+      return;
+    }
+    // Validate size
+    if (file.size > MAX_SIZE_BYTES) {
+      showToast('Ukuran file melebihi batas 5MB.', 'error');
+      return;
+    }
+
+    selectedFile = file;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImg.src = e.target.result;
+      previewImg.style.display = 'block';
+      dropzoneIcon.style.display = 'none';
+      dropzoneText.style.display = 'none';
+      dropzoneSubtext.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+
+    confirmBtn.disabled = false;
+  }
+
+  async function doUpload() {
+    if (!selectedFile || !currentStudentId) return;
+
+    // Set uploading state
+    confirmBtn.classList.add('uploading');
+    confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
+    closeBtn.disabled = true;
+    progressWrap.classList.add('visible');
+    progressBar.style.width = '30%';
+
+    const formData = new FormData();
+    formData.append('studentId', currentStudentId);
+    formData.append('photo', selectedFile, selectedFile.name);
+
+    try {
+      progressBar.style.width = '60%';
+
+      const res = await fetch('/api/upload-photo', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      progressBar.style.width = '90%';
+      const data = await res.json();
+
+      if (data.status === 'ok') {
+        progressBar.style.width = '100%';
+
+        // Invalidate image cache for this student
+        if (window.ImageCache) {
+          window.ImageCache.invalidate(currentStudentId);
+        }
+
+        // Update the in-memory student data immediately with the fresh signed URL
+        if (data.signedUrl) {
+          const student = allStudents.find(s => s.studentId === currentStudentId);
+          if (student) {
+            student.image = data.signedUrl;
+          }
+        }
+
+        showToast('Foto berhasil diunggah! ✓', 'success');
+
+        // Close modal and re-render the current student list to show new photo
+        setTimeout(() => {
+          close();
+          filterStudents(); // re-render with updated image URL
+        }, 600);
+      } else {
+        throw new Error(data.message || 'Gagal mengunggah foto');
+      }
+    } catch (err) {
+      console.error('[PhotoUploader] Upload error:', err);
+      showToast(`Gagal mengunggah: ${err.message}`, 'error');
+
+      // Reset state
+      confirmBtn.classList.remove('uploading');
+      confirmBtn.disabled = false;
+      cancelBtn.disabled = false;
+      closeBtn.disabled = false;
+      progressWrap.classList.remove('visible');
+      progressBar.style.width = '0%';
+    }
+  }
+
+  return { init, open, close };
+})();
+
+
+// ============================================================
+// Class / Student Loading
+// ============================================================
 
 async function loadClasses() {
   try {
@@ -235,10 +449,28 @@ function renderStudents(students) {
               <span class="detail-value">${katekisKkVal}</span>
             </div>
           </div>
+
+          <!-- Upload Photo Button -->
+          <button class="upload-photo-btn" data-student-id="${escapeHTML(student.studentId)}" data-student-name="${escapeHTML(student.name)}" type="button" aria-label="Ganti foto ${escapeHTML(student.name)}">
+            <span class="material-icons-outlined">photo_camera</span>
+            Ganti Foto
+          </button>
         </div>
       </div>
     `;
     
+    // Wire up the upload button
+    const uploadBtn = body.querySelector('.upload-photo-btn');
+    if (uploadBtn) {
+      uploadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        PhotoUploader.open(
+          uploadBtn.dataset.studentId,
+          uploadBtn.dataset.studentName
+        );
+      });
+    }
+
     const toggle = () => {
       const isExpanded = body.classList.contains('expanded');
       
@@ -306,6 +538,7 @@ function showToast(message, type = 'success') {
 
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  PhotoUploader.init();
   loadClasses();
 
   // Scroll listener for header minimization
@@ -337,3 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', filterStudents);
   }
 });
+
+
+
+

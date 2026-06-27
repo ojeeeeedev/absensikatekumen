@@ -62,6 +62,20 @@ window.ImageCache = {
     }
   },
 
+  /**
+   * Invalidate (remove) the cached image for a single student.
+   * Call this after uploading a new photo so the fresh URL is shown immediately.
+   */
+  invalidate: function(studentId) {
+    if (!studentId) return;
+    const key = `img_cache_${studentId.toLowerCase()}`;
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn(`Error invalidating image cache for ${studentId}:`, e);
+    }
+  },
+
   compressAndCacheElement: function(studentId, imgEl) {
     if (!studentId || !imgEl || imgEl.src.startsWith('data:') || imgEl.src.includes('assets/favicon.png')) {
       return;
