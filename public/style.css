@@ -173,7 +173,7 @@ body {
 }
 
 #app-container {
-  max-height: calc(100vh - 120px);
+  max-height: calc(var(--vh, 1vh) * 100 - 100px);
 }
 
 .app-section {
@@ -337,7 +337,7 @@ body {
   background: var(--bg-body); border: 1px solid var(--border-glass);
   padding: 0.65rem 0.85rem; border-radius: 10px;
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
   flex-shrink: 0;
@@ -364,16 +364,18 @@ body {
 #active-topic-name { font-weight: 500; color: var(--text-primary); }
 
 #reader-container {
-  width: 275px;
+  width: min(275px, 35vh);
   max-width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
   border-radius: 20px;
   overflow: hidden; position: relative; border: 1px solid var(--border-glass);
   background: #000; box-shadow: inset 0 4px 12px rgba(0,0,0,0.2);
-  margin: 0 auto 0.75rem auto;
+  margin: 0 auto 0.5rem auto;
   pointer-events: none;
-  flex-shrink: 0; /* Prevents vertical shrinking */
+  flex-shrink: 1; /* Allow vertical shrinking on smaller devices */
+  min-width: 180px;
+  min-height: 180px;
 }
 #reader { width: 100%; height: 100%; object-fit: cover; }
 
@@ -446,8 +448,8 @@ body {
    ========================================= */
 #queue-history-panel {
   flex: 1 1 auto; display: flex; flex-direction: column;
-  min-height: 0;
-  overflow: hidden; margin-bottom: 0.5rem;
+  min-height: 125px; /* Ensures history panel has enough height to not clip cards */
+  overflow: hidden; margin-bottom: 0.25rem;
 }
 
 .history-header {
@@ -888,6 +890,7 @@ input:focus-visible,
   display: flex;
   align-items: center;
   width: 100%;
+  min-height: 94px; /* Ensure space for the scan cards and hover states/shadows */
 }
 .carousel-container {
   flex: 1;
