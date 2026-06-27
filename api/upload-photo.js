@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import { ensureBucketExists } from './_supabase-utils.js';
 
 // Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -159,6 +160,9 @@ export default async function handler(req, res) {
   const targetFilename = `${baseFilename}.${ext}`;
 
   try {
+    // --- Ensure the bucket exists; create it if not (idempotent) ---
+    await ensureBucketExists(supabase, bucketName);
+
     // Delete any existing photos for this student (all extensions)
     const { data: existingFiles } = await supabase.storage
       .from(bucketName)
@@ -210,3 +214,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
 }
+

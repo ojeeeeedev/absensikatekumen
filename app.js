@@ -108,6 +108,18 @@ app.get('/api/classes', async (req, res) => {
   }
 });
 
+// Route to initialise (create) a Supabase storage bucket for a new class
+app.post('/api/init-bucket', async (req, res) => {
+  try {
+    const handler = (await import('./api/init-bucket.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/init-bucket:", error);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
+
 // Route to handle version retrieval
 app.get('/api/version', async (req, res) => {
   try {
