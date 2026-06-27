@@ -6,17 +6,8 @@
     const sessionToken = sessionStorage.getItem('authToken');
     if (!sessionToken) return;
 
-    // Dynamically inject stylesheet if not already loaded
-    if (!document.getElementById('onboarding-style')) {
-      const link = document.createElement('link');
-      link.id = 'onboarding-style';
-      link.rel = 'stylesheet';
-      link.href = 'onboarding.css';
-      document.head.appendChild(link);
-    }
-
-    // Dynamically inject onboarding modal HTML
-    if (!document.getElementById('onboarding-modal')) {
+    const appendModal = () => {
+      if (document.getElementById('onboarding-modal')) return;
       const modal = document.createElement('div');
       modal.id = 'onboarding-modal';
       modal.className = 'student-modal';
@@ -30,7 +21,7 @@
       modal.innerHTML = `
         <div class="modal-content onboarding-modal-content">
           <!-- Small Pewartaan Logo -->
-          <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" class="onboarding-logo">
+          <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" class="onboarding-logo" height="48" style="height: 48px; width: auto;">
 
           <!-- Welcome Header (Inter Font) -->
           <h2 class="onboarding-title">Selamat datang di Sistem Presensi v2</h2>
@@ -178,6 +169,19 @@
 
       // Register escape key handler
       window.addEventListener('keydown', handleEscapeKey);
+    };
+
+    // Dynamically inject stylesheet if not already loaded, wait for it to load to prevent unstyled logo flash
+    if (!document.getElementById('onboarding-style')) {
+      const link = document.createElement('link');
+      link.id = 'onboarding-style';
+      link.rel = 'stylesheet';
+      link.href = 'onboarding.css';
+      link.onload = appendModal;
+      link.onerror = appendModal; // Fallback in case loading fails
+      document.head.appendChild(link);
+    } else {
+      appendModal();
     }
   };
 
