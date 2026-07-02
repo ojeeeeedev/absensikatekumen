@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 
 // Load .env.local first (takes precedence), then fall back to .env
 dotenv.config({ path: '.env.local' });
@@ -26,6 +27,18 @@ app.use((req, res, next) => {
 
 // Accessing variables from environment
 const PORT = process.env.PORT || 5500;
+
+// Rate limiting middleware for sensitive routes
+const bucketInitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: {
+    status: "error",
+    message: "Too many requests, please try again later."
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 // ==========================================
 // 1. REWRITES & MIDDLEWARE EMULATION
@@ -109,7 +122,7 @@ app.get('/api/classes', async (req, res) => {
 });
 
 // Route to initialise (create) a Supabase storage bucket for a new class
-app.post('/api/init-bucket', async (req, res) => {
+app.post('/api/init-bucket', bucketInitLimiter, async (req, res) => {
   try {
     const handler = (await import('./api/init-bucket.js')).default;
     await handler(req, res);
