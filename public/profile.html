@@ -100,7 +100,45 @@
       </div>
     </main>
 
+    <!-- Upload Photo Modal (Bottom Sheet) -->
+    <div id="upload-preview-modal" class="upload-preview-modal" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+      <div class="upload-preview-sheet">
+        <div class="upload-preview-handle" aria-hidden="true"></div>
+        <div class="upload-preview-header">
+          <span class="upload-preview-title" id="upload-modal-title">Ganti Foto Katekumen</span>
+          <button class="upload-preview-close" id="upload-close-btn" aria-label="Tutup">
+            <span class="material-icons-outlined">close</span>
+          </button>
+        </div>
+        <div class="upload-preview-body">
+          <p class="upload-student-label" id="upload-student-label">—</p>
+          <!-- Drop Zone / Preview Area -->
+          <div class="upload-dropzone" id="upload-dropzone" tabindex="0" role="button" aria-label="Pilih atau seret foto ke sini">
+            <span class="material-icons-outlined upload-dropzone-icon" id="upload-dropzone-icon">add_photo_alternate</span>
+            <p class="upload-dropzone-text" id="upload-dropzone-text">Ketuk untuk memilih foto</p>
+            <p class="upload-dropzone-subtext" id="upload-dropzone-subtext">JPG, PNG, WebP • Maks. 5MB</p>
+            <img id="upload-preview-img" class="upload-preview-img" alt="Preview foto" />
+          </div>
+          <!-- Hidden file input -->
+          <input type="file" id="upload-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" aria-hidden="true" />
+          <!-- Progress Bar -->
+          <div class="upload-progress-bar-wrap" id="upload-progress-wrap">
+            <div class="upload-progress-bar" id="upload-progress-bar"></div>
+          </div>
+          <!-- Action Buttons -->
+          <div class="upload-actions">
+            <button class="upload-cancel-btn" id="upload-cancel-btn" type="button">Batal</button>
+            <button class="upload-confirm-btn" id="upload-confirm-btn" type="button" disabled>
+              <div class="btn-spinner"></div>
+              <span class="btn-label">Unggah Foto</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
+
 
     <script src="image-cache.js"></script>
     <script src="theme.js"></script>

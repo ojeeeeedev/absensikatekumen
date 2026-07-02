@@ -1764,3 +1764,305 @@ input:focus-visible,
 #profile-page #students-loader {
   padding: 30px 1.25rem;
 }
+
+/* =========================================
+   PHOTO UPLOAD — BUTTON & CONTROLS
+   ========================================= */
+.upload-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.2px;
+}
+
+.upload-photo-btn span.material-icons-outlined {
+  font-size: 1rem !important;
+}
+
+.upload-photo-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+.upload-photo-btn:active {
+  transform: translateY(0);
+}
+
+.upload-photo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* =========================================
+   PHOTO UPLOAD — FULL-SCREEN PREVIEW MODAL
+   ========================================= */
+.upload-preview-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 300;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.upload-preview-modal.open {
+  display: flex;
+}
+
+.upload-preview-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  border-top: 1px solid var(--border-glass);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
+  padding: 1.25rem 1.5rem 2rem;
+  animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes slideUpSheet {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.upload-preview-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border-glass);
+  border-radius: 2px;
+  margin: 0 auto 1.25rem auto;
+}
+
+.upload-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.upload-preview-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.upload-preview-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.upload-preview-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.upload-preview-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Drop-zone / Image Preview Area */
+.upload-dropzone {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  border: 2px dashed var(--border-glass);
+  border-radius: 16px;
+  background: var(--bg-hover);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-height: 200px;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.upload-dropzone-icon {
+  font-size: 2.5rem !important;
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+.upload-dropzone-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.upload-dropzone-subtext {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  text-align: center;
+}
+
+/* Preview image shown inside dropzone after selection */
+.upload-preview-img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 12px;
+  object-fit: contain;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  display: none;
+}
+
+.upload-student-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: 'Google Sans Code', monospace;
+  text-align: center;
+}
+
+/* Progress bar */
+.upload-progress-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-hover);
+  border-radius: 3px;
+  overflow: hidden;
+  display: none;
+}
+
+.upload-progress-bar-wrap.visible {
+  display: block;
+}
+
+.upload-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), #60a5fa);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  animation: progressShimmer 1.5s infinite linear;
+  background-size: 200% 100%;
+}
+
+@keyframes progressShimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* Action buttons row */
+.upload-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.upload-cancel-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-cancel-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.upload-confirm-btn {
+  flex: 2;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.upload-confirm-btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px var(--accent-glow);
+}
+
+.upload-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.upload-confirm-btn .btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+
+.upload-confirm-btn.uploading .btn-spinner {
+  display: block;
+}
+
+.upload-confirm-btn.uploading .btn-label {
+  display: none;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
