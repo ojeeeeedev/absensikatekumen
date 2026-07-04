@@ -6,6 +6,10 @@
       "destination": "/api/register"
     },
     {
+      "source": "/dashboard",
+      "destination": "/public/dashboard.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/public/$1"
     }

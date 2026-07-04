@@ -6,18 +6,20 @@
   const emptyState = document.getElementById('dashboard-empty');
   const content = document.getElementById('dashboard-content');
   const alertBox = document.getElementById('dashboard-alert');
+  const riskSearchInput = document.getElementById('risk-search-input');
   const selectedClassKey = 'dashboardSelectedClass';
+  let currentRiskRows = [];
+  const classNames = {};
 
-  const chartColors = ['#3b82f6', '#f4b400', '#d8574f', '#34a853', '#8b5cf6', '#00a3a3', '#9aa0a6'];
-  const zoneColors = {
-    green: '#78b85f',
-    yellow: '#d9b844',
-    red: '#d8574f',
-    black: '#2f3033'
+  const zoneCopy = {
+    green: { label: 'Aman', helper: 'Kehadiran di atas 85%', className: 'is-green' },
+    yellow: { label: 'Perhatian', helper: 'Perlu perhatian ringan', className: 'is-yellow' },
+    red: { label: 'Pengawasan', helper: 'Kehadiran 50-65%', className: 'is-red' },
+    black: { label: 'Penindakan', helper: 'Kehadiran di bawah 50%', className: 'is-black' }
   };
 
   function escapeHTML(value) {
-    return String(value || '')
+    return String(value === null || value === undefined ? '' : value)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -36,8 +38,12 @@
   }
 
   function setLoading(isLoading) {
+    document.body.classList.toggle('dashboard-loading', isLoading);
     if (loader) loader.hidden = !isLoading;
-    if (content && isLoading) content.setAttribute('aria-busy', 'true');
+    if (content && isLoading) {
+      content.setAttribute('aria-busy', 'true');
+      content.hidden = true;
+    }
     if (content && !isLoading) content.removeAttribute('aria-busy');
     if (emptyState) emptyState.hidden = isLoading || !!classSelector.value;
     if (refreshBtn) refreshBtn.disabled = isLoading;
@@ -77,6 +83,7 @@
         option.value = item.code;
         option.textContent = `Kelompok ${item.name}`;
         classSelector.appendChild(option);
+        classNames[item.code] = item.name;
       });
 
       const requestedClass = new URLSearchParams(window.location.search).get('classCode');
@@ -106,9 +113,7 @@
       const data = await res.json();
       if (data.status !== 'ok') throw new Error(data.message || 'Gagal memuat dashboard');
       renderDashboard(data);
-      if (data.fallback && data.message) {
-        showAlert(data.message);
-      }
+      if (data.fallback && data.message) showAlert(data.message);
       if (!options.silent) showToast('Dashboard diperbarui', 'success');
     } catch (err) {
       showAlert(err.message || 'Gagal memuat dashboard');
@@ -122,178 +127,228 @@
     const metadata = data.metadata || {};
     const summary = data.summary || {};
     const attendance = data.attendance || {};
+    const zones = normalizeZones(attendance.zones || []);
+    const recentTopics = attendance.topicHistory || attendance.recentTopics || [];
+    const lowTopics = attendance.lowAttendanceTopics || attendance.attentionTopics || [];
+    const latestTopic = attendance.latestTopic || recentTopics[0] || null;
 
-    setText('meta-tahun', metadata.tahun || '-');
-    setText('meta-kelompok', metadata.kelompok || data.classCode || '-');
-    setText('meta-baptis', metadata.baptis || '-');
+    setText('meta-kelompok', cohortLabel(metadata.kelompok, data.classCode));
+    setText('meta-period', periodLabel(metadata));
+    setText('meta-priest', metadata.priest || '-');
     setText('meta-updated', metadata.lastUpdated ? `Terakhir diperbarui ${formatDateLabel(metadata.lastUpdated)}` : 'Belum ada timestamp');
-    setText('summary-total', summary.total || 0);
 
-    renderGender(summary.gender || []);
-    renderCategoryTable('religion-table', summary.religion || []);
-    renderCategoryTable('marital-table', summary.maritalStatus || []);
-    renderZoneCards(attendance.zones || []);
-    renderTopicTable('recent-table', attendance.recentTopics || []);
-    renderTopicTable('attention-table', attendance.attentionTopics || []);
-    renderRiskTable(attendance.riskParticipants || []);
-    renderDonut('religion-chart', summary.religion || [], chartColors, summary.total || 0);
-    renderDonut('status-chart', attendance.zones || [], zoneSeriesColors(attendance.zones || []), summary.total || 0);
+    renderMetricCards(summary, zones, latestTopic);
+    renderAttendanceOverview(zones, Number(summary.total || 0));
+    renderTopicList('recent-topics', recentTopics, { latest: true });
+    renderTopicList('lowest-topics', lowTopics, { compact: true });
+    currentRiskRows = attendance.riskParticipants || [];
+    renderRiskList(currentRiskRows);
+    renderBreakdown('gender-breakdown', summary.gender || []);
+    renderBreakdown('religion-breakdown', summary.religion || []);
+    renderBreakdown('marital-breakdown', summary.maritalStatus || []);
 
     if (emptyState) emptyState.hidden = true;
     if (content) content.hidden = false;
   }
 
-  function setText(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
-  }
-
-  function renderGender(rows) {
-    const container = document.getElementById('gender-summary');
-    if (!container) return;
-    if (!rows.length) {
-      container.innerHTML = '<div class="split-badge"><span>Belum ada data</span><strong>0</strong></div>';
-      return;
-    }
-
-    container.innerHTML = rows.slice(0, 4).map((row) => `
-      <div class="split-badge">
-        <span>${escapeHTML(row.label)}</span>
-        <strong>${Number(row.count || 0)}</strong>
-      </div>
-    `).join('');
-  }
-
-  function renderCategoryTable(id, rows) {
-    const tbody = document.getElementById(id);
-    if (!tbody) return;
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td class="empty-row" colspan="3">Belum ada data.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = rows.map((row) => `
-      <tr>
-        <td>${escapeHTML(row.label)}</td>
-        <td>${Number(row.count || 0)}</td>
-        <td>${escapeHTML(row.percentage || formatPercent(row.rate))}</td>
-      </tr>
-    `).join('');
-  }
-
-  function renderZoneCards(rows) {
-    const container = document.getElementById('zone-cards');
-    if (!container) return;
-    const fallback = [
-      { key: 'green', label: 'Zona Hijau (Aman)', count: 0, percentage: '0.0%' },
-      { key: 'yellow', label: 'Zona Kuning (Perhatian)', count: 0, percentage: '0.0%' },
-      { key: 'red', label: 'Zona Merah (Pengawasan)', count: 0, percentage: '0.0%' },
-      { key: 'black', label: 'Zona Hitam (Penindakan)', count: 0, percentage: '0.0%' }
+  function renderMetricCards(summary, zones, latestTopic) {
+    const green = zoneByKey(zones, 'green');
+    const yellow = zoneByKey(zones, 'yellow');
+    const red = zoneByKey(zones, 'red');
+    const black = zoneByKey(zones, 'black');
+    const watched = Number(red.count || 0) + Number(black.count || 0);
+    const latestRate = latestTopic ? latestTopic.percentage || formatPercent(latestTopic.rate) : '-';
+    const cards = [
+      metricCard('Total Peserta', Number(summary.total || 0), 'Peserta aktif dalam kelompok ini', 'neutral'),
+      metricCard('Zona Hijau', Number(green.count || 0), 'Kehadiran di atas 85%', 'green', green.percentage),
+      metricCard('Zona Kuning', Number(yellow.count || 0), 'Perlu perhatian ringan', 'yellow', yellow.percentage),
+      metricCard('Dalam Pengawasan', watched, 'Kehadiran di bawah ambang aman', watched ? 'red' : 'green'),
+      metricCard('Topik Terbaru', latestRate, latestTopic?.topic || 'Belum ada data', latestTopic ? zoneKeyForRate(latestTopic.rate) : 'neutral')
     ];
-    const source = rows.length ? rows : fallback;
+    setHTML('metric-cards', cards.join(''));
+  }
 
-    container.innerHTML = source.map((row) => `
-      <div class="zone-card zone-${escapeHTML(row.key || zoneKeyFromLabel(row.label))}">
-        <span>${escapeHTML(row.label)}</span>
-        <strong>${Number(row.count || 0)} <em>${escapeHTML(row.percentage || formatPercent(row.rate))}</em></strong>
-        <div class="zone-meter" aria-hidden="true"><i style="width:${clampPercent(row.rate)}%"></i></div>
+  function metricCard(label, value, helper, tone, meta = '') {
+    return `
+      <article class="metric-card tone-${escapeHTML(tone || 'neutral')}">
+        <span>${escapeHTML(label)}</span>
+        <strong>${escapeHTML(value)}</strong>
+        <small>${escapeHTML(meta || helper)}</small>
+      </article>
+    `;
+  }
+
+  function renderAttendanceOverview(zones, total) {
+    const rows = ['green', 'yellow', 'red', 'black'].map((key) => zoneByKey(zones, key));
+    const segments = rows.map((row) => {
+      const width = clampPercent(row.rate);
+      const copy = zoneCopy[row.key];
+      const percentage = row.percentage || formatPercent(row.rate);
+      const tooltip = `${copy.label}: ${Number(row.count || 0)} peserta / ${percentage}. ${copy.helper}`;
+      return `
+        <span
+          class="zone-segment ${copy.className}"
+          style="width:${width}%"
+          tabindex="0"
+          role="img"
+          aria-label="${escapeHTML(tooltip)}"
+          data-tooltip="${escapeHTML(tooltip)}">
+        </span>
+      `;
+    }).join('');
+    const labels = rows.map((row) => {
+      const copy = zoneCopy[row.key];
+      const percentage = row.percentage || formatPercent(row.rate);
+      return `
+        <div class="zone-legend-item ${copy.className}">
+          <span><i></i>${escapeHTML(copy.label)}</span>
+          <strong>${Number(row.count || 0)} / ${escapeHTML(percentage)}</strong>
+        </div>
+      `;
+    }).join('');
+
+    setHTML('attendance-overview', `
+      <div class="health-score">
+        <div>
+          <span>Ringkasan kesehatan</span>
+          <strong>${Number(total || 0)} peserta</strong>
+        </div>
+        <p>Zona presensi dihitung dari topik yang sudah berjalan.</p>
       </div>
-    `).join('');
+      <div class="stacked-zone-bar" aria-label="Distribusi zona presensi">${segments}</div>
+      <div class="zone-legend" aria-label="Ringkasan zona presensi">${labels}</div>
+    `);
   }
 
-  function renderTopicTable(id, rows) {
-    const tbody = document.getElementById(id);
-    if (!tbody) return;
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td class="empty-row" colspan="4">Belum ada data.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = rows.map((row) => {
-      const rate = Number(row.rate || 0);
-      return `
-        <tr>
-          <td>
-            <strong>${escapeHTML(row.topic)}</strong>
-            ${row.topicName ? `<small>${escapeHTML(row.topicName)}</small>` : ''}
-          </td>
-          <td><span class="type-pill">${escapeHTML(row.type || topicType(row))}</span></td>
-          <td>${escapeHTML(row.ratio || `${row.presentCount || 0}/${row.totalCount || 0}`)}</td>
-          <td><span class="rate-pill ${rateClass(rate)}">${escapeHTML(row.percentage || formatPercent(rate))}</span></td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  function renderRiskTable(rows) {
-    const tbody = document.getElementById('risk-table');
-    if (!tbody) return;
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td class="empty-row" colspan="4">Tidak ada peserta dalam pengawasan.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = rows.map((row) => {
-      const rate = Number(row.rate || 0);
-      return `
-        <tr>
-          <td>
-            <strong>${escapeHTML(row.name || 'Tanpa nama')}</strong><br>
-            <span class="student-id">${escapeHTML(row.studentId || '-')}</span>
-          </td>
-          <td>${escapeHTML(row.katekisKk || row.kelasKi || '-')}</td>
-          <td><span class="zone-pill ${rateClass(rate)}">${escapeHTML(row.zone || '-')}</span></td>
-          <td><span class="rate-pill ${rateClass(rate)}">${escapeHTML(row.percentage || formatPercent(rate))}</span></td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  function renderDonut(id, rows, colors, total) {
+  function renderTopicList(id, rows, options = {}) {
     const container = document.getElementById(id);
     if (!container) return;
-    const filtered = rows.filter((row) => Number(row.count || 0) > 0);
-    if (!filtered.length) {
-      container.innerHTML = '<div class="empty-row">Belum ada data chart.</div>';
+    if (!rows.length) {
+      container.innerHTML = emptyStateMarkup('event_busy', 'Belum ada data topik', 'Data presensi akan muncul setelah kelas berjalan.');
       return;
     }
 
-    const sum = filtered.reduce((acc, row) => acc + Number(row.count || 0), 0);
-    let offset = 25;
-    const radius = 15.9155;
-    const circumference = 100;
-    const segments = filtered.map((row, index) => {
-      const value = sum > 0 ? Number(row.count || 0) / sum * 100 : 0;
-      const stroke = colors[index % colors.length];
-      const segment = `<circle r="${radius}" cx="18" cy="18" fill="transparent" stroke="${stroke}" stroke-width="8" stroke-dasharray="${value} ${circumference - value}" stroke-dashoffset="${offset}" />`;
-      offset -= value;
-      return segment;
+    container.innerHTML = rows.map((row, index) => {
+      const rate = Number(row.rate || 0);
+      const zone = zoneKeyForRate(rate);
+      const topicTitle = row.topicName || 'Tanpa judul topik';
+      const isLatest = options.latest && index === 0;
+      return `
+        <article class="topic-card ${isLatest ? 'is-latest' : ''}">
+          <div class="topic-main">
+            <span>${escapeHTML(row.topic || '-')}</span>
+            <strong>${escapeHTML(topicTitle)}</strong>
+            <small>${escapeHTML(row.ratio || `${row.presentCount || 0}/${row.totalCount || 0}`)} hadir</small>
+          </div>
+          <div class="topic-stat">
+            <strong>${escapeHTML(row.percentage || formatPercent(rate))}</strong>
+          </div>
+          <div class="mini-progress" aria-hidden="true"><i class="tone-${zone}" style="width:${clampPercent(rate)}%"></i></div>
+        </article>
+      `;
     }).join('');
+  }
 
-    const legend = filtered.map((row, index) => `
-      <span class="legend-chip">
-        <span class="legend-dot" style="background:${colors[index % colors.length]}"></span>
-        <span>${escapeHTML(row.shortLabel || row.label)}</span>
-        <strong>${escapeHTML(row.percentage || formatPercent(row.rate))}</strong>
-      </span>
-    `).join('');
+  function renderRiskList(rows) {
+    const list = document.getElementById('risk-list');
+    if (!list) return;
+    const query = String(riskSearchInput?.value || '').trim().toLowerCase();
+    const filtered = query
+      ? rows.filter((row) => String(row.name || '').toLowerCase().includes(query))
+      : rows;
 
-    container.innerHTML = `
-      <div class="donut-wrap">
-        <svg viewBox="0 0 36 36" role="img" aria-label="Diagram donat">
-          <title>Distribusi ${Number(total || sum)} peserta</title>
-          <circle r="${radius}" cx="18" cy="18" fill="transparent" stroke="var(--border-glass)" stroke-width="8" />
-          <g transform="rotate(-90 18 18)">${segments}</g>
-          <text x="18" y="17.3" text-anchor="middle" class="donut-center">${Number(total || sum)}</text>
-          <text x="18" y="21.2" text-anchor="middle" class="donut-label-sub">peserta</text>
-        </svg>
-        <div class="donut-legend">${legend}</div>
+    if (!rows.length) {
+      list.innerHTML = emptyStateMarkup('verified_user', 'Tidak ada peserta dalam pengawasan', 'Semua peserta masih berada di zona aman atau perhatian.');
+      return;
+    }
+    if (!filtered.length) {
+      list.innerHTML = emptyStateMarkup('search_off', 'Nama tidak ditemukan', 'Coba gunakan kata kunci lain.');
+      return;
+    }
+
+    list.innerHTML = filtered.map((row) => {
+      const rate = Number(row.rate || 0);
+      const zone = zoneKeyForRate(rate);
+      const waLink = whatsappLink(row.contact);
+      const missed = row.total !== undefined && row.present !== undefined ? Math.max(0, Number(row.total) - Number(row.present)) : null;
+      const image = row.image
+        ? `<img src="${escapeHTML(row.image)}" alt="Foto ${escapeHTML(row.name || 'peserta')}" loading="lazy" onerror="this.replaceWith(this.nextElementSibling)">`
+        : '';
+      return `
+        <article class="watch-card">
+          <div class="watch-photo">${image}<span class="material-icons-outlined">person</span></div>
+          <div class="watch-main">
+            <strong>${escapeHTML(row.name || 'Tanpa nama')}</strong>
+            <span>${escapeHTML(row.katekisKk || row.kelasKi || '-')}</span>
+            ${missed === null ? '' : `<small>${missed} topik belum hadir</small>`}
+          </div>
+          <div class="watch-meta">
+            <span class="status-badge tone-${zone}">${zoneLabel(zone)}</span>
+            <strong>${escapeHTML(row.percentage || formatPercent(rate))}</strong>
+            ${waLink ? `<a class="wa-link" href="${waLink}" target="_blank" rel="noopener" aria-label="Hubungi ${escapeHTML(row.name || 'peserta')} via WhatsApp"><span class="material-icons-outlined">chat</span></a>` : ''}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function renderBreakdown(id, rows) {
+    const container = document.getElementById(id);
+    if (!container) return;
+    const visible = rows.filter((row) => Number(row.count || 0) > 0);
+    if (!visible.length) {
+      container.innerHTML = emptyStateMarkup('bar_chart', 'Belum ada data', 'Data akan muncul setelah sinkronisasi.');
+      return;
+    }
+
+    container.innerHTML = visible.map((row) => {
+      const rate = Number(row.rate || 0);
+      return `
+        <div class="breakdown-row">
+          <div>
+            <span>${escapeHTML(row.label)}</span>
+            <strong>${Number(row.count || 0)}</strong>
+            <em>${escapeHTML(row.percentage || formatPercent(rate))}</em>
+          </div>
+          <div class="breakdown-bar" aria-hidden="true"><i style="width:${clampPercent(rate)}%"></i></div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function emptyStateMarkup(icon, title, helper) {
+    return `
+      <div class="empty-state">
+        <span class="material-icons-outlined">${escapeHTML(icon)}</span>
+        <strong>${escapeHTML(title)}</strong>
+        <small>${escapeHTML(helper)}</small>
       </div>
     `;
   }
 
-  function zoneSeriesColors(rows) {
-    return rows.map((row) => zoneColors[row.key] || zoneColors[zoneKeyFromLabel(row.label)] || '#9aa0a6');
+  function normalizeZones(rows) {
+    return ['green', 'yellow', 'red', 'black'].map((key) => {
+      const row = rows.find((item) => item.key === key || zoneKeyFromLabel(item.label) === key) || {};
+      return {
+        key,
+        label: row.label || zoneCopy[key].label,
+        count: Number(row.count || 0),
+        rate: Number(row.rate || 0),
+        percentage: row.percentage || formatPercent(row.rate)
+      };
+    });
+  }
+
+  function zoneByKey(rows, key) {
+    return rows.find((row) => row.key === key) || { key, count: 0, rate: 0, percentage: '0.0%' };
+  }
+
+  function zoneKeyForRate(rate) {
+    const value = Number(rate || 0);
+    if (value > 85) return 'green';
+    if (value >= 65) return 'yellow';
+    if (value >= 50) return 'red';
+    return 'black';
   }
 
   function zoneKeyFromLabel(label) {
@@ -304,10 +359,39 @@
     return 'black';
   }
 
-  function rateClass(rate) {
-    if (rate > 85) return 'rate-good';
-    if (rate >= 65) return 'rate-watch';
-    return 'rate-bad';
+  function zoneLabel(key) {
+    return zoneCopy[key]?.label || 'Penindakan';
+  }
+
+  function periodLabel(metadata) {
+    const intake = metadata.intakeYear || metadata.tahun || '';
+    const baptism = metadata.baptismYear || metadata.baptis || '';
+    if (intake && baptism) return `${intake} - ${baptism}`;
+    return intake || baptism || '-';
+  }
+
+  function cohortLabel(kelompok, classCode) {
+    const raw = String(kelompok || '').trim();
+    const code = String(classCode || classSelector.value || '').trim().toUpperCase();
+    if (raw && raw.toUpperCase() !== code) return raw;
+    return classNames[code] || raw || code || '-';
+  }
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function setHTML(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = value;
+  }
+
+  function whatsappLink(contact) {
+    const digits = String(contact || '').replace(/\D/g, '');
+    if (!digits) return '';
+    const normalized = digits.startsWith('0') ? `62${digits.slice(1)}` : digits.startsWith('62') ? digits : `62${digits}`;
+    return `https://wa.me/${normalized}`;
   }
 
   function formatPercent(value) {
@@ -319,12 +403,15 @@
   }
 
   function formatDateLabel(value) {
-    const date = new Date(value);
+    const normalized = String(value || '').replace(' ', 'T');
+    const date = new Date(normalized);
     if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleString('id-ID', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   }
 
@@ -332,18 +419,6 @@
     const url = new URL(window.location.href);
     url.searchParams.set('classCode', classCode);
     window.history.replaceState({}, '', url);
-  }
-
-  function topicType(row) {
-    const topicText = String(row.topic || '');
-    const match = topicText.match(/(?:Topik\s*)?([A-Z]?\d+|R\d+)/i);
-    const week = match ? match[1].toUpperCase() : '';
-    const topic = Array.isArray(STATIC_TOPICS) ? STATIC_TOPICS.find((item) => String(item.week).toUpperCase() === week) : null;
-    if (!topic) return 'KK';
-    if (/\(KI\)/i.test(topic.name)) return 'KI';
-    if (/\(P\)/i.test(topic.name)) return 'Pastor';
-    if (/rekoleksi|refleksi/i.test(topic.name)) return 'Rekoleksi';
-    return 'KK';
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -360,5 +435,9 @@
     refreshBtn.addEventListener('click', () => {
       if (classSelector.value) loadDashboard(classSelector.value);
     });
+
+    if (riskSearchInput) {
+      riskSearchInput.addEventListener('input', () => renderRiskList(currentRiskRows));
+    }
   });
 })();

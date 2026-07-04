@@ -62,15 +62,8 @@ app.get('/dashboard', async (req, res) => {
     // If token is missing, redirect to login page (index.html)
     return res.redirect('/');
   }
-  
-  try {
-    // Run api/dashboard handler directly
-    const handler = (await import('./api/dashboard.js')).default;
-    await handler(req, res);
-  } catch (error) {
-    console.error("Error running api/dashboard:", error);
-    res.status(500).send("Internal Server Error");
-  }
+
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // ==========================================
@@ -96,6 +89,17 @@ app.get('/api/dashboard', async (req, res) => {
   } catch (error) {
     console.error("Error running api/dashboard:", error);
     res.status(500).send("Internal Server Error");
+  }
+});
+
+// Route to handle dashboard data retrieval
+app.get('/api/dashboard-data', async (req, res) => {
+  try {
+    const handler = (await import('./api/dashboard-data.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/dashboard-data:", error);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
   }
 });
 

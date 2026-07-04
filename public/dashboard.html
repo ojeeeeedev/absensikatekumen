@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Presensi Katekumen Digital</title>
+    <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600;700&family=Google+Sans+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="dashboard.css">
+  </head>
+  <body id="dashboard-page">
+    <script>
+      (function() {
+        const getCookie = (name) => {
+          const value = '; ' + document.cookie;
+          const parts = value.split('; ' + name + '=');
+          if (parts.length === 2) return parts.pop().split(';').shift();
+          return null;
+        };
+        if (!getCookie('auth_token')) {
+          window.location.href = '/';
+        }
+      })();
+    </script>
+
+    <div class="liquid-background">
+      <div class="liquid-shape shape1"></div>
+      <div class="liquid-shape shape2"></div>
+    </div>
+
+    <nav class="app-nav dashboard-nav" id="app-nav">
+      <a href="/" class="nav-item">
+        <span class="material-icons-outlined">qr_code_scanner</span>
+        <span>Scan</span>
+      </a>
+      <a href="/profile" class="nav-item">
+        <span class="material-icons-outlined">people_alt</span>
+        <span>Profil</span>
+      </a>
+      <a href="/dashboard" class="nav-item active">
+        <span class="material-icons-outlined">tv</span>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item logout-btn" onclick="handleLogout(event)" aria-label="Keluar">
+        <span class="material-icons-outlined">logout</span>
+      </a>
+    </nav>
+
+    <main class="dashboard-shell">
+      <header class="dashboard-header">
+        <div class="dashboard-brand">
+          <img src="assets/pewartaan_normal.png" class="dashboard-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }">
+          <div>
+            <p class="dashboard-kicker">Katekumen Dewasa</p>
+            <h1>Dashboard Presensi dan Data Peserta</h1>
+            <p class="dashboard-subtitle">Paroki St. Petrus - Katedral, Bandung</p>
+          </div>
+        </div>
+        <div class="dashboard-controls">
+          <span id="meta-updated" class="updated-pill">Belum ada timestamp</span>
+          <label for="dashboard-class-selector" class="sr-only">Pilih kelas dashboard</label>
+          <select id="dashboard-class-selector">
+            <option value="" disabled selected>Memuat kelas...</option>
+          </select>
+          <button id="dashboard-refresh-btn" class="dashboard-icon-btn" type="button" aria-label="Muat ulang dashboard">
+            <span class="material-icons-outlined">refresh</span>
+          </button>
+        </div>
+      </header>
+
+      <section id="dashboard-alert" class="dashboard-alert" hidden></section>
+
+      <section id="dashboard-empty" class="dashboard-empty">
+        <span class="material-icons-outlined">dashboard_customize</span>
+        <h2>Pilih kelas untuk membuka dashboard.</h2>
+        <p>Data akan dimuat dari Google Sheet kelas yang terhubung.</p>
+      </section>
+
+      <section id="dashboard-loader" class="dashboard-loader" hidden>
+        <div class="spinner"></div>
+        <span>Memuat dashboard...</span>
+      </section>
+
+      <section id="dashboard-content" class="dashboard-grid" hidden>
+        <section class="context-strip" aria-label="Identitas kelompok">
+          <div>
+            <span>Kelompok</span>
+            <strong id="meta-kelompok">-</strong>
+          </div>
+          <div>
+            <span>Periode</span>
+            <strong id="meta-period">-</strong>
+          </div>
+          <div>
+            <span>Pastor pendamping</span>
+            <strong id="meta-priest">-</strong>
+          </div>
+        </section>
+
+        <section id="metric-cards" class="metric-grid" aria-label="Ringkasan kelas"></section>
+
+        <section class="section-card attendance-overview">
+          <div class="section-heading">
+            <div>
+              <span>Kesehatan Presensi</span>
+              <h2>Status kehadiran peserta</h2>
+            </div>
+          </div>
+          <div id="attendance-overview"></div>
+        </section>
+
+        <section class="section-card watch-panel">
+          <div class="section-heading split">
+            <div>
+              <span>Perlu tindakan</span>
+              <h2>Peserta Dalam Pengawasan</h2>
+            </div>
+            <label class="risk-search">
+              <input id="risk-search-input" type="search" placeholder="Cari nama peserta..." autocomplete="off">
+            </label>
+          </div>
+          <div id="risk-list" class="risk-list"></div>
+        </section>
+
+        <section class="section-card topics-panel">
+          <div class="section-heading">
+            <div>
+              <span>Topik Terbaru</span>
+              <h2>4 pertemuan terakhir</h2>
+            </div>
+          </div>
+          <div id="recent-topics" class="topic-list"></div>
+        </section>
+
+        <section class="section-card low-topics-panel">
+          <div class="section-heading">
+            <div>
+              <span>Perhatian</span>
+              <h2>Topik Dengan Kehadiran Terendah</h2>
+            </div>
+          </div>
+          <div id="lowest-topics" class="topic-list compact"></div>
+        </section>
+
+        <section class="section-card demographics-panel">
+          <div class="section-heading">
+            <div>
+              <span>Profil kelas</span>
+              <h2>Demografi Peserta</h2>
+            </div>
+          </div>
+          <div class="breakdown-grid">
+            <div>
+              <h3>Jenis Kelamin</h3>
+              <div id="gender-breakdown" class="breakdown-list"></div>
+            </div>
+            <div>
+              <h3>Agama</h3>
+              <div id="religion-breakdown" class="breakdown-list"></div>
+            </div>
+            <div>
+              <h3>Status Perkawinan</h3>
+              <div id="marital-breakdown" class="breakdown-list"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
+
+    <script src="topics.js"></script>
+    <script src="theme.js"></script>
+    <script src="session.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

@@ -120,6 +120,11 @@ function doPost(e) {
 
     // 6. Mark Attendance
     statusCell.setValue(true);
+    try {
+      touchDashboardLastUpdated_(ss);
+    } catch (touchErr) {
+      console.log("Dashboard timestamp update failed: " + touchErr.toString());
+    }
 
     return buildResponse_({
       status: "ok",
@@ -252,11 +257,11 @@ function getDashboardData_(ss) {
   const total = participants.length;
 
   const zones = buildZoneSummary_(attendanceProfiles, total);
-  const recentTopics = topicRows.slice(0, 5);
-  const attentionTopics = topicRows
-    .filter(function(row) { return row.rate <= 70; })
+  const topicHistory = topicRows.slice(0, 4);
+  const latestTopic = topicHistory[0] || null;
+  const lowAttendanceTopics = topicRows
     .sort(function(a, b) { return a.rate - b.rate; })
-    .slice(0, 5);
+    .slice(0, 4);
   const riskParticipants = attendanceProfiles
     .filter(function(profile) { return profile.zone === "Zona Merah" || profile.zone === "Zona Hitam"; })
     .sort(function(a, b) { return a.rate - b.rate; })
@@ -267,6 +272,7 @@ function getDashboardData_(ss) {
         name: profile.name,
         kelasKi: profile.kelasKi,
         katekisKk: profile.katekisKk,
+        contact: profile.contact,
         zone: profile.zone,
         rate: round1_(profile.rate),
         percentage: formatPercent_(profile.rate)
@@ -283,8 +289,11 @@ function getDashboardData_(ss) {
     },
     attendance: {
       zones: zones,
-      recentTopics: recentTopics,
-      attentionTopics: attentionTopics,
+      latestTopic: latestTopic,
+      topicHistory: topicHistory,
+      lowAttendanceTopics: lowAttendanceTopics,
+      recentTopics: topicHistory,
+      attentionTopics: lowAttendanceTopics,
       riskParticipants: riskParticipants
     }
   };
@@ -294,19 +303,57 @@ function readDashboardMetadata_(ss) {
   const defaults = {
     tahun: "",
     kelompok: "",
+    intakeYear: "",
+    baptismYear: "",
+    priest: "",
     baptis: "",
-    lastUpdated: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd")
+    lastUpdated: ""
   };
   const sheet = ss.getSheetByName("Dashboard_Metadata");
   if (!sheet) return defaults;
 
   const values = sheet.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
-    const key = String(values[i][0] || "").trim();
+    const key = normalizeHeaderKey_(values[i][0]);
     if (!key) continue;
-    defaults[key] = String(values[i][1] || "").trim();
+    const value = String(values[i][1] || "").trim();
+    if (key === "kelompok" || key === "cohortname") defaults.kelompok = value;
+    else if (key === "intakeyear" || key === "tahun") defaults.intakeYear = value;
+    else if (key === "baptismyear") defaults.baptismYear = value;
+    else if (key === "priest" || key === "romo" || key === "pastor" || key === "pastorincharge") defaults.priest = value;
+    else if (key === "baptis") defaults.baptis = value;
+    else if (key === "lastupdated") defaults.lastUpdated = value;
+    else defaults[key] = value;
   }
   return defaults;
+}
+
+function touchDashboardLastUpdated_(ss) {
+  let sheet = ss.getSheetByName("Dashboard_Metadata");
+  if (!sheet) {
+    sheet = ss.insertSheet("Dashboard_Metadata");
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, 2).setValues([["key", "value"]]);
+  }
+
+  const lastRow = Math.max(sheet.getLastRow(), 1);
+  const values = sheet.getRange(1, 1, lastRow, 2).getValues();
+  let rowIndex = -1;
+  for (let i = 1; i < values.length; i++) {
+    if (normalizeHeaderKey_(values[i][0]) === "lastupdated") {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  if (rowIndex < 0) {
+    rowIndex = lastRow + 1;
+    sheet.getRange(rowIndex, 1).setValue("lastUpdated");
+  }
+
+  sheet.getRange(rowIndex, 2).setValue(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss"));
 }
 
 function readDashboardParticipants_(ss) {
@@ -331,11 +378,12 @@ function readDashboardParticipants_(ss) {
     participants.push({
       studentId: studentId,
       name: name,
-      gender: getCell_(row, headers, "gender") || "Belum Diketahui",
+      gender: getCellAny_(row, headers, ["gender", "jk", "jeniskelamin"], -1) || "Belum Diketahui",
       religion: getCell_(row, headers, "religion") || "Belum Diketahui",
       maritalStatus: getCell_(row, headers, "maritalstatus") || "Belum Diketahui",
       kelasKi: getCell_(row, headers, "kelaski"),
-      katekisKk: getCell_(row, headers, "katekiskk")
+      katekisKk: getCell_(row, headers, "katekiskk"),
+      contact: getCellAny_(row, headers, ["nohp", "phone", "contact", "whatsapp", "telepon", "kontak"], -1)
     });
   }
   return participants.length ? participants : readParticipantsFromSourceSheets_(ss);
@@ -368,7 +416,8 @@ function readParticipantsFromSourceSheets_(ss) {
       religion: "Belum Diketahui",
       maritalStatus: "Belum Diketahui",
       kelasKi: "",
-      katekisKk: ""
+      katekisKk: "",
+      contact: ""
     };
     order.push(key);
   }
@@ -386,11 +435,12 @@ function readParticipantsFromSourceSheets_(ss) {
         if (!participant) continue;
 
         participant.name = getCellAny_(row, siswaHeaders, ["name", "nama", "namalengkap"], -1) || participant.name;
-        participant.gender = getCellAny_(row, siswaHeaders, ["gender", "jeniskelamin", "kelamin"], -1) || participant.gender;
+        participant.gender = getCellAny_(row, siswaHeaders, ["jk", "gender", "jeniskelamin", "kelamin"], -1) || participant.gender;
         participant.religion = getCellAny_(row, siswaHeaders, ["religion", "agama"], -1) || participant.religion;
         participant.maritalStatus = getCellAny_(row, siswaHeaders, ["maritalstatus", "statusperkawinan", "statuskawin", "perkawinan"], -1) || participant.maritalStatus;
         participant.kelasKi = getCellAny_(row, siswaHeaders, ["kelaski"], 17) || participant.kelasKi;
-        participant.katekisKk = getCellAny_(row, siswaHeaders, ["katekiskk", "katekiskelaskecil", "katekiskelcil", "katekiskecil"], 18) || participant.katekisKk;
+        participant.katekisKk = getCellAny_(row, siswaHeaders, ["katekiskelompokkecil", "katekiskk", "katekiskelaskecil", "katekiskelcil", "katekiskecil"], 18) || participant.katekisKk;
+        participant.contact = getCellAny_(row, siswaHeaders, ["nohp", "phone", "contact", "whatsapp", "telepon", "kontak"], -1) || participant.contact;
       }
     }
   }
@@ -461,7 +511,8 @@ function readTopicRowsFromPresensi_(ss, participants) {
     total++;
   }
 
-  return topicCols.map(function(topicCol) {
+  const activeTopicCols = activeTopicColumns_(values, topicCols, activeIds, useActiveIds);
+  return activeTopicCols.map(function(topicCol) {
     let present = 0;
     for (let r = 1; r < values.length; r++) {
       const studentId = String(values[r][11] || "").trim().toLowerCase();
@@ -490,7 +541,8 @@ function readAttendanceProfiles_(ss, participants) {
   const headers = values[0];
   const topicCols = [];
   for (let c = 0; c < headers.length; c++) {
-    if (/^Topik\s+/i.test(String(headers[c] || "").trim())) topicCols.push(c);
+    const header = String(headers[c] || "").trim();
+    if (/^Topik\s+/i.test(header)) topicCols.push({ index: c, topic: header });
   }
   if (topicCols.length === 0) return [];
 
@@ -498,6 +550,13 @@ function readAttendanceProfiles_(ss, participants) {
   participants.forEach(function(participant) {
     participantMap[String(participant.studentId || "").trim().toLowerCase()] = participant;
   });
+  const activeIds = {};
+  participants.forEach(function(participant) {
+    const key = String(participant.studentId || "").trim().toLowerCase();
+    if (key) activeIds[key] = true;
+  });
+  const activeTopicCols = activeTopicColumns_(values, topicCols, activeIds, true);
+  if (activeTopicCols.length === 0) return [];
 
   const profiles = [];
   for (let r = 1; r < values.length; r++) {
@@ -506,23 +565,40 @@ function readAttendanceProfiles_(ss, participants) {
     if (!participant) continue;
 
     let present = 0;
-    topicCols.forEach(function(col) {
-      if (values[r][col] === true || values[r][col] === "TRUE") present++;
+    activeTopicCols.forEach(function(topicCol) {
+      if (values[r][topicCol.index] === true || values[r][topicCol.index] === "TRUE") present++;
     });
 
-    const rate = present / topicCols.length * 100;
+    const rate = present / activeTopicCols.length * 100;
     profiles.push({
       studentId: studentId,
       name: participant.name || String(values[r][1] || "").trim(),
       kelasKi: participant.kelasKi,
       katekisKk: participant.katekisKk,
+      contact: participant.contact,
       present: present,
-      total: topicCols.length,
+      total: activeTopicCols.length,
       rate: rate,
       zone: zoneForRate_(rate)
     });
   }
   return profiles;
+}
+
+function activeTopicColumns_(values, topicCols, activeIds, useActiveIds) {
+  let lastActiveTopicIndex = -1;
+  for (let t = 0; t < topicCols.length; t++) {
+    const topicCol = topicCols[t];
+    for (let r = 1; r < values.length; r++) {
+      const studentId = String(values[r][11] || "").trim().toLowerCase();
+      if (useActiveIds && !activeIds[studentId]) continue;
+      if (values[r][topicCol.index] === true || values[r][topicCol.index] === "TRUE") {
+        lastActiveTopicIndex = t;
+        break;
+      }
+    }
+  }
+  return lastActiveTopicIndex >= 0 ? topicCols.slice(0, lastActiveTopicIndex + 1) : [];
 }
 
 function buildZoneSummary_(profiles, fallbackTotal) {
@@ -582,10 +658,14 @@ function buildCategorySummary_(items, field, total, orderedLabels) {
 function buildHeaderIndex_(headerRow) {
   const headers = {};
   for (let i = 0; i < headerRow.length; i++) {
-    const key = String(headerRow[i] || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    const key = normalizeHeaderKey_(headerRow[i]);
     if (key) headers[key] = i;
   }
   return headers;
+}
+
+function normalizeHeaderKey_(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function getCell_(row, headers, key) {
