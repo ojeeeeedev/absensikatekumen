@@ -1,4 +1,12 @@
+import { verifyJwt } from './_auth.js';
+
 export default function handler(req, res) {
+  try {
+    verifyJwt(req, { allowCookie: true });
+  } catch {
+    return res.status(401).send("Unauthorized");
+  }
+
   const dashboardUrl = process.env.DASHBOARD_URL;
 
   if (!dashboardUrl) {

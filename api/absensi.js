@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { verifyJwt } from './_auth.js';
+import { bucketNameForClass, classCodeFromStudentId, findStudentPhoto, photoUrlForStudent } from './_supabase-utils.js';
 
 export default async function handler(req, res) {
   // CORS
@@ -19,7 +21,7 @@ export default async function handler(req, res) {
   // --- Supabase Configuration ---
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
-  const supabase = (SUPABASE_URL && SUPABASE_KEY) 
+  const supabase = (SUPABASE_URL && SUPABASE_KEY)
     ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
   // --- Mapping for your sheets (loaded from environment variable) ---
@@ -65,18 +67,17 @@ export default async function handler(req, res) {
       
       // If not login, handle it as an attendance submission
       // --- Token validation for this specific action is required ---
-      const token = req.headers.authorization?.split(' ')[1];
-      if (!token) {
-        return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
-      }
       try {
-        jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+        verifyJwt(req);
       } catch (err) {
         return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
       }
 
       const { studentId } = req.body;
-      const classCode = studentId?.split('/')[1]?.toUpperCase();
+      const classCode = classCodeFromStudentId(studentId);
+      if (!classCode) {
+        return res.status(400).json({ status: "error", message: "Format studentId tidak valid" });
+      }
 
       const scriptURL = SCRIPT_MAP[classCode];
       if (!scriptURL) {
@@ -86,9 +87,13 @@ export default async function handler(req, res) {
         });
       }
 
+      const GAS_SECRET_KEY = process.env.GAS_SECRET_KEY;
+      if (!GAS_SECRET_KEY) {
+        return res.status(500).json({ status: "error", message: "Server configuration error." });
+      }
+
       // --- OPTIMIZATION: Parallelize GAS fetch and Supabase Image preparation ---
-      const baseFilename = studentId.replace(/\//g, '-');
-      const bucketName = `pasfoto-${classCode.toLowerCase()}`;
+      const bucketName = bucketNameForClass(classCode);
 
       // Start GAS fetch
       const gasPromise = fetch(scriptURL, {
@@ -96,7 +101,7 @@ export default async function handler(req, res) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...req.body,
-          api_secret: process.env.GAS_SECRET_KEY || "default_development_secret"
+          api_secret: GAS_SECRET_KEY
         }),
       });
 
@@ -104,34 +109,15 @@ export default async function handler(req, res) {
       const imagePromise = (async () => {
         if (!supabase) return null;
         try {
-          const { data: files, error: listError } = await supabase.storage
-            .from(bucketName)
-            .list('', { search: baseFilename });
-
-          if (listError || !files || files.length === 0) return null;
-
-          // Find exact match with allowed extensions
-          const match = files.find(f => {
-            const parts = f.name.split('.');
-            const ext = parts.pop().toLowerCase();
-            const nameWithoutExt = parts.join('.');
-            return nameWithoutExt === baseFilename && ['jpg', 'jpeg', 'png'].includes(ext);
-          });
-
-          if (!match) return null;
-
-          const { data: sigData, error: sigError } = await supabase.storage
-            .from(bucketName)
-            .createSignedUrl(match.name, 60);
-
-          return sigError ? null : sigData?.signedUrl;
+          const match = await findStudentPhoto(supabase, bucketName, studentId);
+          return match ? photoUrlForStudent(studentId) : null;
         } catch (e) {
           console.error("[DEBUG] Image preparation error:", e);
           return null;
         }
       })();
 
-      const [gasResponse, signedUrl] = await Promise.all([gasPromise, imagePromise]);
+      const [gasResponse, imageUrl] = await Promise.all([gasPromise, imagePromise]);
 
       const text = await gasResponse.text();
       let data;
@@ -146,9 +132,9 @@ export default async function handler(req, res) {
         });
       }
 
-      // Inject image if we got a URL and GAS was successful or returned duplicate (SUDAH ABSEN)
-      if ((data.status === 'ok' || data.status === 'duplicate') && signedUrl) {
-        data.image = signedUrl;
+      // Inject same-origin image URL if GAS was successful or returned duplicate (SUDAH ABSEN)
+      if ((data.status === 'ok' || data.status === 'duplicate') && imageUrl) {
+        data.image = imageUrl;
       }
 
       return res.status(200).json(data);

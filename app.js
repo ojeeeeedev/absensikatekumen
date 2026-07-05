@@ -121,6 +121,17 @@ app.get('/api/classes', async (req, res) => {
   }
 });
 
+// Route to proxy private Supabase photos through the app server
+app.get('/api/photo', async (req, res) => {
+  try {
+    const handler = (await import('./api/photo.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/photo:", error);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
 // Route to initialise (create) a Supabase storage bucket for a new class
 app.post('/api/init-bucket', bucketInitLimiter, async (req, res) => {
   try {

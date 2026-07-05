@@ -1,6 +1,6 @@
-import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 import { ensureBucketExists, bucketNameForClass } from './_supabase-utils.js';
+import { verifyJwt } from './_auth.js';
 
 /**
  * POST /api/init-bucket
@@ -40,13 +40,8 @@ export default async function handler(req, res) {
   }
 
   // --- JWT Authentication ---
-  const JWT_SECRET = process.env.JWT_SECRET;
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
-  }
   try {
-    jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    verifyJwt(req);
   } catch (err) {
     return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
   }

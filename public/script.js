@@ -113,14 +113,26 @@ window.addEventListener('resize', setViewportHeight);
 window.openTopicModal = function() { document.getElementById('topic-modal').style.display = 'flex'; }
 window.closeTopicModal = function() { document.getElementById('topic-modal').style.display = 'none'; }
 
+function setTopicTriggerText(week, name) {
+  const btn = document.getElementById('topic-trigger-large');
+  if (!btn) return;
+  btn.textContent = '';
+
+  const label = document.createElement('span');
+  label.textContent = `${week}. ${name}`;
+
+  const icon = document.createElement('span');
+  icon.className = 'material-icons-outlined';
+  icon.textContent = 'arrow_drop_down';
+
+  btn.append(label, icon);
+}
+
 window.selectTopic = function(week, name, element) {
   selectedWeek = week;
   localStorage.setItem('selectedWeek', week);
   localStorage.setItem('selectedTopicName', name);
-  const btn = document.getElementById('topic-trigger-large');
-  if (btn) {
-    btn.innerHTML = `<span>${week}. ${name}</span><span class="material-icons-outlined">arrow_drop_down</span>`;
-  }
+  setTopicTriggerText(week, name);
   const activeTopicText = document.getElementById('active-topic-name');
   if (activeTopicText) {
     activeTopicText.textContent = `${week}. ${name}`;
@@ -568,22 +580,15 @@ class ScanQueue {
         }
       };
 
-      const cachedPhoto = window.ImageCache ? window.ImageCache.get(item.studentId) : null;
-      const avatarSrc = cachedPhoto || item.image || '/assets/favicon.png';
+      const avatarSrc = item.image || '/assets/favicon.png';
       
       const studentInfo = document.createElement('div');
       studentInfo.className = 'student-info';
 
       const studentPhoto = document.createElement('img');
       studentPhoto.className = 'student-photo';
-      studentPhoto.setAttribute('crossorigin', 'anonymous');
       studentPhoto.setAttribute('data-student-id', item.studentId || '');
       studentPhoto.alt = 'Foto';
-      studentPhoto.onload = function() {
-        if (!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) {
-          window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);
-        }
-      };
       studentPhoto.onerror = function() {
         this.onerror = null;
         this.src = '/assets/favicon.png';
@@ -1062,10 +1067,7 @@ window.onload = () => {
     const savedTopicName = localStorage.getItem('selectedTopicName');
     if (savedWeek && savedTopicName) {
       selectedWeek = savedWeek;
-      const btn = document.getElementById('topic-trigger-large');
-      if (btn) {
-        btn.innerHTML = `<span>${savedWeek}. ${savedTopicName}</span><span class="material-icons-outlined">arrow_drop_down</span>`;
-      }
+      setTopicTriggerText(savedWeek, savedTopicName);
       const activeTopicText = document.getElementById('active-topic-name');
       if (activeTopicText) {
         activeTopicText.textContent = `${savedWeek}. ${savedTopicName}`;
@@ -1089,16 +1091,9 @@ window.showStudentModal = function(item) {
 
   if (!modal) return;
 
-  const cachedPhoto = window.ImageCache ? window.ImageCache.get(item.studentId) : null;
-  const modalImgSrc = cachedPhoto || item.image || '/assets/favicon.png';
+  const modalImgSrc = item.image || '/assets/favicon.png';
 
-  photoEl.setAttribute('crossorigin', 'anonymous');
   photoEl.setAttribute('data-student-id', item.studentId || '');
-  photoEl.onload = function() {
-    if (!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) {
-      window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);
-    }
-  };
   photoEl.onerror = function() {
     this.onerror = null;
     this.src = '/assets/favicon.png';

@@ -182,16 +182,11 @@ const PhotoUploader = (() => {
       if (data.status === 'ok') {
         progressBar.style.width = '100%';
 
-        // Invalidate image cache for this student
-        if (window.ImageCache) {
-          window.ImageCache.invalidate(currentStudentId);
-        }
-
-        // Update the in-memory student data immediately with the fresh signed URL
-        if (data.signedUrl) {
+        // Update the in-memory student data immediately with the private app URL
+        if (data.image) {
           const student = allStudents.find(s => s.studentId === currentStudentId);
           if (student) {
-            student.image = data.signedUrl;
+            student.image = data.image;
           }
         }
 
@@ -381,13 +376,11 @@ function renderStudents(students) {
     header.setAttribute('role', 'button');
     header.setAttribute('aria-expanded', 'false');
     
-    const imgUrl = student.image;
-    const cachedPhoto = window.ImageCache ? window.ImageCache.get(student.studentId) : null;
-    const displayImgUrl = cachedPhoto || imgUrl;
+    const displayImgUrl = student.image;
     const hasPhoto = !!displayImgUrl;
     
     const photoHtml = hasPhoto 
-      ? `<img class="student-thumb" src="${escapeHTML(displayImgUrl)}" crossorigin="anonymous" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="if(!this.src.startsWith('data:') && window.ImageCache && this.dataset.studentId) window.ImageCache.compressAndCacheElement(this.dataset.studentId, this);">
+      ? `<img class="student-thumb" src="${escapeHTML(displayImgUrl)}" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <div class="student-thumb-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
       : `<div class="student-thumb-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
@@ -415,7 +408,7 @@ function renderStudents(students) {
     body.className = 'student-accordion-body collapsed';
     
     const largePhotoHtml = hasPhoto
-      ? `<img class="student-photo-large" src="${escapeHTML(displayImgUrl)}" crossorigin="anonymous" alt="Foto ${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      ? `<img class="student-photo-large" src="${escapeHTML(displayImgUrl)}" alt="Foto ${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <div class="student-photo-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
       : `<div class="student-photo-placeholder"><span class="material-icons-outlined">person</span></div>`;
     
@@ -570,7 +563,6 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', filterStudents);
   }
 });
-
 
 
 

@@ -47,6 +47,27 @@ export async function ensureBucketExists(supabase, bucketName) {
   throw new Error(`Gagal membuat bucket storage: ${error.message}`);
 }
 
+export const PHOTO_MIME_TYPES = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+};
+
+export function classCodeFromStudentId(studentId) {
+  const value = String(studentId || '').trim();
+  if (!/^[A-Za-z0-9_-]+\/[A-Za-z0-9]{2,5}\/[A-Za-z0-9_-]+$/.test(value)) {
+    return null;
+  }
+
+  const parts = value.split('/');
+  const classCode = parts[1]?.trim().toUpperCase();
+  if (!/^[A-Z0-9]{2,5}$/.test(classCode)) {
+    return null;
+  }
+  return classCode;
+}
+
 /**
  * Derives the Supabase bucket name from a student ID or class code.
  *
@@ -55,4 +76,33 @@ export async function ensureBucketExists(supabase, bucketName) {
  */
 export function bucketNameForClass(classCode) {
   return `pasfoto-${classCode.toLowerCase()}`;
+}
+
+export function storageBaseNameForStudent(studentId) {
+  const normalized = String(studentId || '').trim();
+  if (!normalized || !classCodeFromStudentId(normalized)) return null;
+  return normalized.replace(/\//g, '-');
+}
+
+export function photoUrlForStudent(studentId, version = '') {
+  const params = new URLSearchParams({ studentId });
+  if (version) params.set('v', version);
+  return `/api/photo?${params.toString()}`;
+}
+
+export async function findStudentPhoto(supabase, bucketName, studentId) {
+  const baseFilename = storageBaseNameForStudent(studentId);
+  if (!baseFilename) return null;
+
+  const { data: files, error } = await supabase.storage
+    .from(bucketName)
+    .list('', { search: baseFilename, limit: 20 });
+
+  if (error || !files?.length) return null;
+
+  return files.find((file) => {
+    const parts = file.name.split('.');
+    const ext = parts.pop()?.toLowerCase();
+    return PHOTO_MIME_TYPES[ext] && parts.join('.') === baseFilename;
+  }) || null;
 }
