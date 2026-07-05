@@ -10,14 +10,15 @@ npm install
 ```
 
 ### Run Local Development Server
-Use the Vercel CLI to run serverless API functions and the frontend concurrently:
+Run the local Express wrapper for API routes and static files:
 ```bash
 npm start
-# or directly using the vercel CLI
-vercel dev
 ```
 
-There are no pre-configured unit testing or linting frameworks in this repository.
+Run tests:
+```bash
+npm test
+```
 
 ---
 
@@ -59,4 +60,3 @@ This repository implements a lightweight, responsive, serverless attendance syst
   - `DAFTAR_URL`: Target Google Forms or registration URL.
 - **Deployment**: Configured to deploy natively to Vercel (see `vercel.json` and `middleware.js` for redirects and path behavior).
 - **Version Bumping**: When all requested modifications for a task are complete and verified, ask the user if they want to bump the package version (major, minor, patch, or none) before final completion. After every version bump, ask the user interactively whether to commit to the local repo or push it to the remote repo.
-
