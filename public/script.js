@@ -83,7 +83,7 @@ window.setAppState = async function(state) {
       const topicTrigger = document.getElementById('topic-trigger-large');
       const activeTopicText = document.getElementById('active-topic-name');
       if (activeTopicText && topicTrigger) {
-        activeTopicText.textContent = topicTrigger.textContent.replace('arrow_drop_down', '').trim();
+        activeTopicText.textContent = topicTrigger.textContent.trim();
       }
     }
 
@@ -110,7 +110,11 @@ setViewportHeight();
 window.addEventListener('resize', setViewportHeight);
 
 // --- MODAL FUNCTIONS ---
-window.openTopicModal = function() { document.getElementById('topic-modal').style.display = 'flex'; }
+window.openTopicModal = function() {
+  const modal = document.getElementById('topic-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('topic-search-input')?.focus(), 0);
+}
 window.closeTopicModal = function() { document.getElementById('topic-modal').style.display = 'none'; }
 
 function setTopicTriggerText(week, name) {
@@ -121,9 +125,7 @@ function setTopicTriggerText(week, name) {
   const label = document.createElement('span');
   label.textContent = `${week}. ${name}`;
 
-  const icon = document.createElement('span');
-  icon.className = 'material-icons-outlined';
-  icon.textContent = 'arrow_drop_down';
+  const icon = window.createAppIcon('chevron-down');
 
   btn.append(label, icon);
 }
@@ -159,12 +161,12 @@ window.togglePasswordVisibility = function() {
   const icon = document.getElementById('password-toggle');
   if (input.type === 'password') {
     input.type = 'text';
-    icon.textContent = 'visibility';
+    icon.setAttribute('icon', 'eye-open');
     icon.setAttribute('aria-pressed', 'true');
     icon.setAttribute('aria-label', 'Sembunyikan password');
   } else {
     input.type = 'password';
-    icon.textContent = 'visibility_off';
+    icon.setAttribute('icon', 'eye-off');
     icon.setAttribute('aria-pressed', 'false');
     icon.setAttribute('aria-label', 'Tampilkan password');
   }
@@ -489,6 +491,8 @@ class ScanQueue {
       if (segDuplicate) segDuplicate.style.width = '0%';
       if (segError) segError.style.width = '0%';
       if (segPending) segPending.style.width = '0%';
+      const progressBar = document.querySelector('.segmented-progress-bar');
+      if (progressBar) progressBar.setAttribute('aria-valuenow', '0');
 
       // Hide all legend tags
       const legends = ['legend-success', 'legend-duplicate', 'legend-error', 'legend-pending'];
@@ -538,6 +542,11 @@ class ScanQueue {
     if (segDuplicate) segDuplicate.style.width = `${duplicatePct}%`;
     if (segError) segError.style.width = `${errorPct}%`;
     if (segPending) segPending.style.width = `${pendingPct}%`;
+    const progressBar = document.querySelector('.segmented-progress-bar');
+    if (progressBar) {
+      const completePct = Math.round(successPct + duplicatePct + errorPct);
+      progressBar.setAttribute('aria-valuenow', String(completePct));
+    }
 
     // 3. Update legend counts and visibility
     const updateLegend = (id, count, singularTerm) => {
@@ -568,7 +577,14 @@ class ScanQueue {
       row.style.cursor = 'pointer';
       row.setAttribute('role', 'button');
       row.setAttribute('tabindex', '0');
-      row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}`);
+      const statusTextMap = {
+        success: 'hadir',
+        duplicate: 'presensi sudah tercatat',
+        error: 'gagal',
+        processing: 'sedang sinkronisasi',
+        pending: 'menunggu sinkronisasi'
+      };
+      row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}, ${statusTextMap[item.status] || item.status}`);
       
       row.onclick = () => {
         showStudentModal(item);
@@ -620,20 +636,14 @@ class ScanQueue {
       const statusBadge = document.createElement('span');
       statusBadge.className = `status-badge ${item.status}`;
       
-      const icon = document.createElement('span');
-      icon.className = 'material-icons-outlined';
-      
-      if (item.status === 'success') {
-        icon.textContent = 'check';
-      } else if (item.status === 'error') {
-        icon.textContent = 'close';
-      } else if (item.status === 'duplicate') {
-        icon.textContent = 'refresh';
-      } else if (item.status === 'processing') {
-        icon.textContent = 'sync';
-      } else {
-        icon.textContent = 'schedule';
-      }
+      const statusIconByStatus = {
+        success: 'check',
+        error: 'close-circle2',
+        duplicate: 'refresh',
+        processing: 'refresh',
+        pending: 'timer-alt'
+      };
+      const icon = window.createAppIcon(statusIconByStatus[item.status] || statusIconByStatus.pending);
       
       statusBadge.appendChild(icon);
       row.appendChild(statusBadge);
@@ -744,14 +754,12 @@ window.showToast = function(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   
-  let iconName = 'check_circle';
-  if (type === 'error') iconName = 'error';
-  if (type === 'info') iconName = 'info';
+  let iconName = 'check-circle';
+  if (type === 'error') iconName = 'close-circle2';
+  if (type === 'info') iconName = 'info-circle';
 
   // Safe element construction to prevent XSS
-  const icon = document.createElement('span');
-  icon.className = 'material-icons-outlined toast-icon';
-  icon.textContent = iconName;
+  const icon = window.createAppIcon(iconName, 'toast-icon');
 
   const text = document.createElement('span');
   text.className = 'toast-message';
@@ -788,17 +796,15 @@ function showStatus(mainText, type, subText = "") {
   const el = document.getElementById("status");
   if (!el) return;
   
-  let iconName = "qr_code_scanner";
-  if (type === 'success') iconName = "check_circle_outline";
-  else if (type === 'error') iconName = "error_outline";
-  else if (type === 'processing') iconName = "hourglass_empty";
+  let iconName = "qr";
+  if (type === 'success') iconName = "check-circle";
+  else if (type === 'error') iconName = "close-circle2";
+  else if (type === 'processing') iconName = "timer-alt";
 
   el.innerHTML = "";
 
-  const iconSpan = document.createElement("span");
-  iconSpan.className = "material-icons-outlined";
+  const iconSpan = window.createAppIcon(iconName);
   iconSpan.style.fontSize = "1.25rem";
-  iconSpan.textContent = iconName;
   el.appendChild(iconSpan);
 
   if (subText) {
@@ -850,22 +856,9 @@ function triggerVisualFlash(type) {
   const readerContainer = document.getElementById('reader-container');
   if (!readerContainer) return;
   
-  // Create a temporary overlay element
   const flash = document.createElement('div');
-  flash.style.position = 'absolute';
-  flash.style.inset = '0';
-  flash.style.zIndex = '5';
-  flash.style.pointerEvents = 'none';
-  flash.style.opacity = '0.35';
-  flash.style.transition = 'opacity 0.4s ease';
-  
-  if (type === 'success') {
-    flash.style.backgroundColor = '#2e7d32'; // Green
-  } else if (type === 'duplicate') {
-    flash.style.backgroundColor = '#f57c00'; // Orange
-  } else {
-    flash.style.backgroundColor = '#c62828'; // Red
-  }
+  const flashType = type === 'success' ? 'success' : type === 'duplicate' ? 'duplicate' : 'error';
+  flash.className = `reader-flash ${flashType}`;
   
   readerContainer.appendChild(flash);
   
@@ -1116,6 +1109,7 @@ window.showStudentModal = function(item) {
   statusEl.textContent = statusText;
 
   modal.style.display = 'flex';
+  setTimeout(() => modal.querySelector('[role="button"], button')?.focus(), 0);
 };
 
 window.closeStudentModal = function(event) {
@@ -1190,4 +1184,17 @@ document.addEventListener('click', (event) => {
       window.closeDeleteConfirm();
     }
   }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const topicModal = document.getElementById('topic-modal');
+  if (topicModal && topicModal.style.display === 'flex') {
+    window.closeTopicModal();
+  }
+  const studentModal = document.getElementById('student-detail-modal');
+  if (studentModal && studentModal.style.display === 'flex') {
+    window.closeStudentModal(event);
+  }
+  window.closeDeleteConfirm(event);
 });
