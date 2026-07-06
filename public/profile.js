@@ -90,6 +90,7 @@ const PhotoUploader = (() => {
     resetDropzone();
     progressWrap.classList.remove('visible');
     progressBar.style.width = '0%';
+    progressWrap.setAttribute('aria-valuenow', '0');
     confirmBtn.disabled = true;
     confirmBtn.classList.remove('uploading');
     fileInput.value = '';
@@ -160,6 +161,7 @@ const PhotoUploader = (() => {
     closeBtn.disabled = true;
     progressWrap.classList.add('visible');
     progressBar.style.width = '30%';
+    progressWrap.setAttribute('aria-valuenow', '30');
 
     const formData = new FormData();
     formData.append('studentId', currentStudentId);
@@ -167,6 +169,7 @@ const PhotoUploader = (() => {
 
     try {
       progressBar.style.width = '60%';
+      progressWrap.setAttribute('aria-valuenow', '60');
 
       const res = await fetch('/api/upload-photo', {
         method: 'POST',
@@ -177,10 +180,12 @@ const PhotoUploader = (() => {
       });
 
       progressBar.style.width = '90%';
+      progressWrap.setAttribute('aria-valuenow', '90');
       const data = await res.json();
 
       if (data.status === 'ok') {
         progressBar.style.width = '100%';
+        progressWrap.setAttribute('aria-valuenow', '100');
 
         // Update the in-memory student data immediately with the private app URL
         if (data.image) {
@@ -211,6 +216,7 @@ const PhotoUploader = (() => {
       closeBtn.disabled = false;
       progressWrap.classList.remove('visible');
       progressBar.style.width = '0%';
+      progressWrap.setAttribute('aria-valuenow', '0');
     }
   }
 
@@ -563,6 +569,4 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', filterStudents);
   }
 });
-
-
 

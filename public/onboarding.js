@@ -14,6 +14,7 @@
       modal.style.display = 'flex';
       modal.setAttribute('role', 'dialog');
       modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-labelledby', 'onboarding-title');
       
       // Close modal on click outside content
       modal.onclick = (e) => closeOnboardingModal(e);
@@ -24,7 +25,7 @@
           <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" class="onboarding-logo" height="48" style="height: 48px; width: auto;">
 
           <!-- Welcome Header (Inter Font) -->
-          <h2 class="onboarding-title">Selamat datang di Sistem Presensi v2</h2>
+          <h2 class="onboarding-title" id="onboarding-title">Selamat datang di Sistem Presensi v2</h2>
 
           <div class="onboarding-scroll-area">
             <!-- Section 1: Fitur Baru yang Memudahkan -->
@@ -36,14 +37,14 @@
               
               <!-- Row 1: Scan QR Berturut-turut -->
               <div class="row-accordion" id="row-scan">
-                <div class="row-accordion-header">
+                <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-scan-content">
                   <div class="row-accordion-title">
                     <span class="material-icons-outlined" aria-hidden="true">bolt</span>
                     <span>Scan QR Berturut-turut</span>
                   </div>
                   <span class="material-icons-outlined chevron">expand_more</span>
-                </div>
-                <div class="row-accordion-content">
+                </button>
+                <div class="row-accordion-content" id="row-scan-content">
                   <div class="row-accordion-body">
                     Scan peserta berikutnya langsung tanpa jeda. Data otomatis dikirim di latar belakang.
                   </div>
@@ -52,14 +53,14 @@
 
               <!-- Row 2: Simpan Offline Otomatis -->
               <div class="row-accordion" id="row-offline">
-                <div class="row-accordion-header">
+                <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-offline-content">
                   <div class="row-accordion-title">
                     <span class="material-icons-outlined" aria-hidden="true">wifi_off</span>
                     <span>Simpan Offline Otomatis</span>
                   </div>
                   <span class="material-icons-outlined chevron">expand_more</span>
-                </div>
-                <div class="row-accordion-content">
+                </button>
+                <div class="row-accordion-content" id="row-offline-content">
                   <div class="row-accordion-body">
                     Scan tetap jalan walau internet lambat/putus. Data aman dan terkirim otomatis saat online.
                   </div>
@@ -68,14 +69,14 @@
 
               <!-- Row 3: Daftar & Profil Katekumen -->
               <div class="row-accordion" id="row-profile">
-                <div class="row-accordion-header">
+                <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-profile-content">
                   <div class="row-accordion-title">
                     <span class="material-icons-outlined" aria-hidden="true">badge</span>
                     <span>Daftar & Profil Katekumen</span>
                   </div>
                   <span class="material-icons-outlined chevron">expand_more</span>
-                </div>
-                <div class="row-accordion-content">
+                </button>
+                <div class="row-accordion-content" id="row-profile-content">
                   <div class="row-accordion-body">
                     Halaman khusus untuk melihat daftar seluruh peserta kelas, katekis, kelompok KI, dan foto mereka.
                   </div>
@@ -84,14 +85,14 @@
 
               <!-- Row 4: Tampilan Informasi Rapi -->
               <div class="row-accordion" id="row-detail">
-                <div class="row-accordion-header">
+                <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-detail-content">
                   <div class="row-accordion-title">
                     <span class="material-icons-outlined" aria-hidden="true">layers</span>
                     <span>Tampilan Informasi Rapi</span>
                   </div>
                   <span class="material-icons-outlined chevron">expand_more</span>
-                </div>
-                <div class="row-accordion-content">
+                </button>
+                <div class="row-accordion-content" id="row-detail-content">
                   <div class="row-accordion-body">
                     Detail data katekumen kini langsung muncul di bagian bawah layar secara instan.
                   </div>
@@ -109,14 +110,14 @@
               
               <!-- Row 5: Buka Scanner Lebih Cepat -->
               <div class="row-accordion" id="row-speed">
-                <div class="row-accordion-header">
+                <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-speed-content">
                   <div class="row-accordion-title">
                     <span class="material-icons-outlined" aria-hidden="true">speed</span>
                     <span>Buka Scanner Lebih Cepat</span>
                   </div>
                   <span class="material-icons-outlined chevron">expand_more</span>
-                </div>
-                <div class="row-accordion-content">
+                </button>
+                <div class="row-accordion-content" id="row-speed-content">
                   <div class="row-accordion-body">
                     Topik pertemuan terakhir otomatis disimpan. Tidak perlu memilih ulang setiap membuka web.
                   </div>
@@ -125,14 +126,14 @@
 
               <!-- Row 6: Navigasi Menu Simpel -->
               <div class="row-accordion" id="row-nav">
-                <div class="row-accordion-header">
+                <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-nav-content">
                   <div class="row-accordion-title">
                     <span class="material-icons-outlined" aria-hidden="true">navigation</span>
                     <span>Navigasi Menu Simpel</span>
                   </div>
                   <span class="material-icons-outlined chevron">expand_more</span>
-                </div>
-                <div class="row-accordion-content">
+                </button>
+                <div class="row-accordion-content" id="row-nav-content">
                   <div class="row-accordion-body">
                     Menu bawah layar baru memudahkan ganti halaman secara instan tanpa tombol ribet.
                   </div>
@@ -195,12 +196,18 @@
     const container = document.querySelector('.onboarding-scroll-area');
     if (container) {
       const all = container.querySelectorAll('.row-accordion');
-      all.forEach(acc => acc.classList.remove('open'));
+      all.forEach(acc => {
+        acc.classList.remove('open');
+        const button = acc.querySelector('.row-accordion-header');
+        if (button) button.setAttribute('aria-expanded', 'false');
+      });
     }
     
     // Toggle selected row
     if (!isOpen) {
       el.classList.add('open');
+      const button = el.querySelector('.row-accordion-header');
+      if (button) button.setAttribute('aria-expanded', 'true');
     }
   };
 

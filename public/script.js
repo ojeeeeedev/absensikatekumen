@@ -110,7 +110,11 @@ setViewportHeight();
 window.addEventListener('resize', setViewportHeight);
 
 // --- MODAL FUNCTIONS ---
-window.openTopicModal = function() { document.getElementById('topic-modal').style.display = 'flex'; }
+window.openTopicModal = function() {
+  const modal = document.getElementById('topic-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('topic-search-input')?.focus(), 0);
+}
 window.closeTopicModal = function() { document.getElementById('topic-modal').style.display = 'none'; }
 
 function setTopicTriggerText(week, name) {
@@ -489,6 +493,8 @@ class ScanQueue {
       if (segDuplicate) segDuplicate.style.width = '0%';
       if (segError) segError.style.width = '0%';
       if (segPending) segPending.style.width = '0%';
+      const progressBar = document.querySelector('.segmented-progress-bar');
+      if (progressBar) progressBar.setAttribute('aria-valuenow', '0');
 
       // Hide all legend tags
       const legends = ['legend-success', 'legend-duplicate', 'legend-error', 'legend-pending'];
@@ -538,6 +544,11 @@ class ScanQueue {
     if (segDuplicate) segDuplicate.style.width = `${duplicatePct}%`;
     if (segError) segError.style.width = `${errorPct}%`;
     if (segPending) segPending.style.width = `${pendingPct}%`;
+    const progressBar = document.querySelector('.segmented-progress-bar');
+    if (progressBar) {
+      const completePct = Math.round(successPct + duplicatePct + errorPct);
+      progressBar.setAttribute('aria-valuenow', String(completePct));
+    }
 
     // 3. Update legend counts and visibility
     const updateLegend = (id, count, singularTerm) => {
@@ -568,7 +579,14 @@ class ScanQueue {
       row.style.cursor = 'pointer';
       row.setAttribute('role', 'button');
       row.setAttribute('tabindex', '0');
-      row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}`);
+      const statusTextMap = {
+        success: 'hadir',
+        duplicate: 'presensi sudah tercatat',
+        error: 'gagal',
+        processing: 'sedang sinkronisasi',
+        pending: 'menunggu sinkronisasi'
+      };
+      row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}, ${statusTextMap[item.status] || item.status}`);
       
       row.onclick = () => {
         showStudentModal(item);
@@ -850,22 +868,9 @@ function triggerVisualFlash(type) {
   const readerContainer = document.getElementById('reader-container');
   if (!readerContainer) return;
   
-  // Create a temporary overlay element
   const flash = document.createElement('div');
-  flash.style.position = 'absolute';
-  flash.style.inset = '0';
-  flash.style.zIndex = '5';
-  flash.style.pointerEvents = 'none';
-  flash.style.opacity = '0.35';
-  flash.style.transition = 'opacity 0.4s ease';
-  
-  if (type === 'success') {
-    flash.style.backgroundColor = '#2e7d32'; // Green
-  } else if (type === 'duplicate') {
-    flash.style.backgroundColor = '#f57c00'; // Orange
-  } else {
-    flash.style.backgroundColor = '#c62828'; // Red
-  }
+  const flashType = type === 'success' ? 'success' : type === 'duplicate' ? 'duplicate' : 'error';
+  flash.className = `reader-flash ${flashType}`;
   
   readerContainer.appendChild(flash);
   
@@ -1116,6 +1121,7 @@ window.showStudentModal = function(item) {
   statusEl.textContent = statusText;
 
   modal.style.display = 'flex';
+  setTimeout(() => modal.querySelector('[role="button"], button')?.focus(), 0);
 };
 
 window.closeStudentModal = function(event) {
@@ -1190,4 +1196,17 @@ document.addEventListener('click', (event) => {
       window.closeDeleteConfirm();
     }
   }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const topicModal = document.getElementById('topic-modal');
+  if (topicModal && topicModal.style.display === 'flex') {
+    window.closeTopicModal();
+  }
+  const studentModal = document.getElementById('student-detail-modal');
+  if (studentModal && studentModal.style.display === 'flex') {
+    window.closeStudentModal(event);
+  }
+  window.closeDeleteConfirm(event);
 });

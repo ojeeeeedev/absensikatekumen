@@ -4,9 +4,9 @@
   width: 90% !important;
   max-width: 400px !important;
   margin: auto;
-  border-radius: 24px;
+  border-radius: var(--radius-2xl);
   padding: 1.5rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-lg);
   animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
@@ -21,7 +21,7 @@
 }
 
 .onboarding-title {
-  font-family: 'Inter', sans-serif !important;
+  font-family: var(--font-sans) !important;
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -71,20 +71,20 @@
 
 /* Light Theme Defaults (Accessible contrast) */
 .updates-header {
-  color: #0284c7;
+  color: var(--primary);
 }
 
 .removals-header {
-  color: #0369a1;
+  color: var(--chart-5);
 }
 
 /* Dark Mode overrides for section headers */
 [data-theme="dark"] .updates-header {
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 [data-theme="dark"] .removals-header {
-  color: #7dd3fc;
+  color: var(--chart-5);
 }
 
 /* Row Accordion Card Styles */
@@ -92,8 +92,8 @@
   border: 1px solid var(--border-glass);
   border-radius: 12px;
   margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  transition: background 0.25s, border-color 0.25s;
+  background: var(--card);
+  transition: background var(--duration-normal), border-color var(--duration-normal);
   text-align: left;
   overflow: hidden;
   
@@ -104,8 +104,8 @@
 }
 
 .row-accordion:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--bg-hover);
+  border-color: var(--ring);
 }
 
 /* Stagger delays for 6 items total */
@@ -118,12 +118,18 @@
 .removals-list .row-accordion:nth-child(2) { animation-delay: 0.40s; }
 
 .row-accordion-header {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
   padding: 10px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
   user-select: none;
+  font: inherit;
+  text-align: left;
 }
 
 .row-accordion-title {
@@ -142,20 +148,20 @@
 
 /* Icon colors using theme-aware blues */
 .updates-list .row-accordion-title span.material-icons-outlined {
-  color: #0284c7;
+  color: var(--primary);
 }
 
 .removals-list .row-accordion-title span.material-icons-outlined {
-  color: #0369a1;
+  color: var(--chart-5);
 }
 
 /* Dark Mode overrides for icons */
 [data-theme="dark"] .updates-list .row-accordion-title span.material-icons-outlined {
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 [data-theme="dark"] .removals-list .row-accordion-title span.material-icons-outlined {
-  color: #7dd3fc;
+  color: var(--chart-5);
 }
 
 .row-accordion-header .chevron {
@@ -171,8 +177,8 @@
 }
 
 .row-accordion.open {
-  border-color: rgba(56, 189, 248, 0.3);
-  background: rgba(56, 189, 248, 0.03);
+  border-color: var(--ring);
+  background: var(--accent-glow);
 }
 
 .row-accordion.open .row-accordion-content {
@@ -196,10 +202,10 @@
 .onboarding-btn {
   width: 100%;
   padding: 0.75rem;
-  background: linear-gradient(135deg, var(--accent) 0%, #0ea5e9 100%);
+  background: var(--primary);
   border: none;
   border-radius: 12px;
-  color: white;
+  color: var(--primary-foreground);
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;

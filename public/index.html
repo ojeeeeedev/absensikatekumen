@@ -2,7 +2,7 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sistem Presensi Katekumen Dewasa</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
     <script>
@@ -154,7 +154,7 @@
               <!-- Segmented Progress Bar Area -->
               <div id="history-progress-area" class="history-progress-container">
                 <div class="progress-bar-row">
-                  <div class="segmented-progress-bar" aria-hidden="true">
+                  <div class="segmented-progress-bar" role="progressbar" aria-label="Ringkasan sinkronisasi presensi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="segment-success" class="progress-segment success" style="width: 0%;"></div>
                     <div id="segment-duplicate" class="progress-segment duplicate" style="width: 0%;"></div>
                     <div id="segment-error" class="progress-segment error" style="width: 0%;"></div>
@@ -225,19 +225,20 @@
     </main>
 
     <!-- Modal Topic Selection -->
-    <div id="topic-modal">
+    <div id="topic-modal" role="dialog" aria-modal="true" aria-labelledby="topic-modal-title">
       <div class="modal-content">
-        <h3>Pilih Topik Pertemuan</h3>
+        <h3 id="topic-modal-title">Pilih Topik Pertemuan</h3>
+        <label for="topic-search-input" class="sr-only">Cari topik pertemuan</label>
         <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="Cari topik...">
         <div id="topic-list-container">
           <div class="topic-loading-placeholder">Memuat topik...</div>
         </div>
-        <div class="modal-close-btn" onclick="closeTopicModal()" role="button" tabindex="0" aria-label="Tutup modal" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeTopicModal(); }">Tutup</div>
+        <button class="modal-close-btn" type="button" onclick="closeTopicModal()">Tutup</button>
       </div>
     </div>
 
     <!-- Modal Student Detail -->
-    <div id="student-detail-modal" class="student-modal" style="display: none;" onclick="closeStudentModal(event)">
+    <div id="student-detail-modal" class="student-modal" style="display: none;" onclick="closeStudentModal(event)" role="dialog" aria-modal="true" aria-labelledby="modal-student-name">
       <div class="modal-content student-modal-content" onclick="event.stopPropagation()">
         <div class="student-modal-header">
           <span class="student-modal-close-icon material-icons-outlined" onclick="closeStudentModal(event)" role="button" tabindex="0" aria-label="Tutup detail katekumen" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeStudentModal(event); }">close</span>
