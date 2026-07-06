@@ -1,6 +1,6 @@
-import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
-import { ensureBucketExists } from './_supabase-utils.js';
+import { verifyJwt } from './_auth.js';
+import { bucketNameForClass, classCodeFromStudentId, ensureBucketExists, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
 // Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -72,13 +72,8 @@ export default async function handler(req, res) {
   }
 
   // --- JWT Authentication ---
-  const JWT_SECRET = process.env.JWT_SECRET;
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
-  }
   try {
-    jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    verifyJwt(req);
   } catch (err) {
     return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
   }
@@ -142,21 +137,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ status: 'error', message: 'Format file harus JPG, PNG, atau WebP' });
   }
 
-  // Validate studentId format: NAME/CLASSCODE/NUMBER
-  const parts = studentId.split('/');
-  if (parts.length < 2) {
+  const classCode = classCodeFromStudentId(studentId);
+  if (!classCode) {
     return res.status(400).json({ status: 'error', message: 'Format studentId tidak valid' });
   }
 
-  const classCode = parts[1]?.toUpperCase();
-  if (!classCode) {
-    return res.status(400).json({ status: 'error', message: 'Class code tidak valid' });
-  }
-
   // --- Derive storage path ---
-  const bucketName = `pasfoto-${classCode.toLowerCase()}`;
+  const bucketName = bucketNameForClass(classCode);
   const ext = ALLOWED_EXTENSIONS[mimeType];
-  const baseFilename = studentId.replace(/\//g, '-');
+  const baseFilename = storageBaseNameForStudent(studentId);
   const targetFilename = `${baseFilename}.${ext}`;
 
   try {
@@ -196,22 +185,14 @@ export default async function handler(req, res) {
       return res.status(500).json({ status: 'error', message: `Gagal mengunggah foto: ${uploadError.message}` });
     }
 
-    // Generate a fresh signed URL to return so the UI can update immediately
-    const { data: sigData, error: sigError } = await supabase.storage
-      .from(bucketName)
-      .createSignedUrl(targetFilename, 60);
-
-    const signedUrl = sigError ? null : sigData?.signedUrl;
-
     return res.status(200).json({
       status: 'ok',
       message: 'Foto berhasil diunggah',
       filename: targetFilename,
-      signedUrl,
+      image: photoUrlForStudent(studentId, Date.now().toString()),
     });
   } catch (err) {
     console.error('[upload-photo] Unexpected error:', err);
     return res.status(500).json({ status: 'error', message: err.message });
   }
 }
-

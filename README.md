@@ -1,4 +1,4 @@
-# Presensi Katekumen Digital (v2.4.2)
+# Presensi Katekumen Digital (v2.4.5)
 
 A modern, responsive, and secure digital attendance system designed for the Catechumenate program at St. Peter's Cathedral, Bandung. This application streamlines the attendance process using QR codes, real-time data synchronization with Google Sheets, and secure image retrieval from Supabase.
 
@@ -127,7 +127,7 @@ _Note: `VERCEL_SCRIPT_MAP_JSON` maps class codes (e.g., "SAB") to their respecti
 
 ```bash
 npm install
-npm start # or `vercel dev` if using Vercel CLI
+npm start
 ```
 
 ---

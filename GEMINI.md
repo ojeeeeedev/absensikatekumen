@@ -50,13 +50,9 @@ A modern digital attendance system for the Catechumenate program at St. Peter's 
    ```bash
    npm install
    ```
-2. Start the development server (requires [Vercel CLI](https://vercel.com/cli)):
+2. Start the local Express development server:
    ```bash
-   npm start # runs `vercel dev`
-   ```
-   Or use the Express wrapper (if configured for your environment):
-   ```bash
-   node app.js
+   npm start
    ```
 
 ### Google Apps Script Management
@@ -94,4 +90,3 @@ The following environment variables are required (configured in Vercel or `.env`
   - Always validate incoming `studentId` formats before processing.
 - **Version Bumping:**
   - When all requested modifications for a task are complete and verified, ask the user interactively if they want to bump the package version in `package.json` (major, minor, patch, or none) before final completion. After every version bump, ask the user interactively whether to commit to the local repo or push it to the remote repo.
-

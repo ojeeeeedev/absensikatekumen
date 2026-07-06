@@ -1,5 +1,6 @@
-import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import { verifyJwt } from './_auth.js';
+import { bucketNameForClass, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -14,15 +15,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ status: "error", message: `Method ${req.method} not allowed` });
   }
 
-  const JWT_SECRET = process.env.JWT_SECRET;
-  const token = req.headers.authorization?.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ status: "error", message: "Akses ditolak: Token tidak valid" });
-  }
-
   try {
-    jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    verifyJwt(req);
   } catch (err) {
     return res.status(401).json({ status: "error", message: "Akses ditolak: Token tidak valid" });
   }
@@ -32,7 +26,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ status: "error", message: "Parameter classCode diperlukan" });
   }
 
-  const normalizedClassCode = classCode.toUpperCase();
+  const normalizedClassCode = String(classCode).trim().toUpperCase();
+  if (!/^[A-Z0-9]{2,5}$/.test(normalizedClassCode)) {
+    return res.status(400).json({ status: "error", message: "Format classCode tidak valid" });
+  }
   
   let SCRIPT_MAP = {};
   try {
@@ -50,6 +47,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ status: "error", message: `Invalid classCode: ${normalizedClassCode}` });
   }
 
+  const GAS_SECRET_KEY = process.env.GAS_SECRET_KEY || "default_development_secret";
+
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
   const supabase = (SUPABASE_URL && SUPABASE_KEY) ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
@@ -60,7 +59,7 @@ export default async function handler(req, res) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "getStudentList",
-        api_secret: process.env.GAS_SECRET_KEY || "default_development_secret"
+        api_secret: GAS_SECRET_KEY
       })
     });
 
@@ -80,7 +79,7 @@ export default async function handler(req, res) {
     const students = data.students;
 
     if (supabase && students.length > 0) {
-      const bucketName = `pasfoto-${normalizedClassCode.toLowerCase()}`;
+      const bucketName = bucketNameForClass(normalizedClassCode);
 
       const { data: files, error: listError } = await supabase.storage
         .from(bucketName)
@@ -90,44 +89,19 @@ export default async function handler(req, res) {
         const fileMap = {};
         files.forEach(f => {
           const parts = f.name.split('.');
-          const ext = parts.pop().toLowerCase();
+          const ext = parts.pop()?.toLowerCase();
           const nameWithoutExt = parts.join('.').toLowerCase();
-          if (['jpg', 'jpeg', 'png'].includes(ext)) {
+          if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
             fileMap[nameWithoutExt] = f.name;
           }
         });
 
-        const pathsToSign = [];
-        const studentImageMatches = {};
-
         students.forEach(s => {
-          const normalizedId = s.studentId.replace(/\//g, '-').toLowerCase();
-          const matchFileName = fileMap[normalizedId];
-          if (matchFileName) {
-            pathsToSign.push(matchFileName);
-            studentImageMatches[s.studentId] = matchFileName;
+          const baseName = storageBaseNameForStudent(s.studentId)?.toLowerCase();
+          if (baseName && fileMap[baseName]) {
+            s.image = photoUrlForStudent(s.studentId);
           }
         });
-
-        if (pathsToSign.length > 0) {
-          const { data: signedData, error: signError } = await supabase.storage
-            .from(bucketName)
-            .createSignedUrls(pathsToSign, 60);
-
-          if (!signError && signedData) {
-            const signedUrlMap = {};
-            signedData.forEach(d => {
-              signedUrlMap[d.path] = d.signedUrl;
-            });
-
-            students.forEach(s => {
-              const fileName = studentImageMatches[s.studentId];
-              if (fileName && signedUrlMap[fileName]) {
-                s.image = signedUrlMap[fileName];
-              }
-            });
-          }
-        }
       }
     }
 

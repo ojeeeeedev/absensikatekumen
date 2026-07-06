@@ -1,7 +1,7 @@
-import jwt from 'jsonwebtoken';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { verifyJwt } from './_auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,14 +19,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ status: "error", message: `Method ${req.method} not allowed` });
   }
 
-  const JWT_SECRET = process.env.JWT_SECRET;
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ status: "error", message: "Unauthorized" });
-  }
-
   try {
-    jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    verifyJwt(req);
   } catch (e) {
     return res.status(401).json({ status: "error", message: "Unauthorized" });
   }

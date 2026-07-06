@@ -16,12 +16,10 @@ window.toggleTheme = toggleTheme;
 
 function updateLogos(theme) {
   const logos = document.querySelectorAll('.theme-logo');
+  const logoSrc = theme === 'dark' ? 'assets/pewartaan_invert.png' : 'assets/pewartaan_normal.png';
+  window.__themeLogoSrc = logoSrc;
   logos.forEach(logo => {
-    if (theme === 'light') {
-      logo.src = 'assets/pewartaan_normal.png';
-    } else {
-      logo.src = 'assets/pewartaan_invert.png';
-    }
+    logo.src = logoSrc;
   });
 }
 

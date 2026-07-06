@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 const CLASP_JSON_PATH = path.resolve('.clasp.json');
 
@@ -36,8 +36,8 @@ function main() {
       fs.writeFileSync(CLASP_JSON_PATH, JSON.stringify(claspConfig, null, 2), 'utf8');
 
       // Run clasp push
-      console.log(`Running: npx @google/clasp push...`);
-      execSync('npx @google/clasp push', { stdio: 'inherit' });
+      console.log(`Running: npx clasp push...`);
+      execFileSync('npx', ['clasp', 'push'], { stdio: 'inherit' });
       console.log(`Successfully pushed to ${dep.class}!`);
     }
   } catch (err) {

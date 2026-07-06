@@ -2,18 +2,19 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Profil Katekumen - Presensi Katekumen Digital</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
     <script>
       (function() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
+        window.__themeLogoSrc = savedTheme === 'dark' ? 'assets/pewartaan_invert.png' : 'assets/pewartaan_normal.png';
+        window.__setThemeLogo = (img) => { img.src = window.__themeLogoSrc; };
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Google+Sans+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
@@ -38,19 +39,19 @@
 
     <nav class="app-nav" id="app-nav">
       <a href="/" class="nav-item">
-        <span class="material-icons-outlined">qr_code_scanner</span>
-        <span>Scan</span>
+        <re-icon icon="qr" decorative></re-icon>
+        <span>Scan Presensi</span>
       </a>
       <a href="/profile" class="nav-item active">
-        <span class="material-icons-outlined">people_alt</span>
-        <span>Profil</span>
+        <re-icon icon="users" decorative></re-icon>
+        <span>Profil Katekumen</span>
       </a>
       <a href="/dashboard" class="nav-item">
-        <span class="material-icons-outlined">tv</span>
+        <re-icon icon="bar-chart" decorative></re-icon>
         <span>Dashboard</span>
       </a>
       <a href="#" class="nav-item logout-btn" onclick="handleLogout(event)" aria-label="Keluar">
-        <span class="material-icons-outlined">logout</span>
+        <re-icon icon="logout" decorative></re-icon>
       </a>
     </nav>
 
@@ -58,7 +59,7 @@
       <div class="app-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto;">
 
         <div class="header-container">
-          <img src="assets/pewartaan_normal.png" class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;">
+          <img class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;"><script>__setThemeLogo(document.currentScript.previousElementSibling)</script>
           <div class="header-text">
             <h1>Profil Katekumen</h1>
             <h2>Katekumen Dewasa</h2>
@@ -67,38 +68,49 @@
         </div>
 
         <div class="profile-selector-container">
+          <label for="class-selector" class="sr-only">Pilih kelas katekumen</label>
           <select id="class-selector">
             <option value="" disabled selected>Memuat kelas...</option>
           </select>
           
           <div id="students-summary" class="students-summary-container" style="display: none;">
             <div class="summary-badge summary-total">
-              <span class="material-icons-outlined">group</span>
+              <re-icon icon="users" decorative></re-icon>
               <span id="summary-total-text">Total: 0</span>
             </div>
             <div class="summary-badge summary-active">
-              <span class="material-icons-outlined">check_circle</span>
+              <re-icon icon="check-circle" decorative></re-icon>
               <span id="summary-active-text">Aktif: 0</span>
             </div>
             <div class="summary-badge summary-inactive">
-              <span class="material-icons-outlined">cancel</span>
+              <re-icon icon="close-circle2" decorative></re-icon>
               <span id="summary-inactive-text">Nonaktif: 0</span>
             </div>
           </div>
           
+          <label for="search-input" class="sr-only">Cari nama atau ID katekumen</label>
           <input type="text" id="search-input" placeholder="Cari nama atau ID..." style="display: none;">
         </div>
 
         <div id="students-loader" style="display: none;">
-          <div class="spinner"></div>
+          <svg class="grid-column-scan-loader spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
+            <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
+            <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
+            <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
+            <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
+            <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
+            <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
+            <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
+            <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
+          </svg>
           <span style="font-size: 0.85rem; color: var(--text-primary); opacity: 0.8;">Memuat katekumen...</span>
         </div>
 
         <div id="students-list" class="students-list-container">
           <div class="welcome-placeholder">
-            <span class="material-icons-outlined welcome-icon">menu_book</span>
-            <h3>Daftar Katekumen</h3>
-            <p>Silakan pilih kelas terlebih dahulu untuk melihat daftar katekumen.</p>
+            <re-icon icon="users" class="welcome-icon" decorative></re-icon>
+            <p>Pilih Kelas terlebih dahulu untuk melihat daftar katekumen.</p>
           </div>
         </div>
       </div>
@@ -111,14 +123,14 @@
         <div class="upload-preview-header">
           <span class="upload-preview-title" id="upload-modal-title">Ganti Foto Katekumen</span>
           <button class="upload-preview-close" id="upload-close-btn" aria-label="Tutup">
-            <span class="material-icons-outlined">close</span>
+            <re-icon icon="close-circle2" decorative></re-icon>
           </button>
         </div>
         <div class="upload-preview-body">
           <p class="upload-student-label" id="upload-student-label">—</p>
           <!-- Drop Zone / Preview Area -->
           <div class="upload-dropzone" id="upload-dropzone" tabindex="0" role="button" aria-label="Pilih atau seret foto ke sini">
-            <span class="material-icons-outlined upload-dropzone-icon" id="upload-dropzone-icon">add_photo_alternate</span>
+            <re-icon icon="camera-add" class="upload-dropzone-icon" id="upload-dropzone-icon" decorative></re-icon>
             <p class="upload-dropzone-text" id="upload-dropzone-text">Ketuk untuk memilih foto</p>
             <p class="upload-dropzone-subtext" id="upload-dropzone-subtext">JPG, PNG, WebP • Maks. 5MB</p>
             <img id="upload-preview-img" class="upload-preview-img" alt="Preview foto" />
@@ -126,14 +138,24 @@
           <!-- Hidden file input -->
           <input type="file" id="upload-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" aria-hidden="true" />
           <!-- Progress Bar -->
-          <div class="upload-progress-bar-wrap" id="upload-progress-wrap">
+          <div class="upload-progress-bar-wrap" id="upload-progress-wrap" role="progressbar" aria-label="Progres unggah foto" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
             <div class="upload-progress-bar" id="upload-progress-bar"></div>
           </div>
           <!-- Action Buttons -->
           <div class="upload-actions">
             <button class="upload-cancel-btn" id="upload-cancel-btn" type="button">Batal</button>
             <button class="upload-confirm-btn" id="upload-confirm-btn" type="button" disabled>
-              <div class="btn-spinner"></div>
+              <svg class="grid-column-scan-loader btn-spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
+                <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
+                <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
+              </svg>
               <span class="btn-label">Unggah Foto</span>
             </button>
           </div>
@@ -144,7 +166,8 @@
     <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
 
-    <script src="image-cache.js"></script>
+    <script src="https://unpkg.com/reicon/cdn/reicon.min.js"></script>
+    <script src="icons.js"></script>
     <script src="theme.js"></script>
     <script src="session.js"></script>
     <script src="profile.js"></script>
