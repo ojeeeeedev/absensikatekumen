@@ -13,7 +13,6 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600;700&family=Google+Sans+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="dashboard.css">
@@ -40,30 +39,32 @@
 
     <nav class="app-nav dashboard-nav" id="app-nav">
       <a href="/" class="nav-item">
-        <span class="material-icons-outlined">qr_code_scanner</span>
-        <span>Scan</span>
+        <re-icon icon="qr" decorative></re-icon>
+        <span>Scan Presensi</span>
       </a>
       <a href="/profile" class="nav-item">
-        <span class="material-icons-outlined">people_alt</span>
-        <span>Profil</span>
+        <re-icon icon="users" decorative></re-icon>
+        <span>Profil Katekumen</span>
       </a>
       <a href="/dashboard" class="nav-item active">
-        <span class="material-icons-outlined">tv</span>
+        <re-icon icon="bar-chart" decorative></re-icon>
         <span>Dashboard</span>
       </a>
       <a href="#" class="nav-item logout-btn" onclick="handleLogout(event)" aria-label="Keluar">
-        <span class="material-icons-outlined">logout</span>
+        <re-icon icon="logout" decorative></re-icon>
       </a>
     </nav>
 
     <main class="dashboard-shell">
       <header class="dashboard-header">
         <div class="dashboard-brand">
-          <img src="assets/pewartaan_normal.png" class="dashboard-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }">
+          <button class="dashboard-logo-btn" type="button" aria-label="Ganti tema tampilan" onclick="toggleTheme()">
+            <img src="assets/pewartaan_normal.png" class="dashboard-logo theme-logo" alt="Logo Pewartaan">
+          </button>
           <div>
             <p class="dashboard-kicker">Katekumen Dewasa</p>
-            <h1>Dashboard Presensi dan Data Peserta</h1>
-            <p class="dashboard-subtitle">Paroki St. Petrus - Katedral, Bandung</p>
+            <h1>Dashboard Presensi</h1>
+            <p class="dashboard-subtitle">Tindak lanjuti peserta berisiko dan pantau kesehatan kelas.</p>
           </div>
         </div>
         <div class="dashboard-controls">
@@ -73,22 +74,32 @@
             <option value="" disabled selected>Memuat kelas...</option>
           </select>
           <button id="dashboard-refresh-btn" class="dashboard-icon-btn" type="button" aria-label="Muat ulang dashboard">
-            <span class="material-icons-outlined">refresh</span>
+            <re-icon icon="refresh" decorative></re-icon>
           </button>
         </div>
       </header>
 
-      <section id="dashboard-alert" class="dashboard-alert" hidden></section>
+      <section id="dashboard-alert" class="dashboard-alert" role="alert" aria-live="assertive" hidden></section>
 
       <section id="dashboard-empty" class="dashboard-empty">
-        <span class="material-icons-outlined">dashboard_customize</span>
+        <re-icon icon="bar-chart" decorative></re-icon>
         <h2>Pilih kelas untuk membuka dashboard.</h2>
-        <p>Data akan dimuat dari Google Sheet kelas yang terhubung.</p>
+        <p>Ringkasan presensi, peserta berisiko, dan topik perhatian akan muncul setelah kelas dipilih.</p>
       </section>
 
-      <section id="dashboard-loader" class="dashboard-loader" hidden>
-        <div class="spinner"></div>
-        <span>Memuat dashboard...</span>
+      <section id="dashboard-loader" class="dashboard-loader" role="status" aria-live="polite" hidden>
+        <svg class="grid-column-scan-loader spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
+          <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
+          <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
+          <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
+          <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
+          <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
+          <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
+          <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
+          <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
+        </svg>
+        <span class="scan-loading-text">Memuat dashboard...</span>
       </section>
 
       <section id="dashboard-content" class="dashboard-grid" hidden>
@@ -109,47 +120,51 @@
 
         <section id="metric-cards" class="metric-grid" aria-label="Ringkasan kelas"></section>
 
-        <section class="section-card attendance-overview">
-          <div class="section-heading">
-            <div>
-              <span>Kesehatan Presensi</span>
-              <h2>Status kehadiran peserta</h2>
-            </div>
-          </div>
-          <div id="attendance-overview"></div>
-        </section>
-
         <section class="section-card watch-panel">
           <div class="section-heading split">
             <div>
               <span>Perlu tindakan</span>
               <h2>Peserta Dalam Pengawasan</h2>
+              <p>Prioritas peserta yang perlu dihubungi atau dipantau lebih dekat.</p>
             </div>
-            <label class="risk-search">
-              <input id="risk-search-input" type="search" placeholder="Cari nama peserta..." autocomplete="off">
+            <label class="risk-search" for="risk-search-input">
+              <span class="sr-only">Cari peserta dalam pengawasan</span>
+              <re-icon icon="user-search" decorative></re-icon>
+              <input id="risk-search-input" type="search" placeholder="Cari peserta..." autocomplete="off">
             </label>
           </div>
           <div id="risk-list" class="risk-list"></div>
         </section>
 
+        <section class="section-card attendance-overview">
+          <div class="section-heading">
+            <div>
+              <span>Kesehatan Presensi</span>
+              <h2>Status kehadiran peserta</h2>
+              <p>Distribusi zona menunjukkan tekanan operasional kelas saat ini.</p>
+            </div>
+          </div>
+          <div id="attendance-overview"></div>
+        </section>
+
         <section class="section-card topics-panel">
           <div class="section-heading">
             <div>
-              <span>Topik Terbaru</span>
-              <h2>4 pertemuan terakhir</h2>
+              <span>Diagnosis topik</span>
+              <h2>Topik yang menjelaskan risiko</h2>
+              <p>Bandingkan sesi terbaru dengan sesi berkehadiran terendah.</p>
             </div>
           </div>
-          <div id="recent-topics" class="topic-list"></div>
-        </section>
-
-        <section class="section-card low-topics-panel">
-          <div class="section-heading">
+          <div class="topic-groups">
             <div>
-              <span>Perhatian</span>
-              <h2>Topik Dengan Kehadiran Terendah</h2>
+              <h3>Pertemuan terakhir</h3>
+              <div id="recent-topics" class="topic-list"></div>
+            </div>
+            <div>
+              <h3>Kehadiran terendah</h3>
+              <div id="lowest-topics" class="topic-list compact"></div>
             </div>
           </div>
-          <div id="lowest-topics" class="topic-list compact"></div>
         </section>
 
         <section class="section-card demographics-panel">
@@ -157,6 +172,7 @@
             <div>
               <span>Profil kelas</span>
               <h2>Demografi Peserta</h2>
+              <p>Referensi komposisi kelas, bukan indikator tindakan utama.</p>
             </div>
           </div>
           <div class="breakdown-grid">
@@ -179,6 +195,8 @@
 
     <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
+    <script src="https://unpkg.com/reicon/cdn/reicon.min.js"></script>
+    <script src="icons.js"></script>
     <script src="topics.js"></script>
     <script src="theme.js"></script>
     <script src="session.js"></script>

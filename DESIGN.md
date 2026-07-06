@@ -102,6 +102,8 @@ Transitions:
 - Do not put cards inside cards unless the inner card is a repeated item or modal section.
 - Scanner layout prioritizes topic, camera, sync history, and footer in that order.
 - Profile layout prioritizes class selector, summary, search, then scannable student list.
+- Dashboard layout prioritizes operational triage: class/freshness controls, risk/action metrics, participants needing follow-up, attendance health, topic diagnosis, then reference demographics.
+- Dashboard metadata such as cohort, period, and pastor is supporting context. It must not compete visually with action metrics.
 - Use scroll containers intentionally; avoid accidental body/page horizontal overflow.
 
 ## 6. Component Standards
@@ -123,6 +125,8 @@ Inputs, selects, textareas, search, file inputs:
 Cards/stat cards/chart cards:
 - Use `card` surface, `border`, `radius-lg`, and subtle shadow.
 - Use status badges for status, not color alone.
+- Dashboard stat cards must have a clear label, readable value, short context, and optional status tone only when it helps action.
+- Dashboard insight cards must answer one question: what is happening, what changed, what needs attention, what to do next, or where to inspect details.
 
 Navigation:
 - Active item uses primary token and clear text/icon.
@@ -137,6 +141,7 @@ Dialogs/drawers/dropdowns/popovers/tooltips:
 Tables/lists:
 - Prefer native tables for true tabular data.
 - Current profile accordion is a list; it must remain keyboard accessible and scannable.
+- Dashboard risk participants are an action list, not a table, until sorting/comparison needs exceed card usability.
 - Metadata uses tabular numeric styling.
 
 Empty, loading, error states:
@@ -151,6 +156,9 @@ Pagination/search/filter UI:
 ## 7. Data Visualization Standards
 
 - Every visual metric must answer a real operational question.
+- Dashboard charts must include a text summary adjacent to the visual so the conclusion is not color-only.
+- Dashboard zone colors map to semantic status roles: safe uses `success`, attention uses `warning`, watch/penindakan uses `destructive` or strong foreground-derived contrast.
+- Use `chart-1` through `chart-5` or dashboard zone aliases mapped to semantic tokens. Do not define unrelated dashboard chart palettes.
 - Scanner progress bars communicate sync composition: success, duplicate, error, pending.
 - Use at most five chart/status colors.
 - Prefer text counts plus color dots for accessibility.
@@ -163,6 +171,7 @@ Pagination/search/filter UI:
 - Theme is driven by `data-theme` on `<html>`.
 - Both modes must define the full semantic token set.
 - No component should hardcode mode-specific colors directly.
+- Dashboard CSS must not redefine global semantic tokens such as `--background`, `--foreground`, `--card`, `--border`, `--primary`, `--success`, `--warning`, or `--destructive`. It may define dashboard aliases that map back to those tokens.
 - Avoid pure black except camera preview surfaces.
 - Native controls must use explicit background, text, border, and `color-scheme`.
 - Logos may swap through `theme.js`; colors still come from tokens.
@@ -192,6 +201,9 @@ Pagination/search/filter UI:
 ## 11. Responsive Design Standards
 
 - Mobile first: 320px through 430px must be usable.
+- Dashboard mobile order is header, primary metrics, participants needing follow-up, attendance health, topic diagnosis, demographics.
+- Dashboard tablet layouts should use two columns where practical instead of jumping directly from desktop grid to one column.
+- Dashboard desktop layouts must avoid fixed-height clipping; body scroll is preferable to hidden overflow when content or zoom needs more space.
 - Tablet/desktop: keep the operational shell centered and calm; do not stretch scanner cards excessively.
 - Nav should stay one line where possible and wrap gracefully on very narrow screens.
 - Primary actions must remain reachable.
@@ -202,8 +214,10 @@ Pagination/search/filter UI:
 ## 12. Implementation Guidelines
 
 - Put tokens in `public/style.css`; do not add a UI library.
+- Dashboard UI uses `public/style.css` semantic tokens and `public/dashboard.css` layout/component composition. Add dashboard-specific values as aliases only when they encode product meaning.
 - Prefer shared selectors for controls: `button`, `.nav-item`, input/select, `.status-badge`, `.toast`, `.modal-content`, `.student-accordion-item`.
 - Preserve business logic in `public/script.js`, `public/profile.js`, API files, session logic, and Apps Script.
+- Preserve dashboard fetch contracts: `/api/classes` and `/api/dashboard-data?classCode=...`.
 - Remove inline style only when it is visual and safe; do not move behavior-driving styles unless tested.
 - Update this file when adding a reusable UI pattern.
 - Use CSS variables for new colors, shadows, radii, spacing, and transitions.

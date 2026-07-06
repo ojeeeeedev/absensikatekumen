@@ -12,10 +12,10 @@
   const classNames = {};
 
   const zoneCopy = {
-    green: { label: 'Aman', helper: 'Kehadiran di atas 85%', className: 'is-green' },
-    yellow: { label: 'Perhatian', helper: 'Perlu perhatian ringan', className: 'is-yellow' },
-    red: { label: 'Pengawasan', helper: 'Kehadiran 50-65%', className: 'is-red' },
-    black: { label: 'Penindakan', helper: 'Kehadiran di bawah 50%', className: 'is-black' }
+    green: { label: 'Aman', helper: 'Kehadiran di atas 85%', className: 'is-green', tone: 'green' },
+    yellow: { label: 'Perhatian', helper: 'Perlu perhatian ringan', className: 'is-yellow', tone: 'yellow' },
+    red: { label: 'Pengawasan', helper: 'Kehadiran 50-65%', className: 'is-red', tone: 'red' },
+    black: { label: 'Penindakan', helper: 'Kehadiran di bawah 50%', className: 'is-black', tone: 'black' }
   };
 
   function escapeHTML(value) {
@@ -29,7 +29,10 @@
 
   function showAlert(message) {
     if (!alertBox) return;
-    alertBox.textContent = message;
+    alertBox.innerHTML = `
+      <strong>Dashboard tidak bisa dimuat.</strong>
+      <span>${escapeHTML(message || 'Data Anda tidak berubah. Coba muat ulang dashboard.')}</span>
+    `;
     alertBox.hidden = false;
   }
 
@@ -40,13 +43,17 @@
   function setLoading(isLoading) {
     document.body.classList.toggle('dashboard-loading', isLoading);
     if (loader) loader.hidden = !isLoading;
-    if (content && isLoading) {
-      content.setAttribute('aria-busy', 'true');
-      content.hidden = true;
-    }
-    if (content && !isLoading) content.removeAttribute('aria-busy');
-    if (emptyState) emptyState.hidden = isLoading || !!classSelector.value;
     if (refreshBtn) refreshBtn.disabled = isLoading;
+    if (content) {
+      if (isLoading) {
+        content.hidden = false;
+        content.setAttribute('aria-busy', 'true');
+        renderDashboardSkeleton();
+      } else {
+        content.removeAttribute('aria-busy');
+      }
+    }
+    if (emptyState) emptyState.hidden = isLoading || !!classSelector.value;
   }
 
   function showToast(message, type = 'success') {
@@ -77,7 +84,7 @@
       const data = await res.json();
       if (data.status !== 'ok') throw new Error(data.message || 'Gagal memuat kelas');
 
-      classSelector.innerHTML = '<option value="" disabled selected>Pilih Kelas...</option>';
+      classSelector.innerHTML = '<option value="" disabled selected>Pilih kelas...</option>';
       data.classes.forEach((item) => {
         const option = document.createElement('option');
         option.value = item.code;
@@ -135,14 +142,14 @@
     setText('meta-kelompok', cohortLabel(metadata.kelompok, data.classCode));
     setText('meta-period', periodLabel(metadata));
     setText('meta-priest', metadata.priest || '-');
-    setText('meta-updated', metadata.lastUpdated ? `Terakhir diperbarui ${formatDateLabel(metadata.lastUpdated)}` : 'Belum ada timestamp');
+    setText('meta-updated', metadata.lastUpdated ? `Diperbarui ${formatDateLabel(metadata.lastUpdated)}` : 'Belum ada timestamp');
 
-    renderMetricCards(summary, zones, latestTopic);
-    renderAttendanceOverview(zones, Number(summary.total || 0));
-    renderTopicList('recent-topics', recentTopics, { latest: true });
-    renderTopicList('lowest-topics', lowTopics, { compact: true });
-    currentRiskRows = attendance.riskParticipants || [];
+    currentRiskRows = sortedRiskRows(attendance.riskParticipants || []);
+    renderMetricCards(summary, zones, latestTopic, currentRiskRows);
     renderRiskList(currentRiskRows);
+    renderAttendanceOverview(zones, Number(summary.total || 0));
+    renderTopicList('recent-topics', recentTopics.slice(0, 3), { latest: true });
+    renderTopicList('lowest-topics', lowTopics.slice(0, 3), { compact: true });
     renderBreakdown('gender-breakdown', summary.gender || []);
     renderBreakdown('religion-breakdown', summary.religion || []);
     renderBreakdown('marital-breakdown', summary.maritalStatus || []);
@@ -151,48 +158,97 @@
     if (content) content.hidden = false;
   }
 
-  function renderMetricCards(summary, zones, latestTopic) {
-    const green = zoneByKey(zones, 'green');
+  function renderDashboardSkeleton() {
+    setText('meta-kelompok', classSelector.value ? classNames[classSelector.value] || classSelector.value : '-');
+    setText('meta-period', 'Memuat...');
+    setText('meta-priest', 'Memuat...');
+    setText('meta-updated', 'Memuat data terbaru...');
+    setHTML('metric-cards', [1, 2, 3].map(() => `
+      <article class="metric-card is-loading" aria-hidden="true">
+        <span></span><strong></strong><small></small>
+      </article>
+    `).join(''));
+    setHTML('risk-list', skeletonRows(4));
+    setHTML('attendance-overview', `
+      <div class="health-score is-loading" aria-hidden="true"><div><span></span><strong></strong></div><p></p></div>
+      <div class="stacked-zone-bar is-loading" aria-hidden="true"></div>
+      <div class="zone-legend is-loading" aria-hidden="true">${skeletonLegend()}</div>
+    `);
+    setHTML('recent-topics', skeletonRows(3));
+    setHTML('lowest-topics', skeletonRows(3));
+    setHTML('gender-breakdown', skeletonRows(2));
+    setHTML('religion-breakdown', skeletonRows(2));
+    setHTML('marital-breakdown', skeletonRows(2));
+  }
+
+  function renderMetricCards(summary, zones, latestTopic, riskRows) {
     const yellow = zoneByKey(zones, 'yellow');
     const red = zoneByKey(zones, 'red');
     const black = zoneByKey(zones, 'black');
     const watched = Number(red.count || 0) + Number(black.count || 0);
+    const worstRisk = riskRows[0];
     const latestRate = latestTopic ? latestTopic.percentage || formatPercent(latestTopic.rate) : '-';
     const cards = [
-      metricCard('Total Peserta', Number(summary.total || 0), 'Peserta aktif dalam kelompok ini', 'neutral'),
-      metricCard('Zona Hijau', Number(green.count || 0), 'Kehadiran di atas 85%', 'green', green.percentage),
-      metricCard('Zona Kuning', Number(yellow.count || 0), 'Perlu perhatian ringan', 'yellow', yellow.percentage),
-      metricCard('Dalam Pengawasan', watched, 'Kehadiran di bawah ambang aman', watched ? 'red' : 'green'),
-      metricCard('Topik Terbaru', latestRate, latestTopic?.topic || 'Belum ada data', latestTopic ? zoneKeyForRate(latestTopic.rate) : 'neutral')
+      metricCard({
+        label: 'Dalam Pengawasan',
+        value: watched,
+        context: watched ? `${watched} peserta perlu follow-up` : 'Tidak ada peserta di zona merah/hitam',
+        tone: watched ? 'red' : 'green',
+        status: watched ? 'Tindak lanjut' : 'Aman'
+      }),
+      metricCard({
+        label: 'Perlu Perhatian',
+        value: Number(yellow.count || 0),
+        context: `${yellow.percentage || '0.0%'} peserta berada di zona kuning`,
+        tone: yellow.count ? 'yellow' : 'green',
+        status: yellow.count ? 'Pantau' : 'Stabil'
+      }),
+      metricCard({
+        label: 'Topik Terbaru',
+        value: latestRate,
+        context: latestTopic ? `${latestTopic.topic || 'Topik'} - ${latestTopic.topicName || 'Tanpa judul'}` : `${Number(summary.total || 0)} peserta aktif`,
+        tone: latestTopic ? zoneKeyForRate(latestTopic.rate) : 'neutral',
+        status: worstRisk ? `Terendah: ${worstRisk.percentage || formatPercent(worstRisk.rate)}` : 'Tidak ada risiko'
+      })
     ];
     setHTML('metric-cards', cards.join(''));
   }
 
-  function metricCard(label, value, helper, tone, meta = '') {
+  function metricCard({ label, value, context, tone, status }) {
     return `
       <article class="metric-card tone-${escapeHTML(tone || 'neutral')}">
-        <span>${escapeHTML(label)}</span>
+        <div class="metric-card-head">
+          <span>${escapeHTML(label)}</span>
+          ${status ? `<em>${escapeHTML(status)}</em>` : ''}
+        </div>
         <strong>${escapeHTML(value)}</strong>
-        <small>${escapeHTML(meta || helper)}</small>
+        <small>${escapeHTML(context)}</small>
       </article>
     `;
   }
 
   function renderAttendanceOverview(zones, total) {
     const rows = ['green', 'yellow', 'red', 'black'].map((key) => zoneByKey(zones, key));
+    const yellow = zoneByKey(rows, 'yellow');
+    const red = zoneByKey(rows, 'red');
+    const black = zoneByKey(rows, 'black');
+    const attentionCount = Number(yellow.count || 0) + Number(red.count || 0) + Number(black.count || 0);
+    const actionCount = Number(red.count || 0) + Number(black.count || 0);
+    const summaryText = actionCount
+      ? `${actionCount} peserta butuh tindakan prioritas.`
+      : attentionCount
+        ? `${attentionCount} peserta perlu dipantau.`
+        : 'Kelas berada dalam kondisi aman.';
     const segments = rows.map((row) => {
       const width = clampPercent(row.rate);
       const copy = zoneCopy[row.key];
       const percentage = row.percentage || formatPercent(row.rate);
-      const tooltip = `${copy.label}: ${Number(row.count || 0)} peserta / ${percentage}. ${copy.helper}`;
       return `
         <span
           class="zone-segment ${copy.className}"
           style="width:${width}%"
-          tabindex="0"
-          role="img"
-          aria-label="${escapeHTML(tooltip)}"
-          data-tooltip="${escapeHTML(tooltip)}">
+          aria-hidden="true"
+          title="${escapeHTML(`${copy.label}: ${Number(row.count || 0)} peserta / ${percentage}`)}">
         </span>
       `;
     }).join('');
@@ -201,7 +257,7 @@
       const percentage = row.percentage || formatPercent(row.rate);
       return `
         <div class="zone-legend-item ${copy.className}">
-          <span><i></i>${escapeHTML(copy.label)}</span>
+          <span><i aria-hidden="true"></i>${escapeHTML(copy.label)}</span>
           <strong>${Number(row.count || 0)} / ${escapeHTML(percentage)}</strong>
         </div>
       `;
@@ -211,11 +267,11 @@
       <div class="health-score">
         <div>
           <span>Ringkasan kesehatan</span>
-          <strong>${Number(total || 0)} peserta</strong>
+          <strong>${escapeHTML(summaryText)}</strong>
         </div>
-        <p>Zona presensi dihitung dari topik yang sudah berjalan.</p>
+        <p>${Number(total || 0)} peserta aktif dihitung dari topik yang sudah berjalan.</p>
       </div>
-      <div class="stacked-zone-bar" aria-label="Distribusi zona presensi">${segments}</div>
+      <div class="stacked-zone-bar" role="img" aria-label="${escapeHTML(zoneSummaryLabel(rows))}">${segments}</div>
       <div class="zone-legend" aria-label="Ringkasan zona presensi">${labels}</div>
     `);
   }
@@ -224,7 +280,7 @@
     const container = document.getElementById(id);
     if (!container) return;
     if (!rows.length) {
-      container.innerHTML = emptyStateMarkup('event_busy', 'Belum ada data topik', 'Data presensi akan muncul setelah kelas berjalan.');
+      container.innerHTML = emptyStateMarkup('event-busy', 'Belum ada data topik', 'Data presensi akan muncul setelah kelas berjalan.');
       return;
     }
 
@@ -240,8 +296,9 @@
             <strong>${escapeHTML(topicTitle)}</strong>
             <small>${escapeHTML(row.ratio || `${row.presentCount || 0}/${row.totalCount || 0}`)} hadir</small>
           </div>
-          <div class="topic-stat">
+          <div class="topic-stat tone-${zone}">
             <strong>${escapeHTML(row.percentage || formatPercent(rate))}</strong>
+            <span>${escapeHTML(zoneLabel(zone))}</span>
           </div>
           <div class="mini-progress" aria-hidden="true"><i class="tone-${zone}" style="width:${clampPercent(rate)}%"></i></div>
         </article>
@@ -254,15 +311,15 @@
     if (!list) return;
     const query = String(riskSearchInput?.value || '').trim().toLowerCase();
     const filtered = query
-      ? rows.filter((row) => String(row.name || '').toLowerCase().includes(query))
+      ? rows.filter((row) => [row.name, row.studentId, row.katekisKk, row.kelasKi].some((value) => String(value || '').toLowerCase().includes(query)))
       : rows;
 
     if (!rows.length) {
-      list.innerHTML = emptyStateMarkup('verified_user', 'Tidak ada peserta dalam pengawasan', 'Semua peserta masih berada di zona aman atau perhatian.');
+      list.innerHTML = emptyStateMarkup('check-circle', 'Tidak ada peserta dalam pengawasan', 'Semua peserta masih berada di zona aman atau perhatian.');
       return;
     }
     if (!filtered.length) {
-      list.innerHTML = emptyStateMarkup('search_off', 'Nama tidak ditemukan', 'Coba gunakan kata kunci lain.');
+      list.innerHTML = emptyStateMarkup('user-search', 'Nama tidak ditemukan', 'Coba gunakan nama, ID, kelas, atau katekis lain.');
       return;
     }
 
@@ -274,18 +331,21 @@
       const image = row.image
         ? `<img src="${escapeHTML(row.image)}" alt="Foto ${escapeHTML(row.name || 'peserta')}" loading="lazy" onerror="this.replaceWith(this.nextElementSibling)">`
         : '';
+      const reason = missed === null
+        ? `${row.percentage || formatPercent(rate)} kehadiran`
+        : `${missed} topik belum hadir`;
       return `
         <article class="watch-card">
-          <div class="watch-photo">${image}<span class="material-icons-outlined">person</span></div>
+          <div class="watch-photo">${image}<re-icon icon="user" decorative></re-icon></div>
           <div class="watch-main">
             <strong>${escapeHTML(row.name || 'Tanpa nama')}</strong>
-            <span>${escapeHTML(row.katekisKk || row.kelasKi || '-')}</span>
-            ${missed === null ? '' : `<small>${missed} topik belum hadir</small>`}
+            <span>${escapeHTML(row.katekisKk || row.kelasKi || row.studentId || '-')}</span>
+            <small>${escapeHTML(reason)}</small>
           </div>
           <div class="watch-meta">
             <span class="status-badge tone-${zone}">${zoneLabel(zone)}</span>
             <strong>${escapeHTML(row.percentage || formatPercent(rate))}</strong>
-            ${waLink ? `<a class="wa-link" href="${waLink}" target="_blank" rel="noopener" aria-label="Hubungi ${escapeHTML(row.name || 'peserta')} via WhatsApp"><span class="material-icons-outlined">chat</span></a>` : ''}
+            ${waLink ? `<a class="wa-link" href="${waLink}" target="_blank" rel="noopener" aria-label="Hubungi ${escapeHTML(row.name || 'peserta')} via WhatsApp"><re-icon icon="chat" decorative></re-icon></a>` : ''}
           </div>
         </article>
       `;
@@ -297,7 +357,7 @@
     if (!container) return;
     const visible = rows.filter((row) => Number(row.count || 0) > 0);
     if (!visible.length) {
-      container.innerHTML = emptyStateMarkup('bar_chart', 'Belum ada data', 'Data akan muncul setelah sinkronisasi.');
+      container.innerHTML = emptyStateMarkup('bar-chart', 'Belum ada data', 'Data akan muncul setelah sinkronisasi.');
       return;
     }
 
@@ -319,7 +379,7 @@
   function emptyStateMarkup(icon, title, helper) {
     return `
       <div class="empty-state">
-        <span class="material-icons-outlined">${escapeHTML(icon)}</span>
+        <re-icon icon="${escapeHTML(icon)}" decorative></re-icon>
         <strong>${escapeHTML(title)}</strong>
         <small>${escapeHTML(helper)}</small>
       </div>
@@ -339,6 +399,10 @@
     });
   }
 
+  function sortedRiskRows(rows) {
+    return rows.slice().sort((a, b) => Number(a.rate || 0) - Number(b.rate || 0));
+  }
+
   function zoneByKey(rows, key) {
     return rows.find((row) => row.key === key) || { key, count: 0, rate: 0, percentage: '0.0%' };
   }
@@ -353,14 +417,21 @@
 
   function zoneKeyFromLabel(label) {
     const text = String(label || '').toLowerCase();
-    if (text.includes('hijau')) return 'green';
-    if (text.includes('kuning')) return 'yellow';
-    if (text.includes('merah')) return 'red';
+    if (text.includes('hijau') || text.includes('aman') || text.includes('aktif')) return 'green';
+    if (text.includes('kuning') || text.includes('perhatian')) return 'yellow';
+    if (text.includes('merah') || text.includes('pengawasan')) return 'red';
     return 'black';
   }
 
   function zoneLabel(key) {
     return zoneCopy[key]?.label || 'Penindakan';
+  }
+
+  function zoneSummaryLabel(rows) {
+    return rows.map((row) => {
+      const copy = zoneCopy[row.key];
+      return `${copy.label}: ${Number(row.count || 0)} peserta, ${row.percentage || formatPercent(row.rate)}`;
+    }).join('. ');
   }
 
   function periodLabel(metadata) {
@@ -375,6 +446,14 @@
     const code = String(classCode || classSelector.value || '').trim().toUpperCase();
     if (raw && raw.toUpperCase() !== code) return raw;
     return classNames[code] || raw || code || '-';
+  }
+
+  function skeletonRows(count) {
+    return Array.from({ length: count }, () => '<div class="skeleton-row" aria-hidden="true"></div>').join('');
+  }
+
+  function skeletonLegend() {
+    return Array.from({ length: 4 }, () => '<div class="skeleton-row" aria-hidden="true"></div>').join('');
   }
 
   function setText(id, value) {

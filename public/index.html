@@ -167,7 +167,7 @@
                 <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
                 <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
               </svg>
-              <span>Memuat Kamera...</span>
+              <span class="scan-loading-text">Memuat Kamera...</span>
             </div>
             <div id="reader"></div>
           </div>
@@ -266,7 +266,7 @@
         <label for="topic-search-input" class="sr-only">Cari topik pertemuan</label>
         <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="Cari topik...">
         <div id="topic-list-container">
-          <div class="topic-loading-placeholder">Memuat topik...</div>
+          <div class="topic-loading-placeholder scan-loading-text">Memuat topik...</div>
         </div>
         <button class="modal-close-btn" type="button" onclick="closeTopicModal()">Tutup</button>
       </div>
