@@ -97,6 +97,10 @@
   --vh: 1vh;
 }
 
+re-icon {
+  flex-shrink: 0;
+}
+
 [data-theme="dark"] {
   color-scheme: dark;
   --background: #101114;
@@ -395,7 +399,7 @@ button:disabled,
   margin-bottom: 1rem;
   box-shadow: 0 4px 12px var(--accent-glow);
 }
-#login-btn .material-icons-outlined {
+#login-btn re-icon {
   position: absolute;
   right: 0.85rem;
   top: 50%;
@@ -469,7 +473,7 @@ button:disabled,
   padding: 0.85rem; display: flex; gap: 10px;
   margin-bottom: 1.5rem; align-items: flex-start;
 }
-.instruction-box span { color: var(--accent); font-size: 1.25rem; }
+.instruction-box re-icon { color: var(--accent); font-size: 1.25rem; }
 .instruction-box p { font-size: 0.8rem; color: var(--text-primary); line-height: 1.4; }
 
 .topic-selector-btn-large {
@@ -515,7 +519,7 @@ button:disabled,
   display: flex; align-items: center; gap: 8px; font-size: 0.8rem;
   flex: 1; min-width: 0;
 }
-.topic-info span.material-icons-outlined { color: var(--accent); font-size: 1.1rem; }
+.topic-info re-icon { color: var(--accent); font-size: 1.1rem; }
 #active-topic-name { font-weight: 500; color: var(--text-primary); }
 
 #reader-container {
@@ -649,7 +653,7 @@ button:disabled,
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-.clear-history-btn .material-icons-outlined {
+.clear-history-btn re-icon {
   font-size: 1.1rem;
 }
 
@@ -961,12 +965,12 @@ a:focus-visible,
   flex-shrink: 0;
 }
 
-.queue-row .status-badge .material-icons-outlined {
+.queue-row .status-badge re-icon {
   font-size: 1.15rem;
 }
 
 /* Spin animation for sync in progress */
-.status-badge.processing .material-icons-outlined {
+.status-badge.processing re-icon {
   animation: spin 1s linear infinite;
 }
 
@@ -1662,7 +1666,7 @@ a:focus-visible,
   -webkit-backdrop-filter: blur(10px);
 }
 
-.summary-badge span.material-icons-outlined {
+.summary-badge re-icon {
   font-size: 1rem !important;
   flex-shrink: 0;
 }
@@ -1677,7 +1681,7 @@ a:focus-visible,
     gap: 4px;
     font-size: 0.7rem;
   }
-  .summary-badge span.material-icons-outlined {
+  .summary-badge re-icon {
     font-size: 0.9rem !important;
   }
 }
@@ -1687,7 +1691,7 @@ a:focus-visible,
   border: 1px solid var(--border-glass);
   color: var(--text-primary);
 }
-.summary-total span.material-icons-outlined {
+.summary-total re-icon {
   color: var(--accent);
 }
 
@@ -1776,7 +1780,7 @@ a:focus-visible,
   color: var(--text-secondary);
 }
 
-.student-thumb-placeholder span {
+.student-thumb-placeholder re-icon {
   font-size: 1.4rem !important;
 }
 
@@ -1794,7 +1798,7 @@ a:focus-visible,
   margin-bottom: 16px;
 }
 
-.student-photo-placeholder span {
+.student-photo-placeholder re-icon {
   font-size: 3rem !important;
 }
 
@@ -1837,7 +1841,7 @@ a:focus-visible,
   white-space: nowrap;
 }
 
-.nav-item span.material-icons-outlined {
+.nav-item re-icon {
   font-size: 1.15rem;
 }
 
@@ -1988,7 +1992,7 @@ a:focus-visible,
   letter-spacing: 0.2px;
 }
 
-.upload-photo-btn span.material-icons-outlined {
+.upload-photo-btn re-icon {
   font-size: 1rem !important;
 }
 
@@ -2278,7 +2282,7 @@ a:focus-visible,
     padding-inline: var(--space-2);
   }
 
-  .nav-item:not(.logout-btn) span:not(.material-icons-outlined) {
+  .nav-item:not(.logout-btn) span {
     position: absolute;
     width: 1px;
     height: 1px;

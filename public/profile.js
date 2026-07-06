@@ -358,7 +358,7 @@ function renderStudents(students) {
   if (processedStudents.length === 0) {
     listContainer.innerHTML = `
       <div class="empty-state">
-        <span class="material-icons-outlined empty-icon">person_search</span>
+        <re-icon icon="user-search" class="empty-icon" decorative></re-icon>
         <p>Tidak ada data katekumen ditemukan.</p>
       </div>
     `;
@@ -387,8 +387,8 @@ function renderStudents(students) {
     
     const photoHtml = hasPhoto 
       ? `<img class="student-thumb" src="${escapeHTML(displayImgUrl)}" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-         <div class="student-thumb-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
-      : `<div class="student-thumb-placeholder"><span class="material-icons-outlined">person</span></div>`;
+         <div class="student-thumb-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>`
+      : `<div class="student-thumb-placeholder"><re-icon icon="user" decorative></re-icon></div>`;
     
     const inactiveBadge = studentInactive 
       ? `<span class="inactive-badge">Nonaktif</span>`
@@ -406,7 +406,7 @@ function renderStudents(students) {
       </div>
       <div class="header-right">
         ${inactiveBadge}
-        <span class="material-icons-outlined expand-arrow">expand_more</span>
+        <re-icon icon="chevron-down" class="expand-arrow" decorative></re-icon>
       </div>
     `;
     
@@ -415,8 +415,8 @@ function renderStudents(students) {
     
     const largePhotoHtml = hasPhoto
       ? `<img class="student-photo-large" src="${escapeHTML(displayImgUrl)}" alt="Foto ${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-         <div class="student-photo-placeholder" style="display: none;"><span class="material-icons-outlined">person</span></div>`
-      : `<div class="student-photo-placeholder"><span class="material-icons-outlined">person</span></div>`;
+         <div class="student-photo-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>`
+      : `<div class="student-photo-placeholder"><re-icon icon="user" decorative></re-icon></div>`;
     
     const kelasKiVal = student.kelasKi ? escapeHTML(student.kelasKi) : `<span class="text-na">N/A</span>`;
     const katekisKkVal = student.katekisKk ? escapeHTML(student.katekisKk) : `<span class="text-na">N/A</span>`;
@@ -431,19 +431,19 @@ function renderStudents(students) {
           <div class="detail-info-grid">
             <div class="detail-item">
               <span class="detail-label">
-                <span class="material-icons-outlined detail-icon-inline">cake</span>Tempat, Tanggal Lahir
+                <re-icon icon="cake2" class="detail-icon-inline" decorative></re-icon>Tempat, Tanggal Lahir
               </span>
               <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
-                <span class="material-icons-outlined detail-icon-inline">meeting_room</span>Kelas KI
+                <re-icon icon="home-user" class="detail-icon-inline" decorative></re-icon>Kelas KI
               </span>
               <span class="detail-value">${kelasKiVal}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
-                <span class="material-icons-outlined detail-icon-inline">person</span>Katekis KK
+                <re-icon icon="user" class="detail-icon-inline" decorative></re-icon>Katekis KK
               </span>
               <span class="detail-value">${katekisKkVal}</span>
             </div>
@@ -451,7 +451,7 @@ function renderStudents(students) {
 
           <!-- Upload Photo Button -->
           <button class="upload-photo-btn" data-student-id="${escapeHTML(student.studentId)}" data-student-name="${escapeHTML(student.name)}" type="button" aria-label="Ganti foto ${escapeHTML(student.name)}">
-            <span class="material-icons-outlined">photo_camera</span>
+            <re-icon icon="camera" decorative></re-icon>
             Ganti Foto
           </button>
         </div>
@@ -569,4 +569,3 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', filterStudents);
   }
 });
-

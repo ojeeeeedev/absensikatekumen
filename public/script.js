@@ -83,7 +83,7 @@ window.setAppState = async function(state) {
       const topicTrigger = document.getElementById('topic-trigger-large');
       const activeTopicText = document.getElementById('active-topic-name');
       if (activeTopicText && topicTrigger) {
-        activeTopicText.textContent = topicTrigger.textContent.replace('arrow_drop_down', '').trim();
+        activeTopicText.textContent = topicTrigger.textContent.trim();
       }
     }
 
@@ -125,9 +125,7 @@ function setTopicTriggerText(week, name) {
   const label = document.createElement('span');
   label.textContent = `${week}. ${name}`;
 
-  const icon = document.createElement('span');
-  icon.className = 'material-icons-outlined';
-  icon.textContent = 'arrow_drop_down';
+  const icon = window.createAppIcon('chevron-down');
 
   btn.append(label, icon);
 }
@@ -163,12 +161,12 @@ window.togglePasswordVisibility = function() {
   const icon = document.getElementById('password-toggle');
   if (input.type === 'password') {
     input.type = 'text';
-    icon.textContent = 'visibility';
+    icon.setAttribute('icon', 'eye-open');
     icon.setAttribute('aria-pressed', 'true');
     icon.setAttribute('aria-label', 'Sembunyikan password');
   } else {
     input.type = 'password';
-    icon.textContent = 'visibility_off';
+    icon.setAttribute('icon', 'eye-off');
     icon.setAttribute('aria-pressed', 'false');
     icon.setAttribute('aria-label', 'Tampilkan password');
   }
@@ -638,20 +636,14 @@ class ScanQueue {
       const statusBadge = document.createElement('span');
       statusBadge.className = `status-badge ${item.status}`;
       
-      const icon = document.createElement('span');
-      icon.className = 'material-icons-outlined';
-      
-      if (item.status === 'success') {
-        icon.textContent = 'check';
-      } else if (item.status === 'error') {
-        icon.textContent = 'close';
-      } else if (item.status === 'duplicate') {
-        icon.textContent = 'refresh';
-      } else if (item.status === 'processing') {
-        icon.textContent = 'sync';
-      } else {
-        icon.textContent = 'schedule';
-      }
+      const statusIconByStatus = {
+        success: 'check',
+        error: 'close-circle2',
+        duplicate: 'refresh',
+        processing: 'refresh',
+        pending: 'timer-alt'
+      };
+      const icon = window.createAppIcon(statusIconByStatus[item.status] || statusIconByStatus.pending);
       
       statusBadge.appendChild(icon);
       row.appendChild(statusBadge);
@@ -762,14 +754,12 @@ window.showToast = function(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   
-  let iconName = 'check_circle';
-  if (type === 'error') iconName = 'error';
-  if (type === 'info') iconName = 'info';
+  let iconName = 'check-circle';
+  if (type === 'error') iconName = 'close-circle2';
+  if (type === 'info') iconName = 'info-circle';
 
   // Safe element construction to prevent XSS
-  const icon = document.createElement('span');
-  icon.className = 'material-icons-outlined toast-icon';
-  icon.textContent = iconName;
+  const icon = window.createAppIcon(iconName, 'toast-icon');
 
   const text = document.createElement('span');
   text.className = 'toast-message';
@@ -806,17 +796,15 @@ function showStatus(mainText, type, subText = "") {
   const el = document.getElementById("status");
   if (!el) return;
   
-  let iconName = "qr_code_scanner";
-  if (type === 'success') iconName = "check_circle_outline";
-  else if (type === 'error') iconName = "error_outline";
-  else if (type === 'processing') iconName = "hourglass_empty";
+  let iconName = "qr";
+  if (type === 'success') iconName = "check-circle";
+  else if (type === 'error') iconName = "close-circle2";
+  else if (type === 'processing') iconName = "timer-alt";
 
   el.innerHTML = "";
 
-  const iconSpan = document.createElement("span");
-  iconSpan.className = "material-icons-outlined";
+  const iconSpan = window.createAppIcon(iconName);
   iconSpan.style.fontSize = "1.25rem";
-  iconSpan.textContent = iconName;
   el.appendChild(iconSpan);
 
   if (subText) {

@@ -30,7 +30,7 @@
           <div class="onboarding-scroll-area">
             <!-- Section 1: Fitur Baru yang Memudahkan -->
             <h3 class="onboarding-section-header updates-header">
-              <span class="material-icons-outlined" aria-hidden="true">auto_awesome</span>
+              <re-icon icon="sparkles" decorative></re-icon>
               Fitur Baru yang Memudahkan
             </h3>
             <div class="updates-list">
@@ -39,10 +39,10 @@
               <div class="row-accordion" id="row-scan">
                 <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-scan-content">
                   <div class="row-accordion-title">
-                    <span class="material-icons-outlined" aria-hidden="true">bolt</span>
+                    <re-icon icon="bolt" decorative></re-icon>
                     <span>Scan QR Berturut-turut</span>
                   </div>
-                  <span class="material-icons-outlined chevron">expand_more</span>
+                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-scan-content">
                   <div class="row-accordion-body">
@@ -55,10 +55,10 @@
               <div class="row-accordion" id="row-offline">
                 <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-offline-content">
                   <div class="row-accordion-title">
-                    <span class="material-icons-outlined" aria-hidden="true">wifi_off</span>
+                    <re-icon icon="wifi-off" decorative></re-icon>
                     <span>Simpan Offline Otomatis</span>
                   </div>
-                  <span class="material-icons-outlined chevron">expand_more</span>
+                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-offline-content">
                   <div class="row-accordion-body">
@@ -71,10 +71,10 @@
               <div class="row-accordion" id="row-profile">
                 <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-profile-content">
                   <div class="row-accordion-title">
-                    <span class="material-icons-outlined" aria-hidden="true">badge</span>
+                    <re-icon icon="user-id" decorative></re-icon>
                     <span>Daftar & Profil Katekumen</span>
                   </div>
-                  <span class="material-icons-outlined chevron">expand_more</span>
+                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-profile-content">
                   <div class="row-accordion-body">
@@ -87,10 +87,10 @@
               <div class="row-accordion" id="row-detail">
                 <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-detail-content">
                   <div class="row-accordion-title">
-                    <span class="material-icons-outlined" aria-hidden="true">layers</span>
+                    <re-icon icon="layers" decorative></re-icon>
                     <span>Tampilan Informasi Rapi</span>
                   </div>
-                  <span class="material-icons-outlined chevron">expand_more</span>
+                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-detail-content">
                   <div class="row-accordion-body">
@@ -103,7 +103,7 @@
 
             <!-- Section 2: Penyederhanaan Sistem -->
             <h3 class="onboarding-section-header removals-header">
-              <span class="material-icons-outlined" aria-hidden="true">published_with_changes</span>
+              <re-icon icon="refresh" decorative></re-icon>
               Penyederhanaan Sistem
             </h3>
             <div class="removals-list">
@@ -112,10 +112,10 @@
               <div class="row-accordion" id="row-speed">
                 <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-speed-content">
                   <div class="row-accordion-title">
-                    <span class="material-icons-outlined" aria-hidden="true">speed</span>
+                    <re-icon icon="speedometer" decorative></re-icon>
                     <span>Buka Scanner Lebih Cepat</span>
                   </div>
-                  <span class="material-icons-outlined chevron">expand_more</span>
+                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-speed-content">
                   <div class="row-accordion-body">
@@ -128,10 +128,10 @@
               <div class="row-accordion" id="row-nav">
                 <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-nav-content">
                   <div class="row-accordion-title">
-                    <span class="material-icons-outlined" aria-hidden="true">navigation</span>
+                    <re-icon icon="streets-nav" decorative></re-icon>
                     <span>Navigasi Menu Simpel</span>
                   </div>
-                  <span class="material-icons-outlined chevron">expand_more</span>
+                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-nav-content">
                   <div class="row-accordion-body">

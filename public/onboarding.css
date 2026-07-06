@@ -65,7 +65,7 @@
   text-align: left !important;
 }
 
-.onboarding-section-header span {
+.onboarding-section-header re-icon {
   font-size: 1.05rem;
 }
 
@@ -141,26 +141,26 @@
   color: var(--text-primary);
 }
 
-.row-accordion-title span.material-icons-outlined {
+.row-accordion-title re-icon {
   font-size: 1.2rem;
   flex-shrink: 0;
 }
 
 /* Icon colors using theme-aware blues */
-.updates-list .row-accordion-title span.material-icons-outlined {
+.updates-list .row-accordion-title re-icon {
   color: var(--primary);
 }
 
-.removals-list .row-accordion-title span.material-icons-outlined {
+.removals-list .row-accordion-title re-icon {
   color: var(--chart-5);
 }
 
 /* Dark Mode overrides for icons */
-[data-theme="dark"] .updates-list .row-accordion-title span.material-icons-outlined {
+[data-theme="dark"] .updates-list .row-accordion-title re-icon {
   color: var(--primary);
 }
 
-[data-theme="dark"] .removals-list .row-accordion-title span.material-icons-outlined {
+[data-theme="dark"] .removals-list .row-accordion-title re-icon {
   color: var(--chart-5);
 }
 
