@@ -365,32 +365,32 @@ function renderStudents(students) {
     return;
   }
   
-  processedStudents.forEach((student, index) => {
+  // Helper to build a single student accordion item
+  const buildStudentItem = (student, index, totalOffset = 0) => {
     const item = document.createElement('div');
     const studentInactive = isInactive(student);
-    item.className = studentInactive 
-      ? 'student-accordion-item inactive' 
+    item.className = studentInactive
+      ? 'student-accordion-item inactive'
       : 'student-accordion-item';
-    
-    // Stagger animation delays top-to-bottom
-    const delay = Math.min(index * 0.04, 0.8);
+
+    const delay = Math.min((index + totalOffset) * 0.04, 0.8);
     item.style.animationDelay = `${delay}s`;
-    
+
     const header = document.createElement('div');
     header.className = 'student-accordion-header';
     header.setAttribute('tabindex', '0');
     header.setAttribute('role', 'button');
     header.setAttribute('aria-expanded', 'false');
-    
+
     const displayImgUrl = student.image;
     const hasPhoto = !!displayImgUrl;
-    
-    const photoHtml = hasPhoto 
+
+    const photoHtml = hasPhoto
       ? `<img class="student-thumb" src="${escapeHTML(displayImgUrl)}" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <div class="student-thumb-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>`
       : `<div class="student-thumb-placeholder"><re-icon icon="user" decorative></re-icon></div>`;
-    
-    const inactiveBadge = studentInactive 
+
+    const inactiveBadge = studentInactive
       ? `<span class="inactive-badge">Nonaktif</span>`
       : '';
 
@@ -409,15 +409,15 @@ function renderStudents(students) {
         <re-icon icon="chevron-down" class="expand-arrow" decorative></re-icon>
       </div>
     `;
-    
+
     const body = document.createElement('div');
     body.className = 'student-accordion-body collapsed';
-    
+
     const largePhotoHtml = hasPhoto
       ? `<img class="student-photo-large" src="${escapeHTML(displayImgUrl)}" alt="Foto ${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <div class="student-photo-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>`
       : `<div class="student-photo-placeholder"><re-icon icon="user" decorative></re-icon></div>`;
-    
+
     const kelasKiVal = student.kelasKi ? escapeHTML(student.kelasKi) : `<span class="text-na">N/A</span>`;
     const katekisKkVal = student.katekisKk ? escapeHTML(student.katekisKk) : `<span class="text-na">N/A</span>`;
 
@@ -427,7 +427,6 @@ function renderStudents(students) {
           ${largePhotoHtml}
           <h3 class="detail-name">${escapeHTML(student.name)}</h3>
           <p class="detail-id">ID: ${escapeHTML(student.studentId)}</p>
-          
           <div class="detail-info-grid">
             <div class="detail-item">
               <span class="detail-label">
@@ -448,8 +447,6 @@ function renderStudents(students) {
               <span class="detail-value">${katekisKkVal}</span>
             </div>
           </div>
-
-          <!-- Upload Photo Button -->
           <button class="upload-photo-btn" data-student-id="${escapeHTML(student.studentId)}" data-student-name="${escapeHTML(student.name)}" type="button" aria-label="Ganti foto ${escapeHTML(student.name)}">
             <re-icon icon="camera" decorative></re-icon>
             Ganti Foto
@@ -457,22 +454,17 @@ function renderStudents(students) {
         </div>
       </div>
     `;
-    
-    // Wire up the upload button
+
     const uploadBtn = body.querySelector('.upload-photo-btn');
     if (uploadBtn) {
       uploadBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        PhotoUploader.open(
-          uploadBtn.dataset.studentId,
-          uploadBtn.dataset.studentName
-        );
+        PhotoUploader.open(uploadBtn.dataset.studentId, uploadBtn.dataset.studentName);
       });
     }
 
     const toggle = () => {
       const isExpanded = body.classList.contains('expanded');
-      
       document.querySelectorAll('.student-accordion-body').forEach(b => {
         b.classList.remove('expanded');
         b.classList.add('collapsed');
@@ -481,7 +473,6 @@ function renderStudents(students) {
         h.classList.remove('active');
         h.setAttribute('aria-expanded', 'false');
       });
-      
       if (!isExpanded) {
         body.classList.remove('collapsed');
         body.classList.add('expanded');
@@ -489,7 +480,7 @@ function renderStudents(students) {
         header.setAttribute('aria-expanded', 'true');
       }
     };
-    
+
     header.addEventListener('click', toggle);
     header.addEventListener('keydown', (e) => {
       if (e.key === ' ' || e.key === 'Enter') {
@@ -497,11 +488,71 @@ function renderStudents(students) {
         toggle();
       }
     });
-    
+
     item.appendChild(header);
     item.appendChild(body);
-    listContainer.appendChild(item);
+    return item;
+  };
+
+  // Render active students
+  activeList.forEach((student, index) => {
+    listContainer.appendChild(buildStudentItem(student, index, 0));
   });
+
+  // Render inactive students inside a collapsible group (default: closed)
+  if (inactiveList.length > 0) {
+    const groupWrapper = document.createElement('div');
+    groupWrapper.className = 'inactive-group-wrapper';
+
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'inactive-group-header';
+    groupHeader.setAttribute('role', 'button');
+    groupHeader.setAttribute('tabindex', '0');
+    groupHeader.setAttribute('aria-expanded', 'false');
+    groupHeader.innerHTML = `
+      <re-icon icon="user-minus" decorative></re-icon>
+      <span>Nonaktif (${inactiveList.length})</span>
+      <re-icon icon="chevron-down" class="inactive-group-arrow" decorative></re-icon>
+    `;
+
+    const groupBody = document.createElement('div');
+    groupBody.className = 'inactive-group-body';
+
+    const groupInner = document.createElement('div');
+    groupInner.className = 'inactive-group-inner';
+
+    inactiveList.forEach((student, index) => {
+      groupInner.appendChild(buildStudentItem(student, index, activeList.length));
+    });
+
+    groupBody.appendChild(groupInner);
+
+    const toggleGroup = () => {
+      const isOpen = groupHeader.classList.contains('open');
+      if (isOpen) {
+        groupHeader.classList.remove('open');
+        groupBody.classList.remove('open');
+        groupHeader.setAttribute('aria-expanded', 'false');
+      } else {
+        groupHeader.classList.add('open');
+        groupBody.classList.add('open');
+        groupHeader.setAttribute('aria-expanded', 'true');
+      }
+    };
+
+    groupHeader.addEventListener('click', toggleGroup);
+    groupHeader.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggleGroup();
+      }
+    });
+
+    groupWrapper.appendChild(groupHeader);
+    groupWrapper.appendChild(groupBody);
+    listContainer.appendChild(groupWrapper);
+  }
+
 }
 
 function filterStudents() {

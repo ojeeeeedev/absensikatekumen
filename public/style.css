@@ -1651,6 +1651,8 @@ a:focus-visible,
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  flex: 1;
+  min-height: 40vh;
   padding: 30px;
   gap: 12px;
 }
@@ -1732,6 +1734,66 @@ a:focus-visible,
 
 .student-accordion-item.inactive:hover {
   border-color: var(--status-duplicate-border);
+}
+
+/* Greyed-out text for inactive students in light mode */
+[data-theme="light"] .student-accordion-item.inactive .student-name-text,
+:root:not([data-theme="dark"]) .student-accordion-item.inactive .student-name-text {
+  color: #9ca3af;
+}
+[data-theme="light"] .student-accordion-item.inactive .student-id-text,
+:root:not([data-theme="dark"]) .student-accordion-item.inactive .student-id-text {
+  color: #b0b8c1;
+}
+[data-theme="light"] .student-accordion-item.inactive .student-thumb-placeholder,
+:root:not([data-theme="dark"]) .student-accordion-item.inactive .student-thumb-placeholder {
+  opacity: 0.45;
+}
+
+/* Inactive group section header */
+.inactive-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px dashed var(--border-glass);
+  background: var(--bg-hover);
+  user-select: none;
+  transition: background 0.2s ease;
+  margin-top: 4px;
+}
+.inactive-group-header:hover {
+  background: color-mix(in srgb, var(--bg-hover) 70%, var(--accent) 10%);
+}
+.inactive-group-header .inactive-group-arrow {
+  margin-left: auto;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.9rem;
+}
+.inactive-group-header.open .inactive-group-arrow {
+  transform: rotate(180deg);
+}
+
+.inactive-group-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.inactive-group-body.open {
+  grid-template-rows: 1fr;
+}
+.inactive-group-inner {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
 }
 
 .inactive-badge {
@@ -1985,6 +2047,8 @@ a:focus-visible,
 }
 
 #profile-page #students-loader {
+  flex: 1;
+  min-height: 40vh;
   padding: 30px 1.25rem;
 }
 
