@@ -87,14 +87,24 @@
         </div>
 
         <div id="students-loader" style="display: none;">
-          <div class="spinner"></div>
+          <svg class="grid-column-scan-loader spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
+            <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
+            <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
+            <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
+            <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
+            <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
+            <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
+            <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
+            <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
+          </svg>
           <span style="font-size: 0.85rem; color: var(--text-primary); opacity: 0.8;">Memuat katekumen...</span>
         </div>
 
         <div id="students-list" class="students-list-container">
           <div class="welcome-placeholder">
             <re-icon icon="users" class="welcome-icon" decorative></re-icon>
-            <p>Pilih kelompok kelas untuk melihat daftar katekumen.</p>
+            <p>Pilih Kelas terlebih dahulu untuk melihat daftar katekumen.</p>
           </div>
         </div>
       </div>
@@ -129,7 +139,17 @@
           <div class="upload-actions">
             <button class="upload-cancel-btn" id="upload-cancel-btn" type="button">Batal</button>
             <button class="upload-confirm-btn" id="upload-confirm-btn" type="button" disabled>
-              <div class="btn-spinner"></div>
+              <svg class="grid-column-scan-loader btn-spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
+                <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
+                <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
+              </svg>
               <span class="btn-label">Unggah Foto</span>
             </button>
           </div>

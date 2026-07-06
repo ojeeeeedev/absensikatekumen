@@ -28,7 +28,17 @@
 
     <!-- Loading screen for login -->
     <div id="login-loader" style="display: none;">
-      <div class="spinner"></div>
+      <svg class="grid-column-scan-loader spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
+        <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
+        <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
+        <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
+        <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
+        <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
+        <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
+        <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
+        <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
+      </svg>
     </div>
 
     <nav class="app-nav" id="app-nav" style="display: none;">
@@ -140,7 +150,17 @@
           <!-- Camera Viewer -->
           <div id="reader-container">
             <div id="camera-loader">
-              <div class="spinner"></div>
+              <svg class="grid-column-scan-loader spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
+                <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
+                <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
+                <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
+                <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
+              </svg>
               <span>Memuat Kamera...</span>
             </div>
             <div id="reader"></div>
@@ -159,7 +179,17 @@
                     <div id="segment-error" class="progress-segment error" style="width: 0%;"></div>
                     <div id="segment-pending" class="progress-segment pending" style="width: 0%;"></div>
                   </div>
-                  <div id="history-sync-spinner" class="spinner-small" style="display: none; margin-right: 4px;"></div>
+                  <svg id="history-sync-spinner" class="grid-column-scan-loader spinner-small" style="display: none; margin-right: 4px;" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
+                    <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
+                    <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
+                    <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
+                    <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
+                    <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
+                    <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
+                    <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
+                    <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
+                  </svg>
                   <button id="history-trash-btn" type="button" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" style="display: none;" onclick="openDeleteConfirm(event)">
                     <re-icon icon="trash" class="icon-default" decorative></re-icon>
                   </button>
