@@ -9,6 +9,8 @@
       (function() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
+        window.__themeLogoSrc = savedTheme === 'dark' ? 'assets/pewartaan_invert.png' : 'assets/pewartaan_normal.png';
+        window.__setThemeLogo = (img) => { img.src = window.__themeLogoSrc; };
       })();
     </script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -79,7 +81,7 @@
            ========================================== -->
       <div id="login-section" class="app-section">
         <div class="login-header-branding">
-          <img src="assets/pewartaan_normal.png" alt="Logo Pewartaan" width="64" height="64" class="theme-logo" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;">
+          <img alt="Logo Pewartaan" width="64" height="64" class="theme-logo" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;"><script>__setThemeLogo(document.currentScript.previousElementSibling)</script>
           <div class="branding-text">
             <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
             <div>Paroki St. Petrus - Katedral</div>
@@ -111,7 +113,7 @@
 
         <!-- Brand Header (Kecil di scan state, besar di selection state) -->
         <div class="header-container">
-          <img src="assets/pewartaan_normal.png" class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" style="cursor: pointer;">
+          <img class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" style="cursor: pointer;"><script>__setThemeLogo(document.currentScript.previousElementSibling)</script>
           <div class="header-text">
             <h1>Sistem Presensi</h1>
             <h2>Katekumen Dewasa</h2>
