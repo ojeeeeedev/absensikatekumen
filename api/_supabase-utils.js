@@ -33,10 +33,11 @@ export async function ensureBucketExists(supabase, bucketName) {
 
   // Supabase returns this message when the bucket already exists.
   // Treat it as a non-error so the function is idempotent.
+  const errorStatus = /** @type {{ statusCode?: string | number, status?: number }} */ (error);
   const alreadyExists =
     error.message?.toLowerCase().includes('already exists') ||
-    error.statusCode === '409' ||
-    error.status === 409;
+    errorStatus.statusCode === '409' ||
+    errorStatus.status === 409;
 
   if (alreadyExists) {
     return { created: false }; // bucket is fine — nothing to do
