@@ -15,13 +15,26 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const requestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: {
+    status: "error",
+    message: "Too many requests, please try again later."
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(requestLimiter);
+
 // Middleware to parse JSON and cookies
 app.use(express.json());
 app.use(cookieParser());
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`[local-dev] ${req.method} ${req.url} - body:`, req.body);
+  console.log('[local-dev]', req.method, req.url, '- body:', req.body);
   next();
 });
 
@@ -169,6 +182,10 @@ app.get('*', (req, res, next) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server started locally on http://localhost:${PORT}`);
-});
+if (process.argv[1] === __filename) {
+  app.listen(PORT, () => {
+    console.log(`Server started locally on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
