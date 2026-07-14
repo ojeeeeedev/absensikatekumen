@@ -1440,24 +1440,24 @@ a:focus-visible,
   padding-top: 5px;
   padding-bottom: 5px;
   margin-top: -5px;
-  transition: gap 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              border-bottom-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              padding-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  isolation: isolate;
 }
 
-.app-section.scrolled .profile-selector-container {
-  gap: 8px;
-  margin-bottom: 8px;
-  border-bottom-color: var(--border-glass);
-  margin-top: -1.25rem;
-  padding-top: calc(1.25rem + 8px);
-  padding-bottom: 8px;
-  background: var(--bg-glass);
+.profile-controls-glass {
+  position: absolute;
+  z-index: 0;
+  inset: -1rem 0 0;
+  border-bottom: 1px solid var(--border-glass);
+  background: var(--popover);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.profile-selector-container > :not(.profile-controls-glass) {
+  position: relative;
+  z-index: 1;
 }
 
 #search-input {
@@ -2323,7 +2323,7 @@ body[data-active-view="profile"] .nav-tabs::before {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
-  margin-bottom: 15px;
+  margin-bottom: 4px;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
   padding-top: 0;
@@ -2336,34 +2336,27 @@ body[data-active-view="profile"] .nav-tabs::before {
   margin-top: 0;
 }
 
-#profile-view.scrolled .profile-selector-container {
+#app-container.profile-expanded #profile-view .profile-selector-container {
   top: -1rem;
   gap: 6px;
   margin-top: 0;
   margin-bottom: 4px;
   padding-top: 8px;
   padding-bottom: 8px;
-  background: var(--background);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
-[data-theme="dark"] #profile-view.scrolled .profile-selector-container {
-  background: var(--background);
-}
+#app-container.profile-expanded #profile-view .students-summary-container { gap: 4px; }
 
-#profile-view.scrolled .students-summary-container { gap: 4px; }
-
-#profile-view.scrolled .summary-badge {
+#app-container.profile-expanded #profile-view .summary-badge {
   gap: 4px;
   padding: 4px 6px;
   border-radius: var(--radius-sm);
   font-size: 0.675rem;
 }
 
-#profile-view.scrolled .summary-badge re-icon { font-size: 0.85rem !important; }
+#app-container.profile-expanded #profile-view .summary-badge re-icon { font-size: 0.85rem !important; }
 
-#profile-view.scrolled #search-input {
+#app-container.profile-expanded #profile-view #search-input {
   min-height: 44px;
   padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;

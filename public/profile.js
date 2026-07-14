@@ -60,6 +60,8 @@ async function loadStudents(classCode) {
   if (appSection) {
     appSection.scrollTop = 0;
     appSection.classList.remove('scrolled');
+    const glass = appSection.querySelector('.profile-controls-glass');
+    if (glass) glass.style.opacity = '0';
   }
   
   if (listContainer) listContainer.innerHTML = '';
@@ -378,16 +380,20 @@ window.initializeProfileView = function initializeProfileView() {
   });
   loadClasses();
 
-  // Scroll listener for header minimization
+  // Fade in the sticky glass layer without changing layout during scrolling.
   const appSection = document.getElementById('profile-view');
   if (appSection) {
+    const glass = appSection.querySelector('.profile-controls-glass');
+    let scrollFrame = 0;
     appSection.addEventListener('scroll', () => {
-      if (appSection.scrollTop > 50) {
-        appSection.classList.add('scrolled');
-      } else {
-        appSection.classList.remove('scrolled');
-      }
-    });
+      if (scrollFrame) return;
+      scrollFrame = requestAnimationFrame(() => {
+        const scrollProgress = Math.min(appSection.scrollTop / 24, 1);
+        if (glass) glass.style.opacity = String(scrollProgress);
+        appSection.classList.toggle('scrolled', appSection.scrollTop > 0);
+        scrollFrame = 0;
+      });
+    }, { passive: true });
   }
   
   const selector = document.getElementById('class-selector');

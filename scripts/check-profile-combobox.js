@@ -211,18 +211,28 @@ try {
     const profile = document.getElementById('profile-view');
     const selectorElement = document.querySelector('#profile-view .profile-selector-container');
     const summaryElement = document.getElementById('students-summary');
+    const glassElement = document.querySelector('.profile-controls-glass');
     const restingHeight = selectorElement.getBoundingClientRect().height;
     const restingSummaryHeight = summaryElement.getBoundingClientRect().height;
-    profile.scrollTop = 100;
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const samples = [];
+    for (const scrollTop of [0, 6, 12, 24, 100]) {
+      profile.scrollTop = scrollTop;
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      samples.push({
+        scrollTop: profile.scrollTop,
+        opacity: Number(getComputedStyle(glassElement).opacity),
+        selectorHeight: selectorElement.getBoundingClientRect().height,
+      });
+    }
     const header = document.getElementById('app-shell-header').getBoundingClientRect();
     const selector = selectorElement.getBoundingClientRect();
     const summary = summaryElement.getBoundingClientRect();
     const search = document.getElementById('search-input').getBoundingClientRect();
+    const firstCard = document.querySelector('.student-accordion-item').getBoundingClientRect();
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 1;
     const context = canvas.getContext('2d');
-    context.fillStyle = getComputedStyle(selectorElement).backgroundColor;
+    context.fillStyle = getComputedStyle(glassElement).backgroundColor;
     context.fillRect(0, 0, 1, 1);
     return {
       headerBottom: header.bottom,
@@ -233,9 +243,18 @@ try {
       scrolledSummaryHeight: summary.height,
       searchHeight: search.height,
       backgroundAlpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
+      backdropFilter: getComputedStyle(glassElement).backdropFilter,
+      selectorTransitionDuration: getComputedStyle(selectorElement).transitionDuration,
+      cardBehindSearch: firstCard.top < search.bottom,
+      samples,
     };
   });
-  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1 || stickyProfileHeader.scrolledHeight >= stickyProfileHeader.restingHeight || stickyProfileHeader.scrolledSummaryHeight >= stickyProfileHeader.restingSummaryHeight || stickyProfileHeader.searchHeight < 44 || stickyProfileHeader.backgroundAlpha !== 1) {
+  const opacityRisesWithScroll = stickyProfileHeader.samples[0].opacity === 0
+    && stickyProfileHeader.samples.at(-1).opacity === 1
+    && stickyProfileHeader.samples.every((sample, index, samples) => index === 0 || sample.opacity >= samples[index - 1].opacity);
+  const selectorHeightStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.selectorHeight))
+    - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorHeight)) < 1;
+  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1 || !opacityRisesWithScroll || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.scrolledSummaryHeight >= 30 || stickyProfileHeader.searchHeight < 44 || stickyProfileHeader.backgroundAlpha < 0.9 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.cardBehindSearch) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
