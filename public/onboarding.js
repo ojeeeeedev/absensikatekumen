@@ -1,5 +1,9 @@
 (function() {
+  const ONBOARDING_ENABLED = false;
+
   const checkOnboarding = () => {
+    if (!ONBOARDING_ENABLED) return;
+
     // Check if they already saw onboarding
     if (localStorage.getItem('hasSeenOnboardingV2')) return;
 
