@@ -841,7 +841,7 @@ button:disabled,
    FOOTER & BOTTOM BRANDING
    ========================================= */
 .app-footer {
-  width: 100%; padding-top: 0.75rem;
+  width: 100%; padding-top: var(--space-6);
   border-top: 1px solid var(--border-glass);
   text-align: center; font-size: 0.65rem; color: var(--text-secondary);
   margin-top: auto;
