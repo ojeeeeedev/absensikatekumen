@@ -8,8 +8,8 @@
 /**
  * Ensures a Supabase storage bucket exists, creating it if necessary.
  *
- * The bucket is created as private (public: false) so that all file access
- * must go through signed URLs — consistent with the rest of the app.
+ * The bucket is created as private (public: false) so that file access must go
+ * through the authenticated same-origin photo proxy.
  *
  * This is idempotent: if the bucket already exists the "already exists"
  * error from Supabase is silently ignored.
@@ -21,7 +21,7 @@
  */
 export async function ensureBucketExists(supabase, bucketName) {
   const { error } = await supabase.storage.createBucket(bucketName, {
-    public: false,            // signed-URL access only
+    public: false,            // authenticated proxy access only
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
     fileSizeLimit: 5 * 1024 * 1024, // 5 MB
   });
@@ -88,6 +88,20 @@ export function photoUrlForStudent(studentId, version = '') {
   const params = new URLSearchParams({ studentId });
   if (version) params.set('v', version);
   return `/api/photo?${params.toString()}`;
+}
+
+export async function listAllFiles(supabase, bucketName, pageSize = 200) {
+  const files = [];
+
+  for (let offset = 0; ; offset += pageSize) {
+    const { data = [], error } = await supabase.storage
+      .from(bucketName)
+      .list('', { limit: pageSize, offset });
+
+    if (error) return { data: null, error };
+    files.push(...data);
+    if (data.length < pageSize) return { data: files, error: null };
+  }
 }
 
 export async function findStudentPhoto(supabase, bucketName, studentId) {

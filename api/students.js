@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
-import { bucketNameForClass, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
+import { getScriptMap, readJsonResponse } from './_gas-utils.js';
+import { bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
+/**
+ * Returns the GAS student roster for one validated class and enriches matching
+ * records with authenticated same-origin photo URLs. Storage-list failures do
+ * not block the roster response; GAS/auth/configuration failures do.
+ */
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -31,12 +37,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ status: "error", message: "Format classCode tidak valid" });
   }
   
-  let SCRIPT_MAP = {};
+  let SCRIPT_MAP;
   try {
-    if (!process.env.VERCEL_SCRIPT_MAP_JSON) {
-      throw new Error("Server configuration error: VERCEL_SCRIPT_MAP_JSON is not defined.");
-    }
-    SCRIPT_MAP = JSON.parse(process.env.VERCEL_SCRIPT_MAP_JSON);
+    SCRIPT_MAP = getScriptMap();
   } catch (e) {
     console.error("Error parsing SCRIPT_MAP:", e);
     return res.status(500).json({ status: "error", message: "Server configuration error" });
@@ -63,11 +66,8 @@ export default async function handler(req, res) {
       })
     });
 
-    const text = await gasResponse.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
+    const { data, text, valid } = await readJsonResponse(gasResponse);
+    if (!valid) {
       console.error(`GAS response is not JSON: ${text}`);
       return res.status(502).json({ status: "error", message: "GAS returned invalid JSON" });
     }
@@ -81,9 +81,7 @@ export default async function handler(req, res) {
     if (supabase && students.length > 0) {
       const bucketName = bucketNameForClass(normalizedClassCode);
 
-      const { data: files, error: listError } = await supabase.storage
-        .from(bucketName)
-        .list('', { limit: 200 });
+      const { data: files, error: listError } = await listAllFiles(supabase, bucketName);
 
       if (!listError && files && files.length > 0) {
         const fileMap = {};
