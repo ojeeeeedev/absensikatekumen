@@ -9,6 +9,8 @@
     "start": "node app.js",
     "dev": "node app.js",
     "build": "for file in app.js middleware.js api/*.js public/*.js apps-script/*.js scripts/*.js test/*.js; do node --check \"$file\"; done",
+    "lint": "eslint app.js middleware.js api public scripts test --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:profile-combobox": "node scripts/check-profile-combobox.js",
     "test:scan-history": "node scripts/check-scan-history-ui.js",
@@ -24,7 +26,12 @@
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.3",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
     "playwright": "^1.60.0",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.9"
   }
 }
