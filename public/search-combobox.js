@@ -91,7 +91,9 @@
       search.value = '';
       render();
       closeActiveCombobox = close;
-      requestAnimationFrame(() => search.focus());
+      requestAnimationFrame(() => {
+        if (!popover.hidden && !popover.contains(document.activeElement)) search.focus();
+      });
     }
 
     function setItems(nextItems, unavailableLabel) {

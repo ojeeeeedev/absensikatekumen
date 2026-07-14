@@ -182,6 +182,9 @@ app.get('/api/version', async (req, res) => {
 // ==========================================
 // 3. STATIC FILES
 // ==========================================
+app.get('/profile.html', (req, res) => res.redirect(308, '/profile'));
+app.get('/profile', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 // Fallback for clean URLs - serve index.html for unknown HTML paths

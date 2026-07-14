@@ -22,6 +22,10 @@ async function waitForServer() {
 let browser;
 try {
   await waitForServer();
+  const legacyProfileResponse = await fetch(`${baseUrl}/profile.html`, { redirect: 'manual' });
+  if (legacyProfileResponse.status !== 308 || legacyProfileResponse.headers.get('location') !== '/profile') {
+    throw new Error('Legacy profile route did not redirect to /profile');
+  }
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
@@ -39,11 +43,111 @@ try {
   }));
   await page.route('**/api/students?*', route => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify({ status: 'ok', students: [] })
+    body: JSON.stringify({ status: 'ok', students: Array.from({ length: 16 }, (_, index) => ({
+      studentId: `2026/MAL/${String(index + 1).padStart(3, '0')}`,
+      name: `Katekumen ${index + 1}`,
+      image: '',
+      status: 'active'
+    })) })
   }));
 
   await page.goto(`${baseUrl}/profile`, { waitUntil: 'networkidle' });
-  const profileSpinnerColors = await page.locator('.app-spinner').first().evaluate(spinner => {
+  const navbarHandle = await page.locator('#app-nav').elementHandle();
+  const headerHandle = await page.locator('#app-shell-header').elementHandle();
+  const initialShell = await page.evaluate(() => ({
+    navTop: document.getElementById('app-nav').getBoundingClientRect().top,
+    header: document.getElementById('app-shell-header').getBoundingClientRect().toJSON(),
+    logoLeft: document.querySelector('#app-shell-header .header-logo').getBoundingClientRect().left,
+    textLeft: document.querySelector('#app-shell-header .header-text').getBoundingClientRect().left,
+    headerGroupCenterOffset: Math.abs(
+      (document.querySelector('#app-shell-header .header-logo').getBoundingClientRect().left
+        + document.querySelector('#app-shell-header .header-text').getBoundingClientRect().right) / 2
+      - (document.getElementById('app-shell-header').getBoundingClientRect().left
+        + document.getElementById('app-shell-header').getBoundingClientRect().right) / 2
+    ),
+    headerVerticalGapDelta: (() => {
+      const container = document.getElementById('app-container').getBoundingClientRect();
+      const header = document.getElementById('app-shell-header').getBoundingClientRect();
+      const logo = document.querySelector('#app-shell-header .header-logo').getBoundingClientRect();
+      const text = document.querySelector('#app-shell-header .header-text').getBoundingClientRect();
+      const contentTop = Math.min(logo.top, text.top);
+      const contentBottom = Math.max(logo.bottom, text.bottom);
+      return Math.abs((contentTop - container.top) - (header.bottom - contentBottom));
+    })(),
+    heading: document.getElementById('app-view-title').textContent,
+    supportingText: [...document.querySelectorAll('#app-shell-header :is(h2, h3)')].map(element => element.textContent),
+    supportingLineHeight: document.querySelector('#app-shell-header h2').getBoundingClientRect().height,
+    tabTrackRadius: getComputedStyle(document.querySelector('.nav-tabs')).borderRadius,
+    tabPillRadius: getComputedStyle(document.querySelector('.nav-tabs'), '::before').borderRadius,
+    tabPillOffset: new DOMMatrix(getComputedStyle(document.querySelector('.nav-tabs'), '::before').transform).m41,
+    tabBounds: (() => {
+      const track = document.querySelector('.nav-tabs').getBoundingClientRect();
+      const tabs = [...document.querySelectorAll('.nav-tabs .nav-item')].map(tab => tab.getBoundingClientRect());
+      return {
+        trackHeight: track.height,
+        heights: tabs.map(tab => tab.height),
+        widths: tabs.map(tab => tab.width),
+        topInsets: tabs.map(tab => tab.top - track.top),
+        bottomInsets: tabs.map(tab => track.bottom - tab.bottom),
+        edgeInsets: [tabs[0].left - track.left, track.right - tabs[1].right]
+      };
+    })(),
+    tabAlignment: [...document.querySelectorAll('.nav-tabs .nav-item')].map(tab => {
+      const tabRect = tab.getBoundingClientRect();
+      const iconRect = tab.querySelector('re-icon').getBoundingClientRect();
+      const labelRect = tab.querySelector('span').getBoundingClientRect();
+      return {
+        iconWidth: iconRect.width,
+        iconHeight: iconRect.height,
+        baselineOffset: Math.abs((iconRect.top + iconRect.bottom) / 2 - (labelRect.top + labelRect.bottom) / 2),
+        centerOffset: Math.abs((iconRect.left + labelRect.right) / 2 - (tabRect.left + tabRect.right) / 2)
+      };
+    }),
+    containerHeight: document.getElementById('app-container').getBoundingClientRect().height,
+    emptyBottomGap: document.getElementById('app-container').getBoundingClientRect().bottom
+      - document.querySelector('#profile-view .welcome-placeholder').getBoundingClientRect().bottom,
+    profileActive: !document.getElementById('profile-view').hidden,
+    scanHidden: document.getElementById('main-app-section').hidden,
+    activeNav: document.querySelector('[aria-current="page"]')?.dataset.appView
+  }));
+  const tabsAligned = initialShell.tabAlignment.every(tab => tab.iconWidth === 20 && tab.iconHeight === 20 && tab.baselineOffset < 1 && tab.centerOffset < 1);
+  const tabBoundsAligned = initialShell.tabBounds.heights.every(height => height < initialShell.tabBounds.trackHeight)
+    && Math.abs(initialShell.tabBounds.heights[0] - initialShell.tabBounds.heights[1]) < 1
+    && Math.abs(initialShell.tabBounds.widths[0] - initialShell.tabBounds.widths[1]) < 1
+    && initialShell.tabBounds.topInsets.every((inset, index) => Math.abs(inset - initialShell.tabBounds.bottomInsets[index]) < 1)
+    && Math.abs(initialShell.tabBounds.edgeInsets[0] - initialShell.tabBounds.edgeInsets[1]) < 1;
+  if (!initialShell.profileActive || !initialShell.scanHidden || initialShell.activeNav !== 'profile' || initialShell.tabTrackRadius !== '16px' || initialShell.tabPillRadius !== '12px' || initialShell.tabPillOffset <= 0 || initialShell.headerGroupCenterOffset >= 1 || initialShell.headerVerticalGapDelta >= 1 || !tabsAligned || !tabBoundsAligned || initialShell.supportingText.join('|') !== 'Katekumen Dewasa - Paroki Katedral St. Petrus|Keuskupan Bandung' || initialShell.supportingLineHeight > 16) {
+    throw new Error(`Direct profile route did not activate the profile view: ${JSON.stringify(initialShell)}`);
+  }
+  if (initialShell.emptyBottomGap > 22) {
+    throw new Error(`Compact profile left excess space below its empty state: ${JSON.stringify(initialShell)}`);
+  }
+  const compactResize = await page.evaluate(async () => {
+    const navigation = window.navigateToAppView('scan');
+    const opacitySamples = [];
+    for (let index = 0; index < 8; index += 1) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+      opacitySamples.push(Number(getComputedStyle(document.getElementById('main-app-section')).opacity));
+    }
+    await navigation;
+    const animation = document.getElementById('app-container').getAnimations().find(candidate =>
+      candidate.effect.getKeyframes().some(frame => frame.height)
+    );
+    if (!animation) return null;
+    const [from, to] = animation.effect.getKeyframes();
+    await animation.finished;
+    return { from: parseFloat(from.height), to: parseFloat(to.height), opacitySamples };
+  });
+  const opacityRestarted = compactResize?.opacitySamples.some((opacity, index, samples) => index > 0 && opacity + 0.01 < samples[index - 1]);
+  if (!compactResize || compactResize.to <= compactResize.from || opacityRestarted) {
+    throw new Error(`Main container did not animate from compact Profile to Scan: ${JSON.stringify(compactResize)}`);
+  }
+  await page.evaluate(async () => {
+    await window.navigateToAppView('profile');
+    await Promise.all(document.getElementById('app-container').getAnimations().map(animation => animation.finished));
+  });
+  const profileSpinners = page.locator('#students-loader .app-spinner, #upload-preview-modal .app-spinner');
+  const profileSpinnerColors = await profileSpinners.first().evaluate(spinner => {
     const light = getComputedStyle(spinner).color;
     document.documentElement.setAttribute('data-theme', 'dark');
     const dark = getComputedStyle(spinner).color;
@@ -51,16 +155,18 @@ try {
     document.documentElement.setAttribute('data-theme', 'light');
     return { light, dark, stroke };
   });
-  if (await page.locator('.app-spinner').count() !== 2 || profileSpinnerColors.light === profileSpinnerColors.dark || profileSpinnerColors.dark !== profileSpinnerColors.stroke || await page.locator('.grid-column-scan-loader').count()) {
-    throw new Error(`Profile spinners do not follow the theme: ${JSON.stringify(profileSpinnerColors)}`);
+  const profileSpinnerCount = await profileSpinners.count();
+  const legacyProfileSpinnerCount = await page.locator('#profile-view .grid-column-scan-loader, #upload-preview-modal .grid-column-scan-loader').count();
+  if (profileSpinnerCount !== 2 || profileSpinnerColors.light === profileSpinnerColors.dark || profileSpinnerColors.dark !== profileSpinnerColors.stroke || legacyProfileSpinnerCount) {
+    throw new Error(`Profile spinners do not follow the theme: ${JSON.stringify({ ...profileSpinnerColors, profileSpinnerCount, legacyProfileSpinnerCount })}`);
   }
   const profileSpacing = await page.evaluate(() => {
-    const header = document.querySelector('#profile-page .header-container').getBoundingClientRect();
-    const container = document.querySelector('#profile-page .profile-selector-container').getBoundingClientRect();
+    const header = document.getElementById('app-shell-header').getBoundingClientRect();
+    const container = document.querySelector('#profile-view .profile-selector-container').getBoundingClientRect();
     const root = document.getElementById('class-combobox').getBoundingClientRect();
     const triggerElement = document.getElementById('class-combobox-trigger');
     const trigger = triggerElement.getBoundingClientRect();
-    const placeholder = document.querySelector('#profile-page .welcome-placeholder').getBoundingClientRect();
+    const placeholder = document.querySelector('#profile-view .welcome-placeholder').getBoundingClientRect();
     return {
       above: trigger.top - header.bottom,
       below: placeholder.top - trigger.bottom,
@@ -74,13 +180,111 @@ try {
   }
   await page.locator('#class-combobox-trigger').click();
   await page.locator('#class-combobox-search').fill('mal');
-  const options = await page.locator('[role="option"]').allTextContents();
+  const options = await page.locator('#class-combobox-options [role="option"]').allTextContents();
   if (options.length !== 1 || !options[0].includes('Malam')) throw new Error('Class filtering failed');
   await page.locator('#class-combobox-search').press('ArrowDown');
   await page.keyboard.press('Enter');
-  if (await page.locator('#class-selector').inputValue() !== 'MAL') throw new Error('Class selection failed');
+  const selectedClass = await page.locator('#class-selector').inputValue();
+  if (selectedClass !== 'MAL') {
+    const activeElement = await page.evaluate(() => ({ id: document.activeElement?.id, text: document.activeElement?.textContent }));
+    throw new Error(`Class selection failed: ${JSON.stringify({ selectedClass, activeElement })}`);
+  }
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
   if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger).animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 16);
+  const expandedShell = await page.evaluate(() => {
+    const nav = document.getElementById('app-nav').getBoundingClientRect();
+    const container = document.getElementById('app-container').getBoundingClientRect();
+    const profile = document.getElementById('profile-view');
+    return {
+      navTop: nav.top,
+      containerHeight: container.height,
+      expanded: document.getElementById('app-container').classList.contains('profile-expanded'),
+      scrollable: profile.scrollHeight > profile.clientHeight
+    };
+  });
+  if (!expandedShell.expanded || !expandedShell.scrollable || expandedShell.containerHeight <= initialShell.containerHeight || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1) {
+    throw new Error(`Profile shell did not grow below the anchored navbar: ${JSON.stringify({ initialShell, expandedShell })}`);
+  }
+
+  await page.locator('[data-app-view="scan"]').click();
+  await page.waitForURL(`${baseUrl}/`);
+  await page.locator('[data-app-view="profile"]').click();
+  await page.waitForURL(`${baseUrl}/profile`);
+  await page.waitForFunction(() => document.activeElement?.id === 'app-view-title');
+  await page.waitForFunction(() => getComputedStyle(document.getElementById('app-view-title')).opacity === '1');
+  const persistentShell = await navbarHandle.evaluate(navbar => ({
+    sameNode: navbar === document.getElementById('app-nav'),
+    navTop: navbar.getBoundingClientRect().top,
+    selectedClass: document.getElementById('class-selector').value
+  }));
+  if (!persistentShell.sameNode || persistentShell.selectedClass !== 'MAL' || Math.abs(persistentShell.navTop - initialShell.navTop) >= 1) {
+    throw new Error(`Tab navigation replaced or moved persistent state: ${JSON.stringify(persistentShell)}`);
+  }
+  const persistentHeader = await headerHandle.evaluate((header, initial) => ({
+    sameNode: header === document.getElementById('app-shell-header'),
+    rect: header.getBoundingClientRect().toJSON(),
+    heading: document.getElementById('app-view-title').textContent,
+    titleOutline: getComputedStyle(document.getElementById('app-view-title')).outlineStyle,
+    logoLeft: header.querySelector('.header-logo').getBoundingClientRect().left,
+    textLeft: header.querySelector('.header-text').getBoundingClientRect().left,
+    animated: document.getElementById('profile-view').getAnimations().length > 0
+  }), initialShell.header);
+  if (!persistentHeader.sameNode || persistentHeader.heading !== 'Profil Katekumen' || persistentHeader.titleOutline !== 'none' || !persistentHeader.animated || Math.abs(persistentHeader.rect.x - initialShell.header.x) >= 1 || Math.abs(persistentHeader.rect.width - initialShell.header.width) >= 1 || Math.abs(persistentHeader.rect.height - initialShell.header.height) >= 1 || Math.abs(persistentHeader.logoLeft - initialShell.logoLeft) >= 1 || Math.abs(persistentHeader.textLeft - initialShell.textLeft) >= 1) {
+    throw new Error(`Shared header shifted or failed to animate: ${JSON.stringify({ initial: initialShell.header, current: persistentHeader })}`);
+  }
+
+  await page.goBack();
+  await page.waitForURL(`${baseUrl}/`);
+  await page.goForward();
+  await page.waitForURL(`${baseUrl}/profile`);
+  if (await page.locator('#class-selector').inputValue() !== 'MAL') throw new Error('Browser history lost profile state');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.locator('[data-app-view="scan"]').click();
+  await page.waitForURL(`${baseUrl}/`);
+  const reducedMotionAnimations = await page.evaluate(() =>
+    document.getElementById('app-view-title').getAnimations().length
+    + document.getElementById('main-app-section').getAnimations().length
+    + document.getElementById('app-container').getAnimations().length
+  );
+  if (reducedMotionAnimations !== 0) throw new Error('Reduced-motion navigation still animated');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(() => {
+    window.__scannerLifecycle = { starts: 0, stops: 0 };
+    window.Html5Qrcode = class {
+      start() {
+        window.__scannerLifecycle.starts += 1;
+        return Promise.resolve();
+      }
+      stop() {
+        window.__scannerLifecycle.stops += 1;
+        return Promise.resolve();
+      }
+    };
+    window.selectTopic('1', 'Perkenalan');
+  });
+  await page.waitForFunction(() => window.__scannerLifecycle.starts === 1);
+  await page.locator('[data-app-view="profile"]').click();
+  await page.waitForFunction(() => window.__scannerLifecycle.stops === 1);
+  await page.locator('[data-app-view="scan"]').click();
+  await page.waitForFunction(() => window.__scannerLifecycle.starts === 2);
+  await page.locator('[data-app-view="profile"]').click();
+  await page.waitForURL(`${baseUrl}/profile`);
+  await page.evaluate(() => Promise.all([
+    window.navigateToAppView('scan'),
+    window.navigateToAppView('profile'),
+    window.navigateToAppView('scan'),
+    window.navigateToAppView('profile')
+  ]));
+  const rapidNavigation = await page.evaluate(() => ({
+    ...window.__scannerLifecycle,
+    activeView: document.querySelector('[aria-current="page"]')?.dataset.appView,
+    profileHidden: document.getElementById('profile-view').hidden
+  }));
+  if (rapidNavigation.starts !== 4 || rapidNavigation.stops !== 4 || rapidNavigation.activeView !== 'profile' || rapidNavigation.profileHidden) {
+    throw new Error(`Rapid navigation broke scanner lifecycle: ${JSON.stringify(rapidNavigation)}`);
+  }
   const classTriggerHeight = await page.locator('#class-combobox-trigger').evaluate(trigger => trigger.getBoundingClientRect().height);
   await page.locator('#class-combobox-trigger').click();
   const classSelectedBackground = await page.locator('#class-combobox-popover [aria-selected="true"]').evaluate(option => getComputedStyle(option).backgroundColor);
@@ -132,13 +336,14 @@ try {
   const selectedP = topicPopover.locator('.topic-option-p[aria-selected="true"]');
   if (await selectedP.evaluate(option => getComputedStyle(option).backgroundColor) === pIdleBackground) throw new Error('Selected P topic fill is missing');
   const topicLayout = await scanPage.evaluate(() => {
-    const header = document.querySelector('#main-app-section .header-container').getBoundingClientRect();
+    const header = document.getElementById('app-shell-header').getBoundingClientRect();
     const root = document.getElementById('topic-combobox-active').getBoundingClientRect();
     const panel = document.getElementById('scanning-panel').getBoundingClientRect();
     const triggerElement = document.getElementById('topic-combobox-trigger');
     const trigger = triggerElement.getBoundingClientRect();
     const reader = document.getElementById('reader-container').getBoundingClientRect();
     const progress = document.querySelector('.segmented-progress-bar').getBoundingClientRect();
+    const options = document.querySelector('#topic-combobox-popover .search-combobox-options').getBoundingClientRect();
     let topGlowClearance = Infinity;
     for (let ancestor = triggerElement.parentElement; ancestor; ancestor = ancestor.parentElement) {
       if (/hidden|clip|auto|scroll/.test(getComputedStyle(ancestor).overflowY)) {
@@ -155,6 +360,7 @@ try {
       scannerBottomGap: progress.top - reader.bottom,
       triggerHeight: trigger.height,
       progressWidth: progress.width,
+      optionsHeight: options.height,
       animationName: getComputedStyle(triggerElement).animationName,
       topGlowClearance,
     };
@@ -166,14 +372,13 @@ try {
   const selectedTopicIsStatic = topicLayout.animationName === 'none';
   const hasUniformSpacing = Math.abs(topicLayout.above - topicLayout.below) < 1;
   const hasUniformScannerSpacing = Math.abs(topicLayout.below - topicLayout.scannerBottomGap) < 1;
-  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasUniformScannerSpacing || topicLayout.topGlowClearance < 8) {
+  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasUniformScannerSpacing || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
     throw new Error(`Topic combobox layout does not match the profile selector: ${JSON.stringify(topicLayout)}`);
   }
   await topicPopover.locator('.search-combobox-search').fill('Pentakosta');
   const topics = await topicPopover.locator('[role="option"]').allTextContents();
   if (topics.length !== 1 || !topics[0].includes('Pentakosta')) throw new Error('Topic filtering failed');
-  await topicPopover.locator('.search-combobox-search').press('ArrowDown');
-  await scanPage.keyboard.press('Enter');
+  await topicPopover.locator('[role="option"]').click();
   if (await scanPage.evaluate(() => localStorage.getItem('selectedWeek')) !== '29') throw new Error('Topic selection failed');
   if (!await scanPage.locator('#active-topic-name').textContent().then(text => text.includes('Pentakosta'))) throw new Error('Topic label did not sync');
   if (await scanPage.locator('#topic-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Topic combobox did not close');
@@ -197,7 +402,7 @@ try {
     scanPage.locator('#topic-combobox-trigger').evaluate(trigger => ({ width: trigger.offsetWidth, height: trigger.offsetHeight })),
     scanPage.locator('.segmented-progress-bar').evaluate(progress => progress.offsetWidth),
   ]);
-  if (classSize.width !== 378 || classSize.height !== 44 || JSON.stringify(topicSize) !== JSON.stringify(classSize) || progressWidth !== 378) {
+  if (JSON.stringify(classSize) !== JSON.stringify(topicSize) || classSize.width !== 378 || classSize.height !== 44 || progressWidth !== 378) {
     throw new Error(`Desktop picker geometry mismatch: ${JSON.stringify({ classSize, topicSize, progressWidth })}`);
   }
   console.log('search combobox smoke ok');

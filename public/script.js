@@ -171,6 +171,10 @@ window.setAppState = async function(state) {
     container.classList.add('state-auth');
     await stopScanner();
     if (nav) nav.style.display = 'none';
+    setViewVisibility('scan');
+    document.body.dataset.activeView = 'scan';
+    updateActiveNavigation('scan');
+    if (window.location.pathname !== '/') history.replaceState({ view: 'scan' }, '', '/');
   } else if (state === 1) {
     container.classList.add('state-selection');
     await stopScanner();
@@ -205,6 +209,146 @@ window.setAppState = async function(state) {
     }
   }
 }
+
+const APP_VIEW_PATHS = { scan: '/', profile: '/profile' };
+const APP_VIEW_TITLES = {
+  scan: 'Sistem Presensi Katekumen Dewasa',
+  profile: 'Profil Katekumen - Presensi Katekumen Digital'
+};
+const APP_VIEW_HEADINGS = { scan: 'Sistem Presensi', profile: 'Profil Katekumen' };
+let appViewNavigation = Promise.resolve();
+
+function viewFromPath(pathname = window.location.pathname) {
+  return pathname === '/profile' || pathname === '/profile.html' ? 'profile' : 'scan';
+}
+
+function setViewVisibility(view) {
+  const scanView = document.getElementById('main-app-section');
+  const profileView = document.getElementById('profile-view');
+  const profileActive = view === 'profile';
+  scanView.hidden = profileActive;
+  scanView.inert = profileActive;
+  profileView.hidden = !profileActive;
+  profileView.inert = !profileActive;
+}
+
+function updateActiveNavigation(view) {
+  document.querySelectorAll('[data-app-view]').forEach(link => {
+    const active = link.dataset.appView === view;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+}
+
+async function replaceViewHeading(view, animate) {
+  const title = document.getElementById('app-view-title');
+  const nextHeading = APP_VIEW_HEADINGS[view];
+  title.getAnimations().forEach(animation => animation.cancel());
+  if (title.textContent === nextHeading) return;
+  if (!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    title.textContent = nextHeading;
+    return;
+  }
+  const fadeOut = title.animate([{ opacity: 1 }, { opacity: 0 }], {
+    duration: 60,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+  await fadeOut.finished;
+  fadeOut.cancel();
+  title.textContent = nextHeading;
+  title.animate([{ opacity: 0 }, { opacity: 1 }], {
+    duration: 70,
+    easing: 'ease-out'
+  });
+}
+
+function animateViewEntry(view) {
+  const viewElement = document.getElementById(view === 'profile' ? 'profile-view' : 'main-app-section');
+  [document.getElementById('main-app-section'), document.getElementById('profile-view')]
+    .forEach(element => element.getAnimations().forEach(animation => animation.cancel()));
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  viewElement.animate(
+    [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'translateY(0)' }],
+    { duration: 180, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
+  );
+}
+
+function animateContainerResize(fromHeight, animate) {
+  const container = document.getElementById('app-container');
+  container.getAnimations().forEach(animation => animation.cancel());
+  const toHeight = container.getBoundingClientRect().height;
+  if (!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches || Math.abs(fromHeight - toHeight) < 1) return;
+  container.animate(
+    [{ height: `${fromHeight}px` }, { height: `${toHeight}px` }],
+    { duration: 240, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
+  );
+}
+
+async function applyAppView(view, { historyMode = 'push', focus = true } = {}) {
+  if (!sessionStorage.getItem('authToken')) {
+    await setAppState(0);
+    return;
+  }
+
+  const container = document.getElementById('app-container');
+  const nav = document.getElementById('app-nav');
+
+  if (view === 'profile') {
+    topicComboboxLarge?.close();
+    topicComboboxActive?.close();
+    window.closeStudentModal?.();
+    window.closeDeleteConfirm?.();
+    await stopScanner();
+  } else {
+    window.closeProfileViewUI?.();
+  }
+
+  const fromHeight = container.getBoundingClientRect().height;
+  const headingChange = replaceViewHeading(view, focus);
+  document.body.dataset.activeView = view;
+  setViewVisibility(view);
+  updateActiveNavigation(view);
+  document.title = APP_VIEW_TITLES[view];
+  if (nav) nav.style.display = 'flex';
+
+  if (view === 'profile') {
+    const expanded = document.getElementById('class-selector')?.value;
+    container.className = `glass-container state-profile${expanded ? ' profile-expanded' : ''}`;
+    window.initializeProfileView?.();
+  } else {
+    await setAppState(2);
+  }
+  animateContainerResize(fromHeight, focus);
+  animateViewEntry(view);
+  await headingChange;
+
+  const path = APP_VIEW_PATHS[view];
+  if (historyMode === 'replace') history.replaceState({ view }, '', path);
+  else if (historyMode === 'push' && window.location.pathname !== path) history.pushState({ view }, '', path);
+
+  if (focus) {
+    requestAnimationFrame(() => document.getElementById('app-view-title')?.focus({ preventScroll: true }));
+  }
+}
+
+window.navigateToAppView = function navigateToAppView(view, options) {
+  appViewNavigation = appViewNavigation.then(() => applyAppView(view, options));
+  return appViewNavigation;
+};
+
+document.querySelectorAll('[data-app-view]').forEach(link => {
+  link.addEventListener('click', event => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    window.navigateToAppView(link.dataset.appView);
+  });
+});
+
+window.addEventListener('popstate', () => {
+  window.navigateToAppView(viewFromPath(), { historyMode: 'none' });
+});
 
 
 
@@ -288,9 +432,8 @@ window.handleLogin = async function() {
           document.cookie = `auth_token=${data.token}; path=/; max-age=28800; SameSite=Lax`;
           loginLoader.style.display = 'none';
           
-          // Switch to Selection State
-          setAppState(2);
           initializeApp();
+          window.navigateToAppView('scan', { historyMode: 'replace', focus: false });
 
           // Safe trigger for onboarding
           if (typeof window.checkOnboarding === 'function') {
@@ -1126,7 +1269,7 @@ function initializeApp() {
 }
 
 // Initial triggers
-window.onload = () => {
+window.onload = async () => {
   initTheme();
   loadVersion();
   
@@ -1135,8 +1278,10 @@ window.onload = () => {
     scanQueue.process();
   });
 
-  const sessionToken = sessionStorage.getItem('authToken');
+  const cookieToken = getCookie('auth_token');
+  const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
   if (sessionToken) {
+    sessionStorage.setItem('authToken', sessionToken);
     // Sync the auth_token cookie with the sessionStorage token
     document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
     
@@ -1149,9 +1294,9 @@ window.onload = () => {
       topicComboboxActive?.setValue(savedWeek);
     }
     
-    setAppState(2); // Set to scanner page initially
+    await window.navigateToAppView(viewFromPath(), { historyMode: 'replace', focus: false });
   } else {
-    setAppState(0); // Authentication screen
+    await setAppState(0); // Authentication screen
   }
 }
 

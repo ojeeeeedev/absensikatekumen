@@ -190,8 +190,9 @@ body {
   font-family: var(--font-sans);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
+  padding: max(var(--space-4), env(safe-area-inset-top)) 0 max(var(--space-4), env(safe-area-inset-bottom));
   overflow: hidden;
   position: relative;
 }
@@ -326,6 +327,10 @@ button:disabled,
   max-height: calc(var(--vh, 1vh) * 100 - 100px);
 }
 
+#app-container.state-auth {
+  margin-block: auto;
+}
+
 .app-section {
   display: none;
   flex-direction: column;
@@ -340,11 +345,31 @@ button:disabled,
 .glass-container.state-selection #main-app-section { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .glass-container.state-selection #selection-panel { display: flex; flex-direction: column; }
 .glass-container.state-selection #scanning-panel { display: none; }
+.glass-container.state-selection { padding-top: var(--space-4); }
 
 .glass-container.state-scanning #main-app-section { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .glass-container.state-scanning #selection-panel { display: none; }
 .glass-container.state-scanning #scanning-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: visible; }
-.glass-container.state-scanning { padding-inline: 0; }
+.glass-container.state-scanning { padding: var(--space-4) 0 var(--space-6); }
+
+.glass-container.state-profile {
+  padding: var(--space-4) 0 0;
+}
+
+.glass-container.state-profile.profile-expanded {
+  height: calc(var(--vh, 1vh) * 100 - 100px);
+}
+
+.glass-container.state-profile #profile-view {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.app-section[hidden] {
+  display: none;
+}
 
 /* =========================================
    LOGIN SCREEN STYLES
@@ -438,24 +463,43 @@ button:disabled,
               visibility 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.app-section.scrolled .header-container {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
+.app-shell-header {
+  display: none;
+  grid-template-columns: 48px minmax(0, min(16rem, calc(100% - 60px)));
+  gap: 12px;
+  width: 100%;
+  padding: 0 1.25rem 1rem;
+  margin-bottom: 0;
+  flex-shrink: 0;
+  justify-content: center;
 }
 
+#main-app-section,
+#profile-view {
+  padding-top: 1rem;
+}
+
+.glass-container.state-selection .app-shell-header,
+.glass-container.state-scanning .app-shell-header,
+.glass-container.state-profile .app-shell-header {
+  display: grid;
+}
 
 .header-logo {
   height: 48px; width: auto; margin-right: 12px;
 }
+.app-shell-header .header-logo { margin-right: 0; }
+.app-shell-header .header-text { min-width: 0; }
 .header-text h1 {
   font-family: var(--font-serif); font-size: calc(1.15rem + 4px); font-style: italic; font-weight: 400; color: var(--text-primary);
   line-height: 1.2;
 }
+#app-view-title:focus { outline: none; box-shadow: none; }
 .header-text h2, .header-text h3 {
   font-family: var(--font-sans); font-size: 0.75rem; font-weight: 400; color: var(--text-secondary);
   letter-spacing: normal; margin-top: 2px;
 }
+.app-shell-header .header-text h2 { font-size: 0.6875rem; white-space: nowrap; }
 
 /* =========================================
    STATE 1: TOPIC SELECTION PANEL
@@ -1524,6 +1568,10 @@ a:focus-visible,
   overscroll-behavior: contain;
 }
 
+.topic-combobox-popover .search-combobox-options {
+  max-height: min(340px, 52vh);
+}
+
 .search-combobox-option {
   width: 100%;
   min-height: 44px;
@@ -2085,7 +2133,45 @@ a:focus-visible,
   gap: 8px;
   width: min(92%, 420px);
   max-width: 420px;
+  height: 44px;
+  flex-shrink: 0;
   z-index: 10;
+}
+
+.nav-tabs {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  padding: 3px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+}
+
+.nav-tabs::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 2);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  box-shadow: 0 4px 12px var(--accent-glow);
+  transform: translateX(0);
+  transition: transform var(--duration-normal) var(--ease-standard);
+}
+
+body[data-active-view="profile"] .nav-tabs::before {
+  transform: translateX(100%);
 }
 
 .nav-item {
@@ -2126,6 +2212,43 @@ a:focus-visible,
   background: var(--primary);
   border-color: var(--primary);
   box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.nav-tabs .nav-item,
+.nav-tabs .nav-item:hover,
+.nav-tabs .nav-item.active {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  padding-block: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transform: none;
+}
+
+.nav-tabs .nav-item {
+  display: grid;
+  grid-template-columns: 1.25rem max-content;
+  align-items: center;
+  justify-content: center;
+  column-gap: 6px;
+  transition: color var(--duration-normal) var(--ease-standard);
+}
+
+.nav-tabs .nav-item re-icon {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  line-height: 1;
+}
+
+.nav-tabs .nav-item span {
+  line-height: 1.25;
 }
 
 .nav-item.logout-btn {
@@ -2189,22 +2312,14 @@ a:focus-visible,
   }
 }
 
-.app-section {
+.glass-container.state-auth #login-section {
   animation: enterAnimation 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* =========================================
    PROFILE PAGE CUSTOM LAYOUT
    ========================================= */
-#profile-page .glass-container {
-  padding: 0;
-}
-
-#profile-page .header-container {
-  padding: 1.25rem 1.25rem 1rem 1.25rem;
-}
-
-#profile-page .profile-selector-container {
+#profile-view .profile-selector-container {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
@@ -2216,12 +2331,12 @@ a:focus-visible,
   margin-top: 0;
 }
 
-#profile-page .welcome-placeholder,
-#profile-page .empty-state {
+#profile-view .welcome-placeholder,
+#profile-view .empty-state {
   margin-top: 0;
 }
 
-#profile-page .app-section.scrolled .profile-selector-container {
+#profile-view.scrolled .profile-selector-container {
   margin-top: 0;
   padding-top: 12px;
   padding-bottom: 12px;
@@ -2230,21 +2345,29 @@ a:focus-visible,
   -webkit-backdrop-filter: blur(40px);
 }
 
-[data-theme="dark"] #profile-page .app-section.scrolled .profile-selector-container {
+[data-theme="dark"] #profile-view.scrolled .profile-selector-container {
   background: var(--popover);
 }
 
-#profile-page .students-summary-container {
+#profile-view .students-summary-container {
   padding: 0;
   margin-bottom: 0;
   width: 100%;
 }
 
-#profile-page .students-list-container {
+#profile-view .students-list-container {
   padding: 0 1.25rem 1.25rem 1.25rem;
 }
 
-#profile-page #students-loader {
+.glass-container.state-profile:not(.profile-expanded) #students-list {
+  min-height: 0;
+}
+
+.glass-container.state-profile:not(.profile-expanded) #profile-view .welcome-placeholder {
+  margin-bottom: 0;
+}
+
+#profile-view #students-loader {
   flex: 1;
   min-height: 40vh;
   padding: 30px 1.25rem;
@@ -2547,6 +2670,10 @@ a:focus-visible,
 }
 
 @media (max-width: 360px) {
+  .app-shell-header .header-text h2 {
+    white-space: normal;
+  }
+
   .app-nav {
     gap: var(--space-2);
   }
@@ -2585,12 +2712,6 @@ a:focus-visible,
   }
 }
 
-@media (min-width: 768px) {
-  #profile-page .glass-container,
-  #profile-page .app-nav {
-    max-width: 520px;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,

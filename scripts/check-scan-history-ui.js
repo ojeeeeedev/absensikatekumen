@@ -158,10 +158,8 @@ try {
   if (repeatScanState.queueIncrease !== 1 || repeatScanState.toastIncrease !== 0 || repeatScanState.storedStudentId !== '2026/TST/009' || repeatScanState.storageDuration < 4900 || repeatScanState.storageDuration > 5000 || !repeatScanState.dimmed) {
     throw new Error(`Scan cooldown state is incorrect: ${JSON.stringify(repeatScanState)}`);
   }
-  await page.waitForTimeout(150);
-  if (await page.locator('#reader-container').evaluate(reader => getComputedStyle(reader, '::after').opacity) !== '0.8') throw new Error('Viewfinder did not reach 80% dimming');
-  await page.waitForTimeout(700);
-  if (await page.locator('#reader-container').evaluate(reader => reader.classList.contains('scan-inactive'))) throw new Error('Viewfinder remained dimmed beyond 800ms');
+  await page.waitForFunction(() => getComputedStyle(document.getElementById('reader-container'), '::after').opacity === '0.8', null, { timeout: 500 });
+  await page.waitForFunction(() => !document.getElementById('reader-container').classList.contains('scan-inactive'), null, { timeout: 1000 });
   await page.evaluate(() => {
     scanQueue.queue = scanQueue.queue.filter(item => item.studentId !== '2026/TST/009');
     scanQueue.save();

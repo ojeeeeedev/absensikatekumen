@@ -33,15 +33,17 @@
       <app-spinner class="app-spinner spinner" aria-hidden="true"></app-spinner>
     </div>
 
-    <nav class="app-nav" id="app-nav" style="display: none;">
-      <a href="/" class="nav-item active">
-        <re-icon icon="qr" decorative></re-icon>
-        <span>Scan Presensi</span>
-      </a>
-      <a href="/profile" class="nav-item">
-        <re-icon icon="users" decorative></re-icon>
-        <span>Profil Katekumen</span>
-      </a>
+    <nav class="app-nav" id="app-nav" style="display: none;" aria-label="Navigasi utama">
+      <div class="nav-tabs">
+        <a href="/" class="nav-item active" data-app-view="scan" aria-current="page">
+          <re-icon icon="qr" decorative></re-icon>
+          <span>Scan Presensi</span>
+        </a>
+        <a href="/profile" class="nav-item" data-app-view="profile">
+          <re-icon icon="users" decorative></re-icon>
+          <span>Profil Katekumen</span>
+        </a>
+      </div>
       <a href="#" class="nav-item logout-btn" onclick="handleLogout(event)" aria-label="Keluar">
         <re-icon icon="logout" decorative></re-icon>
       </a>
@@ -50,7 +52,11 @@
     <main id="app-container" class="glass-container">
       <script>
         (function() {
-          const sessionToken = sessionStorage.getItem('authToken');
+          const cookieToken = document.cookie.split('; ').find(value => value.startsWith('auth_token='))?.split('=')[1];
+          const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
+          if (cookieToken && !sessionStorage.getItem('authToken')) {
+            sessionStorage.setItem('authToken', decodeURIComponent(cookieToken));
+          }
           const container = document.currentScript.parentElement;
           if (sessionToken) {
             container.classList.add('state-scanning');
@@ -96,20 +102,19 @@
         </div>
       </div>
 
+      <header id="app-shell-header" class="header-container app-shell-header">
+        <img class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;"><script>__setThemeLogo(document.currentScript.previousElementSibling)</script>
+        <div class="header-text">
+          <h1 id="app-view-title" tabindex="-1">Sistem Presensi</h1>
+          <h2>Katekumen Dewasa - Paroki Katedral St. Petrus</h2>
+          <h3>Keuskupan Bandung</h3>
+        </div>
+      </header>
+
       <!-- ==========================================
            2. STATE: SELECTION & SCANNING (SHARED)
            ========================================== -->
-      <div id="main-app-section" class="app-section">
-
-        <!-- Brand Header (Kecil di scan state, besar di selection state) -->
-        <div class="header-container">
-          <img class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" style="cursor: pointer;"><script>__setThemeLogo(document.currentScript.previousElementSibling)</script>
-          <div class="header-text">
-            <h1>Sistem Presensi</h1>
-            <h2>Katekumen Dewasa</h2>
-            <h3>Paroki St. Petrus - Bandung</h3>
-          </div>
-        </div>
+      <div id="main-app-section" class="app-section" aria-labelledby="app-view-title">
 
         <!-- STATE 1: TOPIC SELECTION -->
         <div id="selection-panel" class="panel-state">
@@ -244,6 +249,59 @@
           </div>
         </footer>
       </div>
+
+      <section id="profile-view" class="app-section" hidden inert aria-labelledby="app-view-title">
+        <div class="profile-selector-container">
+          <select id="class-selector" hidden aria-hidden="true" tabindex="-1">
+            <option value="" disabled selected>Memuat kelas...</option>
+          </select>
+          <div class="search-combobox" id="class-combobox">
+            <button id="class-combobox-trigger" class="active-topic-bar class-selector-control search-combobox-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="class-combobox-popover" disabled>
+              <span class="topic-info">
+                <re-icon icon="users" decorative></re-icon>
+                <span id="class-combobox-value">Memuat kelas...</span>
+              </span>
+              <span class="search-combobox-arrow" aria-hidden="true"></span>
+            </button>
+            <div id="class-combobox-popover" class="search-combobox-popover" hidden>
+              <label for="class-combobox-search" class="sr-only">Cari kelas katekumen</label>
+              <input id="class-combobox-search" class="search-combobox-search" type="search" placeholder="Cari kelas..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="class-combobox-options">
+              <div id="class-combobox-options" class="search-combobox-options" role="listbox" aria-label="Daftar kelas katekumen"></div>
+              <p id="class-combobox-empty" class="search-combobox-empty" hidden>Kelas tidak ditemukan.</p>
+            </div>
+          </div>
+
+          <div id="students-summary" class="students-summary-container" style="display: none;">
+            <div class="summary-badge summary-total">
+              <re-icon icon="users" decorative></re-icon>
+              <span id="summary-total-text">Total: 0</span>
+            </div>
+            <div class="summary-badge summary-active">
+              <re-icon icon="check-circle" decorative></re-icon>
+              <span id="summary-active-text">Aktif: 0</span>
+            </div>
+            <div class="summary-badge summary-inactive">
+              <re-icon icon="close-circle2" decorative></re-icon>
+              <span id="summary-inactive-text">Nonaktif: 0</span>
+            </div>
+          </div>
+
+          <label for="search-input" class="sr-only">Cari nama atau ID katekumen</label>
+          <input type="text" id="search-input" placeholder="Cari nama atau ID..." style="display: none;">
+        </div>
+
+        <div id="students-loader" style="display: none;">
+          <app-spinner class="app-spinner spinner" aria-hidden="true"></app-spinner>
+          <span style="font-size: 0.85rem; color: var(--text-primary); opacity: 0.8;">Memuat katekumen...</span>
+        </div>
+
+        <div id="students-list" class="students-list-container">
+          <div class="welcome-placeholder">
+            <re-icon icon="users" class="welcome-icon" decorative></re-icon>
+            <p>Pilih Kelas terlebih dahulu untuk melihat daftar katekumen.</p>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Modal Student Detail -->
@@ -264,6 +322,38 @@
       </div>
     </div>
 
+    <div id="upload-preview-modal" class="upload-preview-modal" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+      <div class="upload-preview-sheet">
+        <div class="upload-preview-handle" aria-hidden="true"></div>
+        <div class="upload-preview-header">
+          <span class="upload-preview-title" id="upload-modal-title">Ganti Foto Katekumen</span>
+          <button class="upload-preview-close" id="upload-close-btn" aria-label="Tutup">
+            <re-icon icon="close-circle2" decorative></re-icon>
+          </button>
+        </div>
+        <div class="upload-preview-body">
+          <p class="upload-student-label" id="upload-student-label">—</p>
+          <div class="upload-dropzone" id="upload-dropzone" tabindex="0" role="button" aria-label="Pilih atau seret foto ke sini">
+            <re-icon icon="camera-add" class="upload-dropzone-icon" id="upload-dropzone-icon" decorative></re-icon>
+            <p class="upload-dropzone-text" id="upload-dropzone-text">Ketuk untuk memilih foto</p>
+            <p class="upload-dropzone-subtext" id="upload-dropzone-subtext">JPG, PNG, WebP • Maks. 5MB</p>
+            <img id="upload-preview-img" class="upload-preview-img" alt="Preview foto" />
+          </div>
+          <input type="file" id="upload-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" aria-hidden="true" />
+          <div class="upload-progress-bar-wrap" id="upload-progress-wrap" role="progressbar" aria-label="Progres unggah foto" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="upload-progress-bar" id="upload-progress-bar"></div>
+          </div>
+          <div class="upload-actions">
+            <button class="upload-cancel-btn" id="upload-cancel-btn" type="button">Batal</button>
+            <button class="upload-confirm-btn" id="upload-confirm-btn" type="button" disabled>
+              <app-spinner class="app-spinner btn-spinner" aria-hidden="true"></app-spinner>
+              <span class="btn-label">Unggah Foto</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
 
     <!-- Toast Container -->
@@ -276,6 +366,8 @@
     <script src="session.js"></script>
     <script src="topics.js"></script>
     <script src="search-combobox.js"></script>
+    <script src="profile-uploader.js"></script>
+    <script src="profile.js"></script>
     <script src="script.js"></script>
     <script src="onboarding.js" defer></script>
   </body>

@@ -1,9 +1,6 @@
 
 
-const token = getCookie('auth_token');
-if (!token) {
-  window.location.href = '/';
-}
+const getProfileToken = () => sessionStorage.getItem('authToken') || getCookie('auth_token');
 
 let allStudents = [];
 
@@ -16,7 +13,7 @@ let allStudents = [];
 // Photo Upload Manager
 // ============================================================
 const PhotoUploader = createProfilePhotoUploader({
-  getToken: () => token,
+  getToken: getProfileToken,
   findStudent: studentId => allStudents.find(student => student.studentId === studentId),
   onUploaded: filterStudents,
 });
@@ -31,7 +28,7 @@ async function loadClasses() {
   try {
     const res = await fetch('/api/classes', {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${getProfileToken()}`
       }
     });
     const data = await res.json();
@@ -59,7 +56,7 @@ async function loadStudents(classCode) {
   }
   
   // Reset scroll position and remove scrolled class on loading new students
-  const appSection = document.querySelector('.app-section');
+  const appSection = document.getElementById('profile-view');
   if (appSection) {
     appSection.scrollTop = 0;
     appSection.classList.remove('scrolled');
@@ -71,7 +68,7 @@ async function loadStudents(classCode) {
   try {
     const res = await fetch(`/api/students?classCode=${classCode}`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${getProfileToken()}`
       }
     });
     const data = await res.json();
@@ -358,7 +355,11 @@ function filterStudents() {
   renderStudents(filtered);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+let profileInitialized = false;
+
+window.initializeProfileView = function initializeProfileView() {
+  if (profileInitialized) return;
+  profileInitialized = true;
   initTheme();
   PhotoUploader.init();
   classCombobox = createSearchCombobox({
@@ -378,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadClasses();
 
   // Scroll listener for header minimization
-  const appSection = document.querySelector('.app-section');
+  const appSection = document.getElementById('profile-view');
   if (appSection) {
     appSection.addEventListener('scroll', () => {
       if (appSection.scrollTop > 50) {
@@ -392,6 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const selector = document.getElementById('class-selector');
   if (selector) {
     selector.addEventListener('change', (e) => {
+      document.getElementById('app-container')?.classList.add('profile-expanded');
       const searchInput = document.getElementById('search-input');
       if (searchInput) {
         searchInput.style.display = 'block';
@@ -405,4 +407,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (searchInput) {
     searchInput.addEventListener('input', filterStudents);
   }
-});
+};
+
+window.closeProfileViewUI = function closeProfileViewUI() {
+  classCombobox?.close();
+  if (profileInitialized) PhotoUploader.close();
+};
