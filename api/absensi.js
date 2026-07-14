@@ -86,7 +86,10 @@ export default async function handler(req, res) {
         });
       }
 
-      const GAS_SECRET_KEY = process.env.GAS_SECRET_KEY || "default_development_secret";
+      const GAS_SECRET_KEY = process.env.GAS_SECRET_KEY;
+      if (!GAS_SECRET_KEY) {
+        return res.status(500).json({ status: "error", message: "Server GAS authentication is not configured" });
+      }
 
       // --- OPTIMIZATION: Parallelize GAS fetch and Supabase Image preparation ---
       const bucketName = bucketNameForClass(classCode);

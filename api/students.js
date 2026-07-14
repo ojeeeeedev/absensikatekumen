@@ -50,7 +50,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ status: "error", message: `Invalid classCode: ${normalizedClassCode}` });
   }
 
-  const GAS_SECRET_KEY = process.env.GAS_SECRET_KEY || "default_development_secret";
+  const GAS_SECRET_KEY = process.env.GAS_SECRET_KEY;
+  if (!GAS_SECRET_KEY) {
+    return res.status(500).json({ status: "error", message: "Server GAS authentication is not configured" });
+  }
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
