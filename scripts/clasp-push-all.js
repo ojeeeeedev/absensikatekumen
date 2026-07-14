@@ -6,7 +6,8 @@ const CLASP_JSON_PATH = path.resolve('.clasp.json');
 
 const DEPLOYMENTS = [
   { class: 'SAB', scriptId: '1yLEwBuUD_-iq0r5TYGhgqFioZQPXzh4MfFtngCvEUT4_DlH1zfo0njr9' },
-  { class: 'TOM', scriptId: '1rpgGakEY262k-UAknem7Doy1BexUqimTzOdpvd8qQWAn-OzEskV15F4T' }
+  { class: 'TOM', scriptId: '1rpgGakEY262k-UAknem7Doy1BexUqimTzOdpvd8qQWAn-OzEskV15F4T' },
+  { class: 'URS', scriptId: '1fOz4sUK1-AbZVfCZhgBWt55FaPC-FU2WqI5Ug5ZHV8BCsVPlA5kAGad4' }
 ];
 
 function main() {
@@ -37,7 +38,7 @@ function main() {
 
       // Run clasp push
       console.log(`Running: npx clasp push...`);
-      execFileSync('npx', ['clasp', 'push'], { stdio: 'inherit' });
+      execFileSync('npx', ['--yes', '@google/clasp', 'push'], { stdio: 'inherit' });
       console.log(`Successfully pushed to ${dep.class}!`);
     }
   } catch (err) {

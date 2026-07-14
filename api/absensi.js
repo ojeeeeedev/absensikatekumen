@@ -43,6 +43,9 @@ export default async function handler(req, res) {
     try {
       // Check if it's a login action
       if (req.body.action === 'login') {
+        if (!SHARED_SECRET || !JWT_SECRET) {
+          return res.status(500).json({ status: 'error', message: 'Server authentication is not configured' });
+        }
         const providedSecret = Buffer.from(String(req.body.secret || ''));
         const storedSecret = Buffer.from(String(SHARED_SECRET || ''));
         
@@ -83,7 +86,10 @@ export default async function handler(req, res) {
         });
       }
 
-      const GAS_SECRET_KEY = process.env.GAS_SECRET_KEY || "default_development_secret";
+      const GAS_SECRET_KEY = process.env.GAS_SECRET_KEY;
+      if (!GAS_SECRET_KEY) {
+        return res.status(500).json({ status: "error", message: "Server GAS authentication is not configured" });
+      }
 
       // --- OPTIMIZATION: Parallelize GAS fetch and Supabase Image preparation ---
       const bucketName = bucketNameForClass(classCode);

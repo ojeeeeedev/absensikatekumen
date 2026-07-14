@@ -9,8 +9,8 @@ function doPost(e) {
 
     // --- SECURITY VERIFICATION ---
     const scriptProperties = PropertiesService.getScriptProperties();
-    const expectedSecret = scriptProperties.getProperty("GAS_SECRET_KEY") || "default_development_secret";
-    if (data.api_secret !== expectedSecret) {
+    const expectedSecret = scriptProperties.getProperty("GAS_SECRET_KEY");
+    if (!expectedSecret || data.api_secret !== expectedSecret) {
       return buildResponse_({ status: "error", message: "Unauthorized: Invalid API secret" });
     }
 
@@ -101,27 +101,36 @@ function doPost(e) {
     // To balance speed and correctness, we read the specific status cell but bypass full lookups.
     // Let's check the cached status if we implement checkins in cache, otherwise read cell.
     const statusCell = sheet.getRange(studentData.r, topikCol);
-    const currentValue = statusCell.getValue();
-
-    if (currentValue === true || currentValue === "TRUE") {
-      return buildResponse_({
-        status: "duplicate",
-        studentId: rawId.toUpperCase(),
-        name: studentData.n,
-        message: `Kode ${rawId.toUpperCase()} sudah absen sebelumnya.`
-      });
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) {
+      return buildResponse_({ status: "error", message: "Sistem sedang sibuk, silakan scan ulang." });
     }
 
-    // 6. Mark Attendance
-    statusCell.setValue(true);
+    try {
+      // ponytail: script-wide lock; revisit only if measured scan contention matters.
+      const currentValue = statusCell.getValue();
+      if (currentValue === true || currentValue === "TRUE") {
+        return buildResponse_({
+          status: "duplicate",
+          studentId: rawId.toUpperCase(),
+          name: studentData.n,
+          message: `Kode ${rawId.toUpperCase()} sudah absen sebelumnya.`
+        });
+      }
 
-    return buildResponse_({
-      status: "ok",
-      studentId: rawId.toUpperCase(),
-      name: studentData.n,
-      image: studentData.i, // Retrieved from map/cache
-      message: `✅ ${studentData.n} hadir ${headerName}`
-    });
+      // 6. Mark Attendance
+      statusCell.setValue(true);
+      SpreadsheetApp.flush();
+      return buildResponse_({
+        status: "ok",
+        studentId: rawId.toUpperCase(),
+        name: studentData.n,
+        image: studentData.i, // Retrieved from map/cache
+        message: `✅ ${studentData.n} hadir ${headerName}`
+      });
+    } finally {
+      lock.releaseLock();
+    }
 
   } catch (err) {
     return buildResponse_({
@@ -173,8 +182,8 @@ function doGet(e) {
   // Clear cache action (useful for debugging or forced updates)
   if (e && e.parameter && e.parameter.action === "clear_cache") {
     const scriptProperties = PropertiesService.getScriptProperties();
-    const expectedSecret = scriptProperties.getProperty("GAS_SECRET_KEY") || "default_development_secret";
-    if (e.parameter.api_secret !== expectedSecret) {
+    const expectedSecret = scriptProperties.getProperty("GAS_SECRET_KEY");
+    if (!expectedSecret || e.parameter.api_secret !== expectedSecret) {
       return buildResponse_({ status: "error", message: "Unauthorized" });
     }
     CacheService.getScriptCache().remove("STUDENT_MAP_V1");

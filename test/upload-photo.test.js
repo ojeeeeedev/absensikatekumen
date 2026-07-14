@@ -3,9 +3,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { createMockResponse } from './helpers.js';
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({ storage: {} })),
-}));
+const storage = {
+  createBucket: vi.fn().mockResolvedValue({ error: null }),
+  from: vi.fn(() => ({
+    list: vi.fn().mockResolvedValue({ data: [], error: null }),
+    remove: vi.fn().mockResolvedValue({ error: null }),
+    upload: vi.fn().mockResolvedValue({ error: null }),
+  })),
+};
+vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn(() => ({ storage })) }));
 
 import handler, { parseMultipart } from '../api/upload-photo.js';
 
@@ -80,6 +86,16 @@ describe('/api/upload-photo multipart validation', () => {
     expect(res.body.message).toMatch(/multipart\/form-data/);
   });
 
+  it('rejects an unauthenticated upload before storage access', async () => {
+    configureEnvironment();
+    const req = streamRequest(Buffer.alloc(0));
+    delete req.headers.authorization;
+    const res = createMockResponse();
+    await handler(req, res);
+    expect(res.statusCode).toBe(401);
+    expect(storage.createBucket).not.toHaveBeenCalled();
+  });
+
   it('supports quoted boundaries and rejects a missing file', async () => {
     configureEnvironment();
     const req = streamRequest(
@@ -128,5 +144,16 @@ describe('/api/upload-photo multipart validation', () => {
     await handler(req, res);
 
     expect(res.statusCode).toBe(413);
+  });
+
+  it('uploads a valid photo and returns a same-origin URL', async () => {
+    configureEnvironment();
+    const req = streamRequest(multipartBody({ studentId: '2025/SAB/001', file: Buffer.from([0xff, 0xd8, 0xff]) }));
+    const res = createMockResponse();
+    await handler(req, res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.status).toBe('ok');
+    expect(res.body.image).toMatch(/^\/api\/photo\?studentId=/);
+    expect(storage.createBucket).toHaveBeenCalledWith('pasfoto-sab', expect.any(Object));
   });
 });
