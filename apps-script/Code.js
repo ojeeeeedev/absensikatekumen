@@ -101,27 +101,36 @@ function doPost(e) {
     // To balance speed and correctness, we read the specific status cell but bypass full lookups.
     // Let's check the cached status if we implement checkins in cache, otherwise read cell.
     const statusCell = sheet.getRange(studentData.r, topikCol);
-    const currentValue = statusCell.getValue();
-
-    if (currentValue === true || currentValue === "TRUE") {
-      return buildResponse_({
-        status: "duplicate",
-        studentId: rawId.toUpperCase(),
-        name: studentData.n,
-        message: `Kode ${rawId.toUpperCase()} sudah absen sebelumnya.`
-      });
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) {
+      return buildResponse_({ status: "error", message: "Sistem sedang sibuk, silakan scan ulang." });
     }
 
-    // 6. Mark Attendance
-    statusCell.setValue(true);
+    try {
+      // ponytail: script-wide lock; revisit only if measured scan contention matters.
+      const currentValue = statusCell.getValue();
+      if (currentValue === true || currentValue === "TRUE") {
+        return buildResponse_({
+          status: "duplicate",
+          studentId: rawId.toUpperCase(),
+          name: studentData.n,
+          message: `Kode ${rawId.toUpperCase()} sudah absen sebelumnya.`
+        });
+      }
 
-    return buildResponse_({
-      status: "ok",
-      studentId: rawId.toUpperCase(),
-      name: studentData.n,
-      image: studentData.i, // Retrieved from map/cache
-      message: `✅ ${studentData.n} hadir ${headerName}`
-    });
+      // 6. Mark Attendance
+      statusCell.setValue(true);
+      SpreadsheetApp.flush();
+      return buildResponse_({
+        status: "ok",
+        studentId: rawId.toUpperCase(),
+        name: studentData.n,
+        image: studentData.i, // Retrieved from map/cache
+        message: `✅ ${studentData.n} hadir ${headerName}`
+      });
+    } finally {
+      lock.releaseLock();
+    }
 
   } catch (err) {
     return buildResponse_({
