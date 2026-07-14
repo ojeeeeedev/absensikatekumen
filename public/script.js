@@ -314,6 +314,12 @@ window.handleLogin = async function() {
 
 
 // --- BACKGROUND SCAN QUEUE ENGINE ---
+/**
+ * Persists scans in `scan_queue` and processes the oldest pending item first.
+ * Pending items survive reloads; 401 pauses processing for a new login, while
+ * network, 429, and 5xx failures remain pending for retry. Completed history is
+ * retained for the UI and trimmed by clearOldHistory().
+ */
 class ScanQueue {
   constructor() {
     try {

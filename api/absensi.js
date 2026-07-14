@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
+import { getScriptMap, readJsonResponse } from './_gas-utils.js';
 import { bucketNameForClass, classCodeFromStudentId, findStudentPhoto, photoUrlForStudent } from './_supabase-utils.js';
 
 export default async function handler(req, res) {
@@ -25,14 +26,9 @@ export default async function handler(req, res) {
     ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
   // --- Mapping for your sheets (loaded from environment variable) ---
-  let SCRIPT_MAP = {};
+  let SCRIPT_MAP;
   try {
-    // In a Vercel environment, the variable MUST exist.
-    if (!process.env.VERCEL_SCRIPT_MAP_JSON) {
-      // This will cause the function to fail if the env var is not set.
-      throw new Error("Server configuration error: VERCEL_SCRIPT_MAP_JSON is not defined.");
-    }
-    SCRIPT_MAP = JSON.parse(process.env.VERCEL_SCRIPT_MAP_JSON);
+    SCRIPT_MAP = getScriptMap();
   } catch (e) {
     console.error("Error parsing VERCEL_SCRIPT_MAP_JSON:", e);
     // Return a generic server error to the client
@@ -116,11 +112,8 @@ export default async function handler(req, res) {
 
       const [gasResponse, imageUrl] = await Promise.all([gasPromise, imagePromise]);
 
-      const text = await gasResponse.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
+      const { data, text, valid } = await readJsonResponse(gasResponse);
+      if (!valid) {
         console.error(`GAS response for class ${classCode} (${scriptURL}) is not JSON:`, text);
         return res.status(502).json({
           status: "error",

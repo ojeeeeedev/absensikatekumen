@@ -17,22 +17,24 @@ describe('local server security middleware', () => {
     await once(server, 'close');
   });
 
-  it('keeps request data out of the format string and limits request bursts', async () => {
+  it('keeps request data out of logs, exposes uploads, and limits bursts', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     try {
+      const uploadResponse = await fetch(`${baseUrl}/api/upload-photo`, { method: 'POST' });
+      expect(uploadResponse.status).toBe(401);
+      expect(log).toHaveBeenCalledWith('[local-dev]', 'POST', '/api/upload-photo');
+
       const firstResponse = await fetch(`${baseUrl}/api/version?probe=%25s`);
       expect(firstResponse.status).toBe(200);
       expect(log).toHaveBeenCalledWith(
         '[local-dev]',
         'GET',
         '/api/version?probe=%25s',
-        '- body:',
-        {},
       );
 
       const allowedResponses = await Promise.all(
-        Array.from({ length: 99 }, () => fetch(`${baseUrl}/api/version`)),
+        Array.from({ length: 98 }, () => fetch(`${baseUrl}/api/version`)),
       );
       expect(allowedResponses.every(response => response.status === 200)).toBe(true);
 

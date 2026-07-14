@@ -32,9 +32,9 @@ app.use(requestLimiter);
 app.use(express.json());
 app.use(cookieParser());
 
-// Request logging middleware
+// Log routing context only; request bodies can contain passwords and student data.
 app.use((req, res, next) => {
-  console.log('[local-dev]', req.method, req.url, '- body:', req.body);
+  console.log('[local-dev]', req.method, req.url);
   next();
 });
 
@@ -141,6 +141,17 @@ app.get('/api/photo', async (req, res) => {
     await handler(req, res);
   } catch (error) {
     console.error("Error running api/photo:", error);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
+// Route to upload student photos through the same handler used by Vercel
+app.post('/api/upload-photo', async (req, res) => {
+  try {
+    const handler = (await import('./api/upload-photo.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/upload-photo:", error);
     res.status(500).json({ status: "error", message: "Internal Server Error" });
   }
 });
