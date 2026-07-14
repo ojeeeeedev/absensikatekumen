@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { createMockRequest, createMockResponse } from './helpers.js';
 
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }));
+import { createClient } from '@supabase/supabase-js';
 import handler from '../api/absensi.js';
 
 const JWT_SECRET = 'test-jwt';
@@ -34,6 +35,34 @@ describe('/api/absensi', () => {
     await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: 'shared-secret' } }), res);
     expect(res.statusCode).toBe(200);
     expect(jwt.verify(res.body.token, JWT_SECRET, { algorithms: ['HS256'] })).toMatchObject({ authorized: true });
+  });
+
+  it('fails closed when AUTH_SECRET is missing', async () => {
+    configure();
+    delete process.env.AUTH_SECRET;
+    global.fetch = vi.fn();
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: '' } }), res);
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toMatchObject({ status: 'error' });
+    expect(res.body.message).toBe('Server authentication is not configured');
+    expect(res.body.token).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when JWT_SECRET is missing', async () => {
+    configure();
+    delete process.env.JWT_SECRET;
+    global.fetch = vi.fn();
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: 'shared-secret' } }), res);
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toMatchObject({ status: 'error' });
+    expect(res.body.message).toBe('Server authentication is not configured');
+    expect(res.body.token).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(createClient).not.toHaveBeenCalled();
   });
 
   it('rejects a wrong login secret without calling GAS', async () => {

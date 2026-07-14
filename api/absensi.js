@@ -43,6 +43,9 @@ export default async function handler(req, res) {
     try {
       // Check if it's a login action
       if (req.body.action === 'login') {
+        if (!SHARED_SECRET || !JWT_SECRET) {
+          return res.status(500).json({ status: 'error', message: 'Server authentication is not configured' });
+        }
         const providedSecret = Buffer.from(String(req.body.secret || ''));
         const storedSecret = Buffer.from(String(SHARED_SECRET || ''));
         
