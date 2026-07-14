@@ -345,12 +345,12 @@ button:disabled,
 .glass-container.state-selection #main-app-section { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .glass-container.state-selection #selection-panel { display: flex; flex-direction: column; }
 .glass-container.state-selection #scanning-panel { display: none; }
-.glass-container.state-selection { padding-top: var(--space-4); }
+.glass-container.state-selection { padding-top: var(--space-4); padding-bottom: var(--space-3); }
 
 .glass-container.state-scanning #main-app-section { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .glass-container.state-scanning #selection-panel { display: none; }
 .glass-container.state-scanning #scanning-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: visible; }
-.glass-container.state-scanning { padding: var(--space-4) 0 var(--space-6); }
+.glass-container.state-scanning { padding: var(--space-4) 0 var(--space-3); }
 
 .glass-container.state-profile {
   padding: var(--space-4) 0 0;
@@ -499,7 +499,7 @@ button:disabled,
   font-family: var(--font-sans); font-size: 0.75rem; font-weight: 400; color: var(--text-secondary);
   letter-spacing: normal; margin-top: 2px;
 }
-.app-shell-header .header-text h2 { font-size: 0.6875rem; white-space: nowrap; }
+.app-shell-header .header-text h2 { white-space: nowrap; }
 
 /* =========================================
    STATE 1: TOPIC SELECTION PANEL
@@ -571,7 +571,7 @@ button:disabled,
 }
 
 #reader-container {
-  width: min(275px, 35vh);
+  width: min(300px, 38vh);
   max-width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
@@ -864,7 +864,7 @@ button:disabled,
    FOOTER & BOTTOM BRANDING
    ========================================= */
 .app-footer {
-  width: 100%; padding-top: var(--space-6);
+  width: 100%; padding-top: var(--space-3);
   border-top: 1px solid var(--border-glass);
   text-align: center; font-size: 0.65rem; color: var(--text-secondary);
   margin-top: auto;
@@ -1445,7 +1445,7 @@ a:focus-visible,
 
 .profile-controls-glass {
   position: absolute;
-  z-index: 0;
+  z-index: -1;
   inset: -1rem 0 0;
   border-bottom: 1px solid var(--border-glass);
   background: var(--popover);
@@ -1453,11 +1453,6 @@ a:focus-visible,
   -webkit-backdrop-filter: blur(20px);
   opacity: 0;
   pointer-events: none;
-}
-
-.profile-selector-container > :not(.profile-controls-glass) {
-  position: relative;
-  z-index: 1;
 }
 
 #search-input {
@@ -2323,7 +2318,7 @@ body[data-active-view="profile"] .nav-tabs::before {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
-  margin-bottom: 4px;
+  margin-bottom: 15px;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
   padding-top: 0;

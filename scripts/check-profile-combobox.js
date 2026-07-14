@@ -76,6 +76,7 @@ try {
     })(),
     heading: document.getElementById('app-view-title').textContent,
     supportingText: [...document.querySelectorAll('#app-shell-header :is(h2, h3)')].map(element => element.textContent),
+    supportingFontSizes: [...document.querySelectorAll('#app-shell-header :is(h2, h3)')].map(element => getComputedStyle(element).fontSize),
     supportingLineHeight: document.querySelector('#app-shell-header h2').getBoundingClientRect().height,
     tabTrackRadius: getComputedStyle(document.querySelector('.nav-tabs')).borderRadius,
     tabPillRadius: getComputedStyle(document.querySelector('.nav-tabs'), '::before').borderRadius,
@@ -116,7 +117,7 @@ try {
     && Math.abs(initialShell.tabBounds.widths[0] - initialShell.tabBounds.widths[1]) < 1
     && initialShell.tabBounds.topInsets.every((inset, index) => Math.abs(inset - initialShell.tabBounds.bottomInsets[index]) < 1)
     && Math.abs(initialShell.tabBounds.edgeInsets[0] - initialShell.tabBounds.edgeInsets[1]) < 1;
-  if (!initialShell.profileActive || !initialShell.scanHidden || initialShell.activeNav !== 'profile' || initialShell.tabTrackRadius !== '16px' || initialShell.tabPillRadius !== '12px' || initialShell.tabPillOffset <= 0 || initialShell.headerGroupCenterOffset >= 1 || initialShell.headerVerticalGapDelta >= 1 || !tabsAligned || !tabBoundsAligned || initialShell.supportingText.join('|') !== 'Katekumen Dewasa - Paroki Katedral St. Petrus|Keuskupan Bandung' || initialShell.supportingLineHeight > 16) {
+  if (!initialShell.profileActive || !initialShell.scanHidden || initialShell.activeNav !== 'profile' || initialShell.tabTrackRadius !== '16px' || initialShell.tabPillRadius !== '12px' || initialShell.tabPillOffset <= 0 || initialShell.headerGroupCenterOffset >= 1 || initialShell.headerVerticalGapDelta >= 1 || !tabsAligned || !tabBoundsAligned || initialShell.supportingText.join('|') !== 'Katekumen Dewasa - Paroki St. Petrus|Keuskupan Bandung' || new Set(initialShell.supportingFontSizes).size !== 1 || initialShell.supportingLineHeight > 16) {
     throw new Error(`Direct profile route did not activate the profile view: ${JSON.stringify(initialShell)}`);
   }
   if (initialShell.emptyBottomGap > 22) {
@@ -258,6 +259,22 @@ try {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
+  await page.locator('#class-combobox-trigger').click();
+  const dropdownStack = await page.evaluate(() => {
+    const search = document.getElementById('class-combobox-search');
+    const option = document.querySelector('#class-combobox-options [role="option"]');
+    const searchRect = search.getBoundingClientRect();
+    const optionRect = option.getBoundingClientRect();
+    return {
+      searchOnTop: document.elementFromPoint(searchRect.left + 12, searchRect.top + 12) === search,
+      optionOnTop: option.contains(document.elementFromPoint(optionRect.left + 12, optionRect.top + optionRect.height / 2)),
+    };
+  });
+  if (!dropdownStack.searchOnTop || !dropdownStack.optionOnTop) {
+    throw new Error(`Profile controls painted over the class dropdown: ${JSON.stringify(dropdownStack)}`);
+  }
+  await page.keyboard.press('Escape');
+
   await page.locator('[data-app-view="scan"]').click();
   await page.waitForURL(`${baseUrl}/`);
   await page.locator('[data-app-view="profile"]').click();
@@ -395,6 +412,9 @@ try {
     const reader = document.getElementById('reader-container').getBoundingClientRect();
     const progress = document.querySelector('.segmented-progress-bar').getBoundingClientRect();
     const options = document.querySelector('#topic-combobox-popover .search-combobox-options').getBoundingClientRect();
+    const appContainer = document.getElementById('app-container').getBoundingClientRect();
+    const footer = document.querySelector('.app-footer').getBoundingClientRect();
+    const footerText = document.querySelector('.footer-text').getBoundingClientRect();
     let topGlowClearance = Infinity;
     for (let ancestor = triggerElement.parentElement; ancestor; ancestor = ancestor.parentElement) {
       if (/hidden|clip|auto|scroll/.test(getComputedStyle(ancestor).overflowY)) {
@@ -409,6 +429,10 @@ try {
       above: trigger.top - header.bottom,
       below: reader.top - trigger.bottom,
       scannerBottomGap: progress.top - reader.bottom,
+      scannerSize: reader.width,
+      footerHeight: appContainer.bottom - footer.top,
+      footerTopGap: footerText.top - footer.top,
+      footerBottomGap: appContainer.bottom - footerText.bottom,
       triggerHeight: trigger.height,
       progressWidth: progress.width,
       optionsHeight: options.height,
@@ -423,7 +447,8 @@ try {
   const selectedTopicIsStatic = topicLayout.animationName === 'none';
   const hasUniformSpacing = Math.abs(topicLayout.above - topicLayout.below) < 1;
   const hasUniformScannerSpacing = Math.abs(topicLayout.below - topicLayout.scannerBottomGap) < 1;
-  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasUniformScannerSpacing || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
+  const footerIsCompactAndCentered = topicLayout.footerHeight <= 40 && Math.abs(topicLayout.footerTopGap - topicLayout.footerBottomGap) < 1;
+  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasUniformScannerSpacing || !footerIsCompactAndCentered || topicLayout.scannerSize < 295 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
     throw new Error(`Topic combobox layout does not match the profile selector: ${JSON.stringify(topicLayout)}`);
   }
   await topicPopover.locator('.search-combobox-search').fill('Pentakosta');
