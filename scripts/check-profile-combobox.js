@@ -207,6 +207,18 @@ try {
     throw new Error(`Profile shell did not grow below the anchored navbar: ${JSON.stringify({ initialShell, expandedShell })}`);
   }
 
+  const stickyProfileHeader = await page.evaluate(async () => {
+    const profile = document.getElementById('profile-view');
+    profile.scrollTop = 100;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const header = document.getElementById('app-shell-header').getBoundingClientRect();
+    const selector = document.querySelector('#profile-view .profile-selector-container').getBoundingClientRect();
+    return { headerBottom: header.bottom, selectorTop: selector.top };
+  });
+  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1) {
+    throw new Error(`Sticky profile controls left a gap below the header: ${JSON.stringify(stickyProfileHeader)}`);
+  }
+
   await page.locator('[data-app-view="scan"]').click();
   await page.waitForURL(`${baseUrl}/`);
   await page.locator('[data-app-view="profile"]').click();

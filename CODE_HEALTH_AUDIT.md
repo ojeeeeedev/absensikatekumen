@@ -40,7 +40,7 @@ an intentional archive. Existing untracked/generated paths (`plans/`,
   app for tests, and only listens when run directly.
 - `test/app-security.test.js` adds coverage for rate limiting and safe
   format-string logging. It does not redact the request body, so F-02 remains.
-- Package metadata is now version 2.6.2-a and `classcode.json` contains five
+- Package metadata is now version 2.6.3 and `classcode.json` contains five
   additional class labels. Neither change alters the dependency conclusions.
 
 Evidence came from:
@@ -113,7 +113,7 @@ outcome is recorded here so the original diagnosis remains reviewable.
 | F-12 | Resolved as documentation: the two-sided compatibility secret and ordered removal procedure are documented; the fallback remains unchanged by design. |
 | F-13 | Deferred by design: this medium-confidence performance candidate requires representative class-size measurements before changing rendering behavior. |
 | F-14 | Resolved for touched boundaries: concise contracts now cover the student endpoint, upload controller, and scan-queue retry/persistence invariants. |
-| F-15 | Resolved: README, static fallbacks, package metadata, and project guidance now agree on v2.6.2-a and the authenticated private-photo proxy. |
+| F-15 | Resolved: README, static fallbacks, package metadata, and project guidance now agree on v2.6.3 and the authenticated private-photo proxy. |
 
 ### F-01 — Local development omits the photo-upload route
 
@@ -322,7 +322,7 @@ outcome is recorded here so the original diagnosis remains reviewable.
 - **Confidence:** High
 - **Evidence:** `README.md:1` reports v2.4.5, the static UI fallbacks at
   `public/index.html:95` and `public/index.html:242` report v2.6.1, and
-  `package.json:3` is 2.6.2. `README.md:21`, `README.md:45`, and the project
+  `package.json:3` is 2.6.3. `README.md:21`, `README.md:45`, and the project
   guidance still describe signed image URLs, while the current implementation
   uses the authenticated same-origin `/api/photo` proxy.
 - **Affected behavior:** Operators and contributors can follow stale deployment
@@ -415,7 +415,7 @@ onboarding state.
 - Scan-history browser smoke: passed on confirmation rerun; the first attempt
   missed the viewfinder animation timing assertion and the unchanged rerun
   completed successfully.
-- Local `/api/version`: HTTP 200 with `{"version":"2.6.2-a"}`.
+- Local `/api/version`: HTTP 200 with `{"version":"2.6.3"}`.
 - Local `POST /api/upload-photo`: reached the handler and returned the expected
   unauthenticated HTTP 401 response.
 - `git diff --check`: passed for staged and unstaged changes.
