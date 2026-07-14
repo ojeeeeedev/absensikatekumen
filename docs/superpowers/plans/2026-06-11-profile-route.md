@@ -83,7 +83,7 @@
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-      <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
       <link rel="stylesheet" href="style.css">
     </head>
     <body>
@@ -104,7 +104,7 @@
 
           <div style="text-align: center; margin: 40px 0; color: var(--text-color, #ffffff);">
             <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.7; margin-bottom: 16px;">account_circle</span>
-            <h3 style="font-family: 'Cinzel', serif; font-size: 20px; margin-bottom: 8px;">Kartu Profil Katekumen</h3>
+            <h3 style="font-family: 'DM Serif Display', serif; font-size: 20px; font-style: italic; font-weight: 400; margin-bottom: 8px;">Kartu Profil Katekumen</h3>
             <p style="font-family: 'Inter', sans-serif; font-size: 14px; opacity: 0.8; max-width: 280px; margin: 0 auto;">Fitur profil katekumen sedang dalam pengembangan.</p>
           </div>
 

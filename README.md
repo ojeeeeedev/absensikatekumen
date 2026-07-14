@@ -1,4 +1,4 @@
-# Presensi Katekumen Digital (v2.4.5)
+# Presensi Katekumen Digital (v2.6.3-c)
 
 A modern, responsive, and secure digital attendance system designed for the Catechumenate program at St. Peter's Cathedral, Bandung. This application streamlines the attendance process using QR codes, real-time data synchronization with Google Sheets, and secure image retrieval from Supabase.
 
@@ -18,7 +18,7 @@ A modern, responsive, and secure digital attendance system designed for the Cate
     - Live registration summary counts (**Total**, **Aktif**, **Nonaktif**) computed dynamically.
     - Sticky selector header that collapses smoothly into a compact frosted glass panel on scroll.
 - **📊 Real-time Data Sync**: Attendance records are instantly pushed to Google Sheets via a secure Vercel proxy.
-- **🖼️ Dynamic Profile Images**: Automatically fetches and displays student profile photos from Supabase Storage using signed URLs.
+- **🖼️ Dynamic Profile Images**: Serves private student photos through the authenticated same-origin `/api/photo` proxy.
 - **📅 Dynamic Topic Selection**: Facilitators can select weekly topics (statically defined for speed) to mark attendance against specific columns.
 - **✅ Instant Feedback**: 
     - Visual status indicators.
@@ -42,7 +42,7 @@ The system employs a serverless architecture to bridge a static frontend with po
 - **Vercel Functions (Node.js)**: Acts as a secure proxy and logic layer.
   - **Authentication**: Verifies shared secrets and issues JWTs.
   - **Routing**: Routes requests to the correct Google Apps Script endpoint based on class codes.
-  - **Enrichment**: Injects signed image URLs from Supabase into the response.
+  - **Enrichment**: Injects authenticated same-origin image routes into responses.
   - **Config**: Securely exposes dashboard URLs via redirects (`/api/dashboard`).
 
 - **Google Apps Script**:
@@ -61,13 +61,13 @@ graph LR
     Frontend -- "POST /api/absensi (JWT)" --> API["Serverless API (Node.js)"]
 
     subgraph "Backend Services"
-    API -- "Validate & Sign" --> Supabase[Supabase Storage]
+    API -- "Authenticated private read" --> Supabase[Supabase Storage]
     API -- "POST Data" --> GAS[Google Apps Script]
     GAS -- "Cache Read/Write" --> Cache[Apps Script Cache]
     end
 
     GAS -- "Append/Update" --> Sheet[Google Sheets]
-    Supabase -- "Signed Image URL" --> API
+    Supabase -- "Private image bytes" --> API
 
     API -- "JSON Response" --> Frontend
 ```
@@ -109,10 +109,22 @@ JWT_SECRET=your_random_jwt_secret_string
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_supabase_anon_key
 VERCEL_SCRIPT_MAP_JSON={"SAB":"https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"}
+GAS_SECRET_KEY=replace_with_the_same_secret_used_by_apps_script
 DASHBOARD_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=sharing
 ```
 
 _Note: `VERCEL_SCRIPT_MAP_JSON` maps class codes (e.g., "SAB") to their respective Google Apps Script URLs._
+
+`GAS_SECRET_KEY` is a two-sided compatibility contract: Vercel sends it and
+each deployed Apps Script reads the same Script Property. Both sides currently
+fall back to `default_development_secret` for older deployments. To remove that
+fallback safely, configure every Apps Script deployment first, configure every
+Vercel environment second, verify attendance and profile loading, and only then
+remove the fallback from both sides in one coordinated release.
+
+Photo buckets are private and named `pasfoto-<lowercase-class-code>`. Photo
+uploads accept JPEG, PNG, or WebP up to 5 MB; downloads require a valid session
+and are proxied through `/api/photo` rather than exposing storage credentials.
 
 ### 4. Deploying
 

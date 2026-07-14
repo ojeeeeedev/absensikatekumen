@@ -31,7 +31,7 @@ Ganti isi `public/index.html` dengan markup yang bersih dan terstruktur untuk me
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://yqguiiczpluljethcopn.supabase.co">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
 
@@ -385,7 +385,7 @@ body {
 }
 
 .login-header-title {
-  font-family: 'Cinzel', serif; font-size: 1.5rem; font-weight: 500;
+  font-family: 'DM Serif Display', serif; font-size: 1.5rem; font-style: italic; font-weight: 400;
   text-align: center; margin-bottom: 1.5rem; color: var(--text-primary);
 }
 
@@ -449,7 +449,7 @@ body {
   height: 48px; width: auto; margin-right: 12px;
 }
 .header-text h1 {
-  font-family: 'Cinzel', serif; font-size: 1.15rem; font-weight: 600; color: var(--text-primary);
+  font-family: 'DM Serif Display', serif; font-size: 1.15rem; font-style: italic; font-weight: 400; color: var(--text-primary);
   line-height: 1.2;
 }
 .header-text h2 {
@@ -619,7 +619,7 @@ body {
   border-top: 1px solid var(--border-glass);
   box-shadow: 0 -8px 24px rgba(0,0,0,0.1);
 }
-.modal-content h3 { font-family: 'Cinzel', serif; font-size: 1.15rem; text-align: center; margin-bottom: 0.85rem; }
+.modal-content h3 { font-family: 'DM Serif Display', serif; font-size: 1.15rem; font-style: italic; font-weight: 400; text-align: center; margin-bottom: 0.85rem; }
 
 #topic-search-input {
   width: 100%; padding: 0.65rem 1rem; margin-bottom: 0.75rem;

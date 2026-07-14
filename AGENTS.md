@@ -85,7 +85,7 @@ The following environment variables are required (configured in Vercel or `.env`
   - Frontend: Vanilla JavaScript, avoid heavy frameworks to keep the load times fast for mobile data users.
 - **Security:**
   - All sensitive operations (Attendance, Dashboard) must be protected by JWT verification.
-  - Supabase images must be served via **Signed URLs** with short expiration (60s).
+  - Supabase images must be served through the authenticated same-origin `/api/photo` proxy; storage buckets remain private.
 - **Optimization:**
   - **Caching:** GAS logic uses `CacheService` (6h TTL) to minimize slow Sheet read operations.
   - **Payloads:** Keep the JSON payloads between Frontend and GAS lean.
@@ -94,4 +94,3 @@ The following environment variables are required (configured in Vercel or `.env`
   - Always validate incoming `studentId` formats before processing.
 - **Version Bumping:**
   - When all requested modifications for a task are complete and verified, ask the user interactively if they want to bump the package version in `package.json` (major, minor, patch, or none) before final completion. After every version bump, ask the user interactively whether to commit to the local repo or push it to the remote repo.
-

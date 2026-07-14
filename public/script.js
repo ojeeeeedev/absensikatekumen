@@ -1,5 +1,11 @@
 let html5QrcodeScanner = null;
 let selectedWeek = null;
+let topicComboboxLarge = null;
+let topicComboboxActive = null;
+let viewfinderDimTimer = null;
+const LAST_QR_SCAN_KEY = 'last_qr_scan';
+const SCAN_REPEAT_WINDOW_MS = 5000;
+const VIEWFINDER_INACTIVE_MS = 800;
 
 window.scrollCarousel = function(direction) {
   const listContainer = document.getElementById('queue-list');
@@ -47,6 +53,107 @@ function updateNavButtons(listContainer, renderItemsLength) {
   }
 }
 
+const BULK_DELETE_DEAD_ZONE = 8;
+const BULK_DELETE_MAX_REVEAL = 72;
+const BULK_DELETE_THRESHOLD = 56;
+
+function setBulkDeleteAvailability(available) {
+  document.querySelectorAll('.bulk-delete-action').forEach(action => {
+    action.hidden = !available;
+  });
+}
+
+function bindHistoryBulkDelete() {
+  const list = document.getElementById('queue-list');
+  const carousel = list?.closest('.carousel-container');
+  const startAction = document.getElementById('bulk-delete-start');
+  const endAction = document.getElementById('bulk-delete-end');
+  if (!list || !carousel || !startAction || !endAction || list.dataset.bulkDeleteBound === 'true') return;
+  list.dataset.bulkDeleteBound = 'true';
+
+  let startX = null;
+  let direction = null;
+  let reveal = 0;
+  let pointerId = null;
+  let suppressClick = false;
+
+  const reset = () => {
+    list.style.removeProperty('transform');
+    list.classList.remove('bulk-delete-dragging');
+    carousel.classList.remove('bulk-delete-revealing');
+    startAction.classList.remove('active');
+    endAction.classList.remove('active');
+    startX = null;
+    direction = null;
+    reveal = 0;
+    pointerId = null;
+  };
+
+  const begin = clientX => {
+    if (startAction.hidden || endAction.hidden) return;
+    startX = clientX;
+  };
+
+  const move = (clientX, event) => {
+    if (startX === null) return;
+    const delta = clientX - startX;
+    if (!direction) {
+      if (Math.abs(delta) <= BULK_DELETE_DEAD_ZONE) return;
+      const atStart = list.scrollLeft <= 5;
+      const atEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth - 5;
+      if (delta > 0 && atStart) direction = 'start';
+      else if (delta < 0 && atEnd) direction = 'end';
+      else return;
+    }
+
+    event.preventDefault();
+    suppressClick = true;
+    reveal = Math.min(BULK_DELETE_MAX_REVEAL, Math.max(0, Math.abs(delta)));
+    const offset = direction === 'start' ? reveal : -reveal;
+    list.style.transform = `translateX(${offset}px)`;
+    list.classList.add('bulk-delete-dragging');
+    carousel.classList.add('bulk-delete-revealing');
+    startAction.classList.toggle('active', direction === 'start');
+    endAction.classList.toggle('active', direction === 'end');
+  };
+
+  const finish = event => {
+    const shouldDelete = direction && reveal >= BULK_DELETE_THRESHOLD;
+    const trigger = direction === 'start' ? startAction : endAction;
+    reset();
+    if (shouldDelete) window.openDeleteConfirm(event, trigger);
+  };
+
+  list.addEventListener('touchstart', event => begin(event.touches[0].clientX), { passive: true });
+  list.addEventListener('touchmove', event => move(event.touches[0].clientX, event), { passive: false });
+  list.addEventListener('touchend', finish);
+  list.addEventListener('touchcancel', reset);
+
+  list.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'touch') return;
+    pointerId = event.pointerId;
+    begin(event.clientX);
+  });
+  list.addEventListener('pointermove', event => {
+    if (event.pointerId !== pointerId) return;
+    move(event.clientX, event);
+    if (direction && !list.hasPointerCapture(pointerId)) list.setPointerCapture(pointerId);
+  });
+  list.addEventListener('pointerup', event => {
+    if (event.pointerId === pointerId) finish(event);
+  });
+  list.addEventListener('pointercancel', reset);
+  list.addEventListener('click', event => {
+    if (!suppressClick) return;
+    suppressClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
+  startAction.addEventListener('click', event => window.openDeleteConfirm(event, startAction));
+  endAction.addEventListener('click', event => window.openDeleteConfirm(event, endAction));
+}
+
 
 // Note: handleLogout, updateActivity, and checkTopicExpiry are now centralized in session.js
 
@@ -64,6 +171,10 @@ window.setAppState = async function(state) {
     container.classList.add('state-auth');
     await stopScanner();
     if (nav) nav.style.display = 'none';
+    setViewVisibility('scan');
+    document.body.dataset.activeView = 'scan';
+    updateActiveNavigation('scan');
+    if (window.location.pathname !== '/') history.replaceState({ view: 'scan' }, '', '/');
   } else if (state === 1) {
     container.classList.add('state-selection');
     await stopScanner();
@@ -99,6 +210,146 @@ window.setAppState = async function(state) {
   }
 }
 
+const APP_VIEW_PATHS = { scan: '/', profile: '/profile' };
+const APP_VIEW_TITLES = {
+  scan: 'Sistem Presensi Katekumen Dewasa',
+  profile: 'Profil Katekumen - Presensi Katekumen Digital'
+};
+const APP_VIEW_HEADINGS = { scan: 'Sistem Presensi', profile: 'Profil Katekumen' };
+let appViewNavigation = Promise.resolve();
+
+function viewFromPath(pathname = window.location.pathname) {
+  return pathname === '/profile' || pathname === '/profile.html' ? 'profile' : 'scan';
+}
+
+function setViewVisibility(view) {
+  const scanView = document.getElementById('main-app-section');
+  const profileView = document.getElementById('profile-view');
+  const profileActive = view === 'profile';
+  scanView.hidden = profileActive;
+  scanView.inert = profileActive;
+  profileView.hidden = !profileActive;
+  profileView.inert = !profileActive;
+}
+
+function updateActiveNavigation(view) {
+  document.querySelectorAll('[data-app-view]').forEach(link => {
+    const active = link.dataset.appView === view;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+}
+
+async function replaceViewHeading(view, animate) {
+  const title = document.getElementById('app-view-title');
+  const nextHeading = APP_VIEW_HEADINGS[view];
+  title.getAnimations().forEach(animation => animation.cancel());
+  if (title.textContent === nextHeading) return;
+  if (!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    title.textContent = nextHeading;
+    return;
+  }
+  const fadeOut = title.animate([{ opacity: 1 }, { opacity: 0 }], {
+    duration: 60,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+  await fadeOut.finished;
+  fadeOut.cancel();
+  title.textContent = nextHeading;
+  title.animate([{ opacity: 0 }, { opacity: 1 }], {
+    duration: 70,
+    easing: 'ease-out'
+  });
+}
+
+function animateViewEntry(view) {
+  const viewElement = document.getElementById(view === 'profile' ? 'profile-view' : 'main-app-section');
+  [document.getElementById('main-app-section'), document.getElementById('profile-view')]
+    .forEach(element => element.getAnimations().forEach(animation => animation.cancel()));
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  viewElement.animate(
+    [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'translateY(0)' }],
+    { duration: 180, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
+  );
+}
+
+function animateContainerResize(fromHeight, animate) {
+  const container = document.getElementById('app-container');
+  container.getAnimations().forEach(animation => animation.cancel());
+  const toHeight = container.getBoundingClientRect().height;
+  if (!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches || Math.abs(fromHeight - toHeight) < 1) return;
+  container.animate(
+    [{ height: `${fromHeight}px` }, { height: `${toHeight}px` }],
+    { duration: 240, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
+  );
+}
+
+async function applyAppView(view, { historyMode = 'push', focus = true } = {}) {
+  if (!sessionStorage.getItem('authToken')) {
+    await setAppState(0);
+    return;
+  }
+
+  const container = document.getElementById('app-container');
+  const nav = document.getElementById('app-nav');
+
+  if (view === 'profile') {
+    topicComboboxLarge?.close();
+    topicComboboxActive?.close();
+    window.closeStudentModal?.();
+    window.closeDeleteConfirm?.();
+    await stopScanner();
+  } else {
+    window.closeProfileViewUI?.();
+  }
+
+  const fromHeight = container.getBoundingClientRect().height;
+  const headingChange = replaceViewHeading(view, focus);
+  document.body.dataset.activeView = view;
+  setViewVisibility(view);
+  updateActiveNavigation(view);
+  document.title = APP_VIEW_TITLES[view];
+  if (nav) nav.style.display = 'flex';
+
+  if (view === 'profile') {
+    const expanded = document.getElementById('class-selector')?.value;
+    container.className = `glass-container state-profile${expanded ? ' profile-expanded' : ''}`;
+    window.initializeProfileView?.();
+  } else {
+    await setAppState(2);
+  }
+  animateContainerResize(fromHeight, focus);
+  animateViewEntry(view);
+  await headingChange;
+
+  const path = APP_VIEW_PATHS[view];
+  if (historyMode === 'replace') history.replaceState({ view }, '', path);
+  else if (historyMode === 'push' && window.location.pathname !== path) history.pushState({ view }, '', path);
+
+  if (focus) {
+    requestAnimationFrame(() => document.getElementById('app-view-title')?.focus({ preventScroll: true }));
+  }
+}
+
+window.navigateToAppView = function navigateToAppView(view, options) {
+  appViewNavigation = appViewNavigation.then(() => applyAppView(view, options));
+  return appViewNavigation;
+};
+
+document.querySelectorAll('[data-app-view]').forEach(link => {
+  link.addEventListener('click', event => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    window.navigateToAppView(link.dataset.appView);
+  });
+});
+
+window.addEventListener('popstate', () => {
+  window.navigateToAppView(viewFromPath(), { historyMode: 'none' });
+});
+
 
 
 // --- SAFARI VIEWPORT FIX ---
@@ -109,51 +360,17 @@ function setViewportHeight() {
 setViewportHeight();
 window.addEventListener('resize', setViewportHeight);
 
-// --- MODAL FUNCTIONS ---
-window.openTopicModal = function() {
-  const modal = document.getElementById('topic-modal');
-  modal.style.display = 'flex';
-  setTimeout(() => document.getElementById('topic-search-input')?.focus(), 0);
-}
-window.closeTopicModal = function() { document.getElementById('topic-modal').style.display = 'none'; }
-
-function setTopicTriggerText(week, name) {
-  const btn = document.getElementById('topic-trigger-large');
-  if (!btn) return;
-  btn.textContent = '';
-
-  const label = document.createElement('span');
-  label.textContent = `${week}. ${name}`;
-
-  const icon = window.createAppIcon('chevron-down');
-
-  btn.append(label, icon);
-}
-
-window.selectTopic = function(week, name, element) {
+window.selectTopic = function(week, name) {
   selectedWeek = week;
   localStorage.setItem('selectedWeek', week);
   localStorage.setItem('selectedTopicName', name);
-  setTopicTriggerText(week, name);
-  const activeTopicText = document.getElementById('active-topic-name');
-  if (activeTopicText) {
-    activeTopicText.textContent = `${week}. ${name}`;
-  }
-  document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
-  element.classList.add('active');
-  setTimeout(() => {
-    window.closeTopicModal();
-    setAppState(2); // Go straight to scanner state on selection
-  }, 200);
+  topicComboboxLarge?.setValue(week);
+  topicComboboxActive?.setValue(week);
+  setTimeout(() => setAppState(2), 200);
 }
 
-window.filterTopics = function() {
-  const searchTerm = document.getElementById('topic-search-input').value.toLowerCase();
-  const topics = document.querySelectorAll('.topic-option');
-  topics.forEach(topic => {
-    const topicText = topic.textContent.toLowerCase();
-    topic.style.display = topicText.includes(searchTerm) ? 'block' : 'none';
-  });
+window.openTopicSelector = function() {
+  topicComboboxActive?.open();
 }
 
 window.togglePasswordVisibility = function() {
@@ -215,9 +432,8 @@ window.handleLogin = async function() {
           document.cookie = `auth_token=${data.token}; path=/; max-age=28800; SameSite=Lax`;
           loginLoader.style.display = 'none';
           
-          // Switch to Selection State
-          setAppState(2);
           initializeApp();
+          window.navigateToAppView('scan', { historyMode: 'replace', focus: false });
 
           // Safe trigger for onboarding
           if (typeof window.checkOnboarding === 'function') {
@@ -241,6 +457,12 @@ window.handleLogin = async function() {
 
 
 // --- BACKGROUND SCAN QUEUE ENGINE ---
+/**
+ * Persists scans in `scan_queue` and processes the oldest pending item first.
+ * Pending items survive reloads; 401 pauses processing for a new login, while
+ * network, 429, and 5xx failures remain pending for retry. Completed history is
+ * retained for the UI and trimmed by clearOldHistory().
+ */
 class ScanQueue {
   constructor() {
     try {
@@ -261,7 +483,6 @@ class ScanQueue {
     if (modified) this.save();
 
     this.isProcessing = false;
-    this.cooldowns = {}; // For preventing duplicate double scans
     const initialPending = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
     this.totalInBatch = initialPending;
     this.cleanExpiredItems();
@@ -278,15 +499,59 @@ class ScanQueue {
     this.render();
   }
 
+  dismiss(id) {
+    const index = this.queue.findIndex(item => item.id === id);
+    if (index < 0) return false;
+    const item = this.queue[index];
+    if (item.status === 'pending' || item.status === 'processing') return false;
+
+    this.queue.splice(index, 1);
+    this.save();
+    showToast('Riwayat pemindaian dihapus', 'info', {
+      actionLabel: 'Urungkan',
+      duration: 5000,
+      onAction: () => this.restore(item, index)
+    });
+    return true;
+  }
+
+  restore(item, index) {
+    if (!item || this.queue.some(existing => existing.id === item.id)) return false;
+    this.queue.splice(Math.min(index, this.queue.length), 0, item);
+    this.save();
+    return true;
+  }
+
+  clearCompleted() {
+    const initialLength = this.queue.length;
+    this.queue = this.queue.filter(item => item.status === 'pending' || item.status === 'processing');
+    if (this.queue.length === initialLength) return 0;
+    this.save();
+    return initialLength - this.queue.length;
+  }
+
   add(studentId, week) {
     const timestamp = Date.now();
-    
-    // Prevent double scan check (cooldown 3s for same studentId)
-    if (this.cooldowns[studentId] && (timestamp - this.cooldowns[studentId] < 3000)) {
-      console.log(`Scan blocked by cooldown: ${studentId}`);
-      return;
+
+    let lastScan = null;
+    try {
+      lastScan = JSON.parse(localStorage.getItem(LAST_QR_SCAN_KEY) || 'null');
+    } catch {
+      localStorage.removeItem(LAST_QR_SCAN_KEY);
     }
-    this.cooldowns[studentId] = timestamp;
+    if (lastScan?.studentId === studentId && lastScan.expiresAt > timestamp) {
+      return false;
+    }
+    const expiresAt = timestamp + SCAN_REPEAT_WINDOW_MS;
+    localStorage.setItem(LAST_QR_SCAN_KEY, JSON.stringify({ studentId, expiresAt }));
+    setTimeout(() => {
+      try {
+        const current = JSON.parse(localStorage.getItem(LAST_QR_SCAN_KEY) || 'null');
+        if (current?.studentId === studentId && current.expiresAt <= Date.now()) localStorage.removeItem(LAST_QR_SCAN_KEY);
+      } catch {
+        localStorage.removeItem(LAST_QR_SCAN_KEY);
+      }
+    }, SCAN_REPEAT_WINDOW_MS);
 
     const id = 'scan_' + Math.random().toString(36).substring(2, 9) + '_' + timestamp;
     const item = {
@@ -311,6 +576,7 @@ class ScanQueue {
     
     // Trigger immediate sequential processing loop
     this.process();
+    return true;
   }
 
   async process() {
@@ -469,15 +735,15 @@ class ScanQueue {
     const queueLength = this.queue.length;
     const progressArea = document.getElementById('history-progress-area');
     const dotsContainer = document.getElementById('carousel-dots');
-    const trashBtn = document.getElementById('history-trash-btn');
     const prevBtn = document.getElementById('carousel-prev-btn');
     const nextBtn = document.getElementById('carousel-next-btn');
+    const hasDismissibleHistory = this.queue.some(item => item.status !== 'pending' && item.status !== 'processing');
+    setBulkDeleteAvailability(hasDismissibleHistory);
 
     // Ensure progress area is always visible (V3 Spec)
     if (progressArea) progressArea.style.display = 'block';
 
     if (queueLength === 0) {
-      if (trashBtn) trashBtn.style.display = 'none';
       if (dotsContainer) dotsContainer.style.display = 'none';
       if (prevBtn) prevBtn.style.display = 'none';
       if (nextBtn) nextBtn.style.display = 'none';
@@ -501,18 +767,19 @@ class ScanQueue {
         if (el) el.style.display = 'none';
       });
 
-      // Render Skeleton Card Placeholder
+      // Render empty history state
       listContainer.style.justifyContent = 'center';
       listContainer.innerHTML = `
-        <div class="queue-row skeleton" aria-hidden="true">
-          <span class="skeleton-empty-text">Belum ada riwayat pemindaian</span>
+        <div class="queue-empty-state" role="status">
+          <span class="queue-empty-icon" aria-hidden="true">
+            <re-icon icon="qr" decorative></re-icon>
+          </span>
+          <strong>Belum ada riwayat pemindaian</strong>
+          <span>Pemindaian terbaru akan muncul di sini.</span>
         </div>
       `;
       return;
     }
-
-    // Show trash button if at least one scan has been conducted
-    if (trashBtn) trashBtn.style.display = 'flex';
 
     // 1. Calculate counters
     let successCount = 0;
@@ -596,6 +863,24 @@ class ScanQueue {
         }
       };
 
+      if (item.status !== 'pending' && item.status !== 'processing') {
+        row.classList.add('dismissible');
+        const dismissButton = document.createElement('button');
+        dismissButton.type = 'button';
+        dismissButton.className = 'history-dismiss-btn';
+        dismissButton.setAttribute('aria-label', `Hapus riwayat ${item.name || item.studentId || 'pemindaian'}`);
+        const dismissGlyph = document.createElement('span');
+        dismissGlyph.setAttribute('aria-hidden', 'true');
+        dismissGlyph.textContent = '×';
+        dismissButton.appendChild(dismissGlyph);
+        dismissButton.addEventListener('click', event => {
+          event.stopPropagation();
+          this.dismiss(item.id);
+        });
+        dismissButton.addEventListener('keydown', event => event.stopPropagation());
+        row.appendChild(dismissButton);
+      }
+
       const avatarSrc = item.image || '/assets/favicon.png';
       
       const studentInfo = document.createElement('div');
@@ -640,10 +925,12 @@ class ScanQueue {
         success: 'check',
         error: 'close-circle2',
         duplicate: 'refresh',
-        processing: 'refresh',
         pending: 'timer-alt'
       };
-      const icon = window.createAppIcon(statusIconByStatus[item.status] || statusIconByStatus.pending);
+      const icon = item.status === 'processing'
+        ? Object.assign(document.createElement('app-spinner'), { className: 'app-spinner status-spinner' })
+        : window.createAppIcon(statusIconByStatus[item.status] || statusIconByStatus.pending);
+      if (item.status === 'processing') icon.setAttribute('aria-hidden', 'true');
       
       statusBadge.appendChild(icon);
       row.appendChild(statusBadge);
@@ -746,51 +1033,6 @@ class ScanQueue {
 // Instantiate globally
 window.scanQueue = new ScanQueue();
 
-// --- TOAST NOTIFICATIONS ---
-window.showToast = function(message, type = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  
-  let iconName = 'check-circle';
-  if (type === 'error') iconName = 'close-circle2';
-  if (type === 'info') iconName = 'info-circle';
-
-  // Safe element construction to prevent XSS
-  const icon = window.createAppIcon(iconName, 'toast-icon');
-
-  const text = document.createElement('span');
-  text.className = 'toast-message';
-  text.textContent = message;
-
-  toast.appendChild(icon);
-  toast.appendChild(text);
-  container.appendChild(toast);
-
-  let autoDismissTimer;
-
-  // Smooth dismiss helper
-  const dismiss = () => {
-    if (toast.classList.contains('hide')) return;
-    if (autoDismissTimer) clearTimeout(autoDismissTimer);
-    toast.removeEventListener('click', dismiss);
-    toast.classList.remove('show');
-    toast.classList.add('hide');
-    setTimeout(() => toast.remove(), 400);
-  };
-
-  // Click to dismiss early
-  toast.addEventListener('click', dismiss);
-
-  // Trigger entry animation
-  setTimeout(() => toast.classList.add('show'), 10);
-
-  // Auto-remove timer
-  autoDismissTimer = setTimeout(dismiss, 3000);
-}
-
 // --- STATUS HANDLER ---
 function showStatus(mainText, type, subText = "") {
   const el = document.getElementById("status");
@@ -869,11 +1111,19 @@ function triggerVisualFlash(type) {
   }, 100);
 }
 
+function dimViewfinder() {
+  const readerContainer = document.getElementById('reader-container');
+  if (!readerContainer) return;
+  readerContainer.classList.add('scan-inactive');
+  clearTimeout(viewfinderDimTimer);
+  viewfinderDimTimer = setTimeout(() => readerContainer.classList.remove('scan-inactive'), VIEWFINDER_INACTIVE_MS);
+}
+
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
   if (!selectedWeek) {
     showStatus("Pilih topik terlebih dahulu!", "error");
-    openTopicModal();
+    openTopicSelector();
     return;
   }
 
@@ -888,11 +1138,10 @@ async function handleScan(decodedText) {
     return;
   }
 
-  // Optimistic tactile feedback on read
-  if (navigator.vibrate) navigator.vibrate(80);
-
   // Add scan to queue instantly and keep camera running!
-  scanQueue.add(originalStudentId, selectedWeek);
+  if (!scanQueue.add(originalStudentId, selectedWeek)) return;
+  dimViewfinder();
+  if (navigator.vibrate) navigator.vibrate(80);
 }
 
 async function startScanner() {
@@ -961,61 +1210,6 @@ async function stopScanner() {
   }
 }
 
-async function loadTopikList() {
-  const listContainer = document.getElementById("topic-list-container");
-  if (!listContainer) return;
-
-  try {
-    if (typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS)) {
-      listContainer.innerHTML = "";
-      STATIC_TOPICS.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "topic-option";
-        if (item.name.includes("(P)")) div.classList.add("topic-p");
-        else if (item.name.includes("(KI)")) div.classList.add("topic-ki");
-        
-        if (item.week === "R1" || item.week === "R2") {
-          div.classList.add("topic-rekoleksi");
-        }
-        div.textContent = `${item.week}. ${item.name}`;
-        
-        if (item.week === selectedWeek) {
-          div.classList.add("active");
-        }
-        
-        // Accessibility attributes
-        div.setAttribute("role", "button");
-        div.tabIndex = 0;
-        
-        div.onclick = () => selectTopic(item.week, item.name, div);
-        div.onkeydown = (event) => {
-          if (event.key === ' ' || event.key === 'Enter') {
-            event.preventDefault();
-            selectTopic(item.week, item.name, div);
-          }
-        };
-        
-        listContainer.appendChild(div);
-      });
-    } else {
-      listContainer.innerHTML = "";
-      const errorDiv = document.createElement("div");
-      errorDiv.className = "topic-loading-placeholder";
-      errorDiv.style.color = "var(--status-duplicate-text)";
-      errorDiv.textContent = "Data topik tidak ditemukan.";
-      listContainer.appendChild(errorDiv);
-    }
-  } catch (err) {
-    console.error(err);
-    listContainer.innerHTML = "";
-    const errorDiv = document.createElement("div");
-    errorDiv.className = "topic-loading-placeholder";
-    errorDiv.style.color = "var(--status-duplicate-text)";
-    errorDiv.textContent = "Gagal memuat topik.";
-    listContainer.appendChild(errorDiv);
-  }
-}
-
 async function loadVersion() {
   try {
     const res = await fetch('/api/version');
@@ -1035,14 +1229,51 @@ async function loadVersion() {
   }
 }
 
-async function initializeApp() {
-  await loadTopikList();
+function initializeTopicComboboxes() {
+  const topics = typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS) ? STATIC_TOPICS : [];
+  const createTopicCombobox = (suffix, placeholder) => {
+    const combobox = createSearchCombobox({
+      rootId: `topic-combobox-${suffix}`,
+      triggerId: suffix === 'large' ? 'topic-trigger-large' : 'topic-combobox-trigger',
+      popoverId: suffix === 'large' ? 'topic-combobox-large-popover' : 'topic-combobox-popover',
+      searchId: `topic-combobox-${suffix === 'large' ? 'large-' : ''}search`,
+      listId: `topic-combobox-${suffix === 'large' ? 'large-' : ''}options`,
+      emptyId: `topic-combobox-${suffix === 'large' ? 'large-' : ''}empty`,
+      valueId: suffix === 'large' ? 'topic-trigger-large-label' : 'active-topic-name',
+      selectId: `topic-selector-${suffix}`,
+      placeholder,
+      getValue: item => item.week,
+      getLabel: item => `${item.week}. ${item.name}`,
+      getSearchText: item => `${item.week} ${item.name}`,
+      getOptionClass: item => {
+        if (item.week.startsWith('R')) return 'topic-option-r';
+        if (item.name.includes('(KI)')) return 'topic-option-ki';
+        if (item.name.includes('(P)')) return 'topic-option-p';
+        return '';
+      }
+    });
+    const select = document.getElementById(`topic-selector-${suffix}`);
+    select?.addEventListener('change', () => {
+      const topic = topics.find(item => item.week === select.value);
+      if (topic) selectTopic(topic.week, topic.name);
+    });
+    combobox?.setItems(topics, 'Data topik tidak ditemukan');
+    return combobox;
+  };
+
+  topicComboboxLarge = createTopicCombobox('large', 'Pilih Topik Pertemuan...');
+  topicComboboxActive = createTopicCombobox('active', 'Ketuk di sini untuk memilih topik...');
+}
+
+function initializeApp() {
+  if (!topicComboboxActive) initializeTopicComboboxes();
+  bindHistoryBulkDelete();
   scanQueue.render();
   scanQueue.process(); // Process any leftover queue from last load
 }
 
 // Initial triggers
-window.onload = () => {
+window.onload = async () => {
   initTheme();
   loadVersion();
   
@@ -1051,26 +1282,25 @@ window.onload = () => {
     scanQueue.process();
   });
 
-  const sessionToken = sessionStorage.getItem('authToken');
+  const cookieToken = getCookie('auth_token');
+  const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
   if (sessionToken) {
+    sessionStorage.setItem('authToken', sessionToken);
     // Sync the auth_token cookie with the sessionStorage token
     document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
     
+    initializeApp();
     const savedWeek = localStorage.getItem('selectedWeek');
     const savedTopicName = localStorage.getItem('selectedTopicName');
     if (savedWeek && savedTopicName) {
       selectedWeek = savedWeek;
-      setTopicTriggerText(savedWeek, savedTopicName);
-      const activeTopicText = document.getElementById('active-topic-name');
-      if (activeTopicText) {
-        activeTopicText.textContent = `${savedWeek}. ${savedTopicName}`;
-      }
+      topicComboboxLarge?.setValue(savedWeek);
+      topicComboboxActive?.setValue(savedWeek);
     }
     
-    setAppState(2); // Set to scanner page initially
-    initializeApp();
+    await window.navigateToAppView(viewFromPath(), { historyMode: 'replace', focus: false });
   } else {
-    setAppState(0); // Authentication screen
+    await setAppState(0); // Authentication screen
   }
 }
 
@@ -1119,7 +1349,18 @@ window.closeStudentModal = function(event) {
   }
 };
 
-window.openDeleteConfirm = function(event) {
+let historyDeleteReturnFocus = null;
+
+function setHistoryContentInert(inert) {
+  const panel = document.getElementById('queue-history-panel');
+  const overlay = document.getElementById('history-confirm-overlay');
+  if (!panel || !overlay) return;
+  [...panel.children].forEach(child => {
+    if (child !== overlay) child.inert = inert;
+  });
+}
+
+window.openDeleteConfirm = function(event, trigger) {
   if (event) event.stopPropagation();
 
   if (typeof scanQueue !== 'undefined') {
@@ -1134,10 +1375,13 @@ window.openDeleteConfirm = function(event) {
 
   const overlay = document.getElementById('history-confirm-overlay');
   if (overlay) {
+    historyDeleteReturnFocus = trigger || event?.currentTarget || document.activeElement;
+    setHistoryContentInert(true);
     overlay.style.display = 'flex';
     // Force a reflow to trigger transition animation
     overlay.offsetHeight;
     overlay.classList.add('show');
+    document.getElementById('confirm-btn-yes')?.focus({ preventScroll: true });
   }
 };
 
@@ -1146,11 +1390,14 @@ window.closeDeleteConfirm = function(event) {
   const overlay = document.getElementById('history-confirm-overlay');
   if (overlay) {
     overlay.classList.remove('show');
+    setHistoryContentInert(false);
     setTimeout(() => {
       if (!overlay.classList.contains('show')) {
         overlay.style.display = 'none';
+        historyDeleteReturnFocus?.focus?.({ preventScroll: true });
+        historyDeleteReturnFocus = null;
       }
-    }, 300);
+    }, 280);
   }
 };
 
@@ -1167,8 +1414,7 @@ window.confirmDeleteHistory = function(event) {
       return;
     }
     
-    scanQueue.queue = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing');
-    scanQueue.save();
+    scanQueue.clearCompleted();
     showToast("Riwayat pemindaian berhasil dibersihkan", "info");
   }
   
@@ -1179,8 +1425,7 @@ window.confirmDeleteHistory = function(event) {
 document.addEventListener('click', (event) => {
   const overlay = document.getElementById('history-confirm-overlay');
   if (overlay && overlay.classList.contains('show')) {
-    const trashBtn = document.getElementById('history-trash-btn');
-    if (!overlay.contains(event.target) && (!trashBtn || !trashBtn.contains(event.target))) {
+    if (!overlay.contains(event.target)) {
       window.closeDeleteConfirm();
     }
   }
@@ -1188,10 +1433,6 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  const topicModal = document.getElementById('topic-modal');
-  if (topicModal && topicModal.style.display === 'flex') {
-    window.closeTopicModal();
-  }
   const studentModal = document.getElementById('student-detail-modal');
   if (studentModal && studentModal.style.display === 'flex') {
     window.closeStudentModal(event);

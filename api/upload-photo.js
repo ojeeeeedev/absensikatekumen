@@ -11,7 +11,7 @@ const ALLOWED_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/web
  * Parses a multipart/form-data body from the raw buffer.
  * Returns { fields: { studentId }, fileBuffer, mimeType, originalFilename }
  */
-function parseMultipart(buffer, boundary) {
+export function parseMultipart(buffer, boundary) {
   const boundaryBuffer = Buffer.from(`--${boundary}`);
   const parts = [];
   let start = 0;
@@ -88,11 +88,11 @@ export default async function handler(req, res) {
 
   // --- Parse multipart body ---
   const contentType = req.headers['content-type'] || '';
-  const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
+  const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;\s]+))/i);
   if (!boundaryMatch) {
     return res.status(400).json({ status: 'error', message: 'Content-Type harus multipart/form-data' });
   }
-  const boundary = boundaryMatch[1];
+  const boundary = boundaryMatch[1] || boundaryMatch[2];
 
   // Collect raw body buffer
   let rawBody;

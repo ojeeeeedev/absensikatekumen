@@ -1,9 +1,6 @@
 
 
-const token = getCookie('auth_token');
-if (!token) {
-  window.location.href = '/';
-}
+const getProfileToken = () => sessionStorage.getItem('authToken') || getCookie('auth_token');
 
 let allStudents = [];
 
@@ -15,243 +12,35 @@ let allStudents = [];
 // ============================================================
 // Photo Upload Manager
 // ============================================================
-const PhotoUploader = (() => {
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-
-  let currentStudentId = null;
-  let currentStudentName = null;
-  let selectedFile = null;
-
-  // DOM refs (resolved lazily after DOMContentLoaded)
-  let modal, sheet, dropzone, fileInput, previewImg, studentLabel,
-      dropzoneIcon, dropzoneText, dropzoneSubtext,
-      progressWrap, progressBar,
-      confirmBtn, cancelBtn, closeBtn;
-
-  function init() {
-    modal        = document.getElementById('upload-preview-modal');
-    dropzone     = document.getElementById('upload-dropzone');
-    fileInput    = document.getElementById('upload-file-input');
-    previewImg   = document.getElementById('upload-preview-img');
-    studentLabel = document.getElementById('upload-student-label');
-    dropzoneIcon = document.getElementById('upload-dropzone-icon');
-    dropzoneText = document.getElementById('upload-dropzone-text');
-    dropzoneSubtext = document.getElementById('upload-dropzone-subtext');
-    progressWrap = document.getElementById('upload-progress-wrap');
-    progressBar  = document.getElementById('upload-progress-bar');
-    confirmBtn   = document.getElementById('upload-confirm-btn');
-    cancelBtn    = document.getElementById('upload-cancel-btn');
-    closeBtn     = document.getElementById('upload-close-btn');
-
-    if (!modal) return; // not on profile page
-
-    // Close actions
-    closeBtn.addEventListener('click', close);
-    cancelBtn.addEventListener('click', close);
-    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-
-    // Keyboard close
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal.classList.contains('open')) close();
-    });
-
-    // Dropzone click → open native file picker
-    dropzone.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('keydown', (e) => {
-      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); fileInput.click(); }
-    });
-
-    // File input change
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files.length > 0) handleFileSelect(fileInput.files[0]);
-    });
-
-    // Drag & drop
-    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-    dropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropzone.classList.remove('dragover');
-      const file = e.dataTransfer?.files?.[0];
-      if (file) handleFileSelect(file);
-    });
-
-    // Confirm upload
-    confirmBtn.addEventListener('click', doUpload);
-  }
-
-  function open(studentId, studentName) {
-    currentStudentId = studentId;
-    currentStudentName = studentName;
-    selectedFile = null;
-
-    // Reset UI
-    resetDropzone();
-    progressWrap.classList.remove('visible');
-    progressBar.style.width = '0%';
-    progressWrap.setAttribute('aria-valuenow', '0');
-    confirmBtn.disabled = true;
-    confirmBtn.classList.remove('uploading');
-    fileInput.value = '';
-
-    // Set student label
-    studentLabel.textContent = `${studentName} · ${studentId}`;
-
-    // Show modal
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
-
-    // Focus close button for accessibility
-    setTimeout(() => closeBtn.focus(), 50);
-  }
-
-  function close() {
-    modal.classList.remove('open');
-    document.body.style.overflow = '';
-    selectedFile = null;
-    currentStudentId = null;
-    currentStudentName = null;
-    fileInput.value = '';
-  }
-
-  function resetDropzone() {
-    previewImg.style.display = 'none';
-    previewImg.src = '';
-    dropzoneIcon.style.display = '';
-    dropzoneText.style.display = '';
-    dropzoneSubtext.style.display = '';
-  }
-
-  function handleFileSelect(file) {
-    // Validate type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      showToast('Format tidak didukung. Gunakan JPG, PNG, atau WebP.', 'error');
-      return;
-    }
-    // Validate size
-    if (file.size > MAX_SIZE_BYTES) {
-      showToast('Ukuran file melebihi batas 5MB.', 'error');
-      return;
-    }
-
-    selectedFile = file;
-
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImg.src = e.target.result;
-      previewImg.style.display = 'block';
-      dropzoneIcon.style.display = 'none';
-      dropzoneText.style.display = 'none';
-      dropzoneSubtext.style.display = 'none';
-    };
-    reader.readAsDataURL(file);
-
-    confirmBtn.disabled = false;
-  }
-
-  async function doUpload() {
-    if (!selectedFile || !currentStudentId) return;
-
-    // Set uploading state
-    confirmBtn.classList.add('uploading');
-    confirmBtn.disabled = true;
-    cancelBtn.disabled = true;
-    closeBtn.disabled = true;
-    progressWrap.classList.add('visible');
-    progressBar.style.width = '30%';
-    progressWrap.setAttribute('aria-valuenow', '30');
-
-    const formData = new FormData();
-    formData.append('studentId', currentStudentId);
-    formData.append('photo', selectedFile, selectedFile.name);
-
-    try {
-      progressBar.style.width = '60%';
-      progressWrap.setAttribute('aria-valuenow', '60');
-
-      const res = await fetch('/api/upload-photo', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      progressBar.style.width = '90%';
-      progressWrap.setAttribute('aria-valuenow', '90');
-      const data = await res.json();
-
-      if (data.status === 'ok') {
-        progressBar.style.width = '100%';
-        progressWrap.setAttribute('aria-valuenow', '100');
-
-        // Update the in-memory student data immediately with the private app URL
-        if (data.image) {
-          const student = allStudents.find(s => s.studentId === currentStudentId);
-          if (student) {
-            student.image = data.image;
-          }
-        }
-
-        showToast('Foto berhasil diunggah! ✓', 'success');
-
-        // Close modal and re-render the current student list to show new photo
-        setTimeout(() => {
-          close();
-          filterStudents(); // re-render with updated image URL
-        }, 600);
-      } else {
-        throw new Error(data.message || 'Gagal mengunggah foto');
-      }
-    } catch (err) {
-      console.error('[PhotoUploader] Upload error:', err);
-      showToast(`Gagal mengunggah: ${err.message}`, 'error');
-
-      // Reset state
-      confirmBtn.classList.remove('uploading');
-      confirmBtn.disabled = false;
-      cancelBtn.disabled = false;
-      closeBtn.disabled = false;
-      progressWrap.classList.remove('visible');
-      progressBar.style.width = '0%';
-      progressWrap.setAttribute('aria-valuenow', '0');
-    }
-  }
-
-  return { init, open, close };
-})();
-
+const PhotoUploader = createProfilePhotoUploader({
+  getToken: getProfileToken,
+  findStudent: studentId => allStudents.find(student => student.studentId === studentId),
+  onUploaded: filterStudents,
+});
 
 // ============================================================
 // Class / Student Loading
 // ============================================================
 
+let classCombobox;
+
 async function loadClasses() {
   try {
     const res = await fetch('/api/classes', {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${getProfileToken()}`
       }
     });
     const data = await res.json();
     if (data.status === 'ok') {
-      const select = document.getElementById('class-selector');
-      if (select) {
-        select.innerHTML = '<option value="" disabled selected>Pilih Kelas...</option>';
-        data.classes.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c.code;
-          opt.textContent = `Kelompok ${c.name}`;
-          select.appendChild(opt);
-        });
-      }
+      classCombobox.setItems(data.classes, 'Kelas tidak tersedia');
     } else {
+      classCombobox.setItems([], 'Gagal memuat kelas');
       showToast(data.message || "Gagal memuat daftar kelas", "error");
     }
   } catch (e) {
     console.error("Error loading classes:", e);
+    classCombobox.setItems([], 'Gagal memuat kelas');
     showToast("Gagal memuat daftar kelas", "error");
   }
 }
@@ -267,10 +56,12 @@ async function loadStudents(classCode) {
   }
   
   // Reset scroll position and remove scrolled class on loading new students
-  const appSection = document.querySelector('.app-section');
+  const appSection = document.getElementById('profile-view');
   if (appSection) {
     appSection.scrollTop = 0;
     appSection.classList.remove('scrolled');
+    const glass = appSection.querySelector('.profile-controls-glass');
+    if (glass) glass.style.opacity = '0';
   }
   
   if (listContainer) listContainer.innerHTML = '';
@@ -279,7 +70,7 @@ async function loadStudents(classCode) {
   try {
     const res = await fetch(`/api/students?classCode=${classCode}`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${getProfileToken()}`
       }
     });
     const data = await res.json();
@@ -566,46 +357,49 @@ function filterStudents() {
   renderStudents(filtered);
 }
 
-function showToast(message, type = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.add('show');
-  }, 10);
-  
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => {
-      toast.remove();
-    }, 300);
-  }, 3000);
-}
+let profileInitialized = false;
 
-document.addEventListener('DOMContentLoaded', () => {
+window.initializeProfileView = function initializeProfileView() {
+  if (profileInitialized) return;
+  profileInitialized = true;
   initTheme();
   PhotoUploader.init();
+  classCombobox = createSearchCombobox({
+    rootId: 'class-combobox',
+    triggerId: 'class-combobox-trigger',
+    popoverId: 'class-combobox-popover',
+    searchId: 'class-combobox-search',
+    listId: 'class-combobox-options',
+    emptyId: 'class-combobox-empty',
+    valueId: 'class-combobox-value',
+    selectId: 'class-selector',
+    placeholder: 'Pilih Kelas...',
+    getValue: item => item.code,
+    getLabel: item => `Kelompok ${item.name}`,
+    getSearchText: item => `${item.code} ${item.name}`
+  });
   loadClasses();
 
-  // Scroll listener for header minimization
-  const appSection = document.querySelector('.app-section');
+  // Fade in the sticky glass layer without changing layout during scrolling.
+  const appSection = document.getElementById('profile-view');
   if (appSection) {
+    const glass = appSection.querySelector('.profile-controls-glass');
+    let scrollFrame = 0;
     appSection.addEventListener('scroll', () => {
-      if (appSection.scrollTop > 50) {
-        appSection.classList.add('scrolled');
-      } else {
-        appSection.classList.remove('scrolled');
-      }
-    });
+      if (scrollFrame) return;
+      scrollFrame = requestAnimationFrame(() => {
+        const scrollProgress = Math.min(appSection.scrollTop / 24, 1);
+        if (glass) glass.style.opacity = String(scrollProgress);
+        appSection.classList.toggle('scrolled', appSection.scrollTop > 0);
+        scrollFrame = 0;
+      });
+    }, { passive: true });
   }
   
   const selector = document.getElementById('class-selector');
   if (selector) {
     selector.addEventListener('change', (e) => {
+      document.getElementById('app-container')?.classList.add('profile-expanded');
       const searchInput = document.getElementById('search-input');
       if (searchInput) {
         searchInput.style.display = 'block';
@@ -619,4 +413,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (searchInput) {
     searchInput.addEventListener('input', filterStudents);
   }
-});
+};
+
+window.closeProfileViewUI = function closeProfileViewUI() {
+  classCombobox?.close();
+  if (profileInitialized) PhotoUploader.close();
+};

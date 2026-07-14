@@ -81,7 +81,7 @@ The following environment variables are required (configured in Vercel or `.env`
   - Frontend: Vanilla JavaScript, avoid heavy frameworks to keep the load times fast for mobile data users.
 - **Security:**
   - All sensitive operations (Attendance, Dashboard) must be protected by JWT verification.
-  - Supabase images must be served via **Signed URLs** with short expiration (60s).
+  - Supabase images must be served through the authenticated same-origin `/api/photo` proxy; storage buckets remain private.
 - **Optimization:**
   - **Caching:** GAS logic uses `CacheService` (6h TTL) to minimize slow Sheet read operations.
   - **Payloads:** Keep the JSON payloads between Frontend and GAS lean.

@@ -796,9 +796,10 @@
   }
 
   .detail-name {
-    font-family: 'Cinzel', serif;
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-weight: 400;
     font-size: 1.25rem;
-    font-weight: bold;
     color: var(--text-primary);
     margin-bottom: 4px;
   }
@@ -887,4 +888,3 @@
   1. Query `http://localhost:5588/api/classes` and verify it responds with config list.
   2. Query `http://localhost:5588/api/students?classCode=SAB` and check returned array of students.
   3. Load `http://localhost:5588/profile` in browser, verify layout rendering, class selection, searching, and expandable card layout.
-
