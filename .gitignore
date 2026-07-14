@@ -13,6 +13,9 @@ build/
 .next/
 *.log
 coverage/
+storybook-static/
+tsconfig.tsbuildinfo
+plans/
 
 # OS specific
 .DS_Store
