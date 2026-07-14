@@ -209,14 +209,34 @@ try {
 
   const stickyProfileHeader = await page.evaluate(async () => {
     const profile = document.getElementById('profile-view');
+    const selectorElement = document.querySelector('#profile-view .profile-selector-container');
+    const summaryElement = document.getElementById('students-summary');
+    const restingHeight = selectorElement.getBoundingClientRect().height;
+    const restingSummaryHeight = summaryElement.getBoundingClientRect().height;
     profile.scrollTop = 100;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const header = document.getElementById('app-shell-header').getBoundingClientRect();
-    const selector = document.querySelector('#profile-view .profile-selector-container').getBoundingClientRect();
-    return { headerBottom: header.bottom, selectorTop: selector.top };
+    const selector = selectorElement.getBoundingClientRect();
+    const summary = summaryElement.getBoundingClientRect();
+    const search = document.getElementById('search-input').getBoundingClientRect();
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d');
+    context.fillStyle = getComputedStyle(selectorElement).backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    return {
+      headerBottom: header.bottom,
+      selectorTop: selector.top,
+      restingHeight,
+      scrolledHeight: selector.height,
+      restingSummaryHeight,
+      scrolledSummaryHeight: summary.height,
+      searchHeight: search.height,
+      backgroundAlpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
+    };
   });
-  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1) {
-    throw new Error(`Sticky profile controls left a gap below the header: ${JSON.stringify(stickyProfileHeader)}`);
+  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1 || stickyProfileHeader.scrolledHeight >= stickyProfileHeader.restingHeight || stickyProfileHeader.scrolledSummaryHeight >= stickyProfileHeader.restingSummaryHeight || stickyProfileHeader.searchHeight < 44 || stickyProfileHeader.backgroundAlpha !== 1) {
+    throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
   await page.locator('[data-app-view="scan"]').click();

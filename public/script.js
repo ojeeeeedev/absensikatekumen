@@ -767,11 +767,15 @@ class ScanQueue {
         if (el) el.style.display = 'none';
       });
 
-      // Render Skeleton Card Placeholder
+      // Render empty history state
       listContainer.style.justifyContent = 'center';
       listContainer.innerHTML = `
-        <div class="queue-row skeleton" aria-hidden="true">
-          <span class="skeleton-empty-text">Belum ada riwayat pemindaian</span>
+        <div class="queue-empty-state" role="status">
+          <span class="queue-empty-icon" aria-hidden="true">
+            <re-icon icon="qr" decorative></re-icon>
+          </span>
+          <strong>Belum ada riwayat pemindaian</strong>
+          <span>Pemindaian terbaru akan muncul di sini.</span>
         </div>
       `;
       return;

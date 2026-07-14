@@ -217,6 +217,20 @@ try {
   const remainingQueue = await page.evaluate(() => JSON.parse(localStorage.getItem('scan_queue')));
   if (remainingQueue.length !== 1 || remainingQueue[0].id !== 'pending-1') throw new Error('Bulk delete did not preserve pending history');
 
+  await page.evaluate(() => {
+    scanQueue.queue = [];
+    scanQueue.render();
+  });
+  const emptyHistory = await page.locator('.queue-empty-state').evaluate(emptyState => ({
+    icon: emptyState.querySelector('re-icon')?.getAttribute('icon'),
+    text: emptyState.textContent.replace(/\s+/g, ' ').trim(),
+    alignItems: getComputedStyle(emptyState).alignItems,
+    textAlign: getComputedStyle(emptyState).textAlign,
+  }));
+  if (emptyHistory.icon !== 'qr' || emptyHistory.alignItems !== 'center' || emptyHistory.textAlign !== 'center' || !emptyHistory.text.includes('Pemindaian terbaru akan muncul di sini.')) {
+    throw new Error(`Empty scan history is not centered with meaningful content: ${JSON.stringify(emptyHistory)}`);
+  }
+
   await page.setViewportSize({ width: 320, height: 720 });
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Scan history overflows at 320px');
   await page.emulateMedia({ reducedMotion: 'reduce' });
