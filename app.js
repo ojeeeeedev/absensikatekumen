@@ -15,13 +15,26 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const requestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: {
+    status: "error",
+    message: "Too many requests, please try again later."
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(requestLimiter);
+
 // Middleware to parse JSON and cookies
 app.use(express.json());
 app.use(cookieParser());
 
-// Request logging middleware
+// Log routing context only; request bodies can contain passwords and student data.
 app.use((req, res, next) => {
-  console.log(`[local-dev] ${req.method} ${req.url}`);
+  console.log('[local-dev]', req.method, req.url);
   next();
 });
 
@@ -132,7 +145,7 @@ app.get('/api/photo', async (req, res) => {
   }
 });
 
-// Route to upload private Supabase photos
+// Route to upload student photos through the same handler used by Vercel
 app.post('/api/upload-photo', async (req, res) => {
   try {
     const handler = (await import('./api/upload-photo.js')).default;
@@ -169,6 +182,9 @@ app.get('/api/version', async (req, res) => {
 // ==========================================
 // 3. STATIC FILES
 // ==========================================
+app.get('/profile.html', (req, res) => res.redirect(308, '/profile'));
+app.get('/profile', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 // Fallback for clean URLs - serve index.html for unknown HTML paths
@@ -180,6 +196,10 @@ app.get('*', (req, res, next) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server started locally on http://localhost:${PORT}`);
-});
+if (process.argv[1] === __filename) {
+  app.listen(PORT, () => {
+    console.log(`Server started locally on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

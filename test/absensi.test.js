@@ -109,4 +109,24 @@ describe('/api/absensi', () => {
     await handler(createMockRequest({ method: 'POST', headers: { authorization: `Bearer ${token()}` }, body: { studentId: '1/SAB/2', week: 'R1' } }), res);
     expect(res.statusCode).toBe(502);
   });
+
+  it('forwards configured GAS secret on valid attendance', async () => {
+    configure();
+    global.fetch = vi.fn().mockResolvedValue(jsonResponse({ status: 'ok' }));
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', headers: { authorization: `Bearer ${token()}` }, body: { studentId: '1/SAB/2', week: 'R1' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body).api_secret).toBe('gas-secret');
+  });
+
+  it.each([undefined, ''])('fails closed before fetch when GAS_SECRET_KEY is %s', async (value) => {
+    configure();
+    if (value === undefined) delete process.env.GAS_SECRET_KEY; else process.env.GAS_SECRET_KEY = value;
+    global.fetch = vi.fn();
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', headers: { authorization: `Bearer ${token()}` }, body: { studentId: '1/SAB/2', week: 'R1' } }), res);
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe('Server GAS authentication is not configured');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
 });
