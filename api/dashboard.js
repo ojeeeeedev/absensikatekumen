@@ -1,6 +1,11 @@
 import { verifyJwt } from './_auth.js';
 
 export default function handler(req, res) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.setHeader('Allow', 'GET, HEAD');
+    return res.status(405).send(`Method ${req.method} not allowed`);
+  }
+
   try {
     verifyJwt(req, { allowCookie: true });
   } catch {

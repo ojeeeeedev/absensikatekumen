@@ -32,3 +32,4 @@ Thumbs.db
 # Superpowers Brainstorming
 .superpowers/
 
+.env*

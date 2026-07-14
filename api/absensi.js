@@ -1,13 +1,39 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import { verifyJwt } from './_auth.js';
+import { clearAuthCookie, setAuthCookie, verifyJwt } from './_auth.js';
 import { getScriptMap, readJsonResponse } from './_gas-utils.js';
 import { bucketNameForClass, classCodeFromStudentId, findStudentPhoto, photoUrlForStudent } from './_supabase-utils.js';
 
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 5;
+// ponytail: warm-instance limiter; move to an edge/shared store if distributed bypass is observed.
+const loginFailures = globalThis.__loginFailures || new Map();
+globalThis.__loginFailures = loginFailures;
+
+function loginClientKey(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  return String(Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket?.remoteAddress || 'unknown')
+    .split(',')[0]
+    .trim();
+}
+
+function currentLoginFailures(req) {
+  const key = loginClientKey(req);
+  const entry = loginFailures.get(key);
+  if (!entry || entry.resetAt <= Date.now()) {
+    loginFailures.delete(key);
+    return { key, count: 0, resetAt: Date.now() + LOGIN_WINDOW_MS };
+  }
+  return { key, ...entry };
+}
+
+function recordLoginFailure(state) {
+  loginFailures.set(state.key, { count: state.count + 1, resetAt: state.resetAt });
+}
+
 export default async function handler(req, res) {
   // CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -42,23 +68,45 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     try {
       // Check if it's a login action
+      if (req.body.action === 'logout') {
+        clearAuthCookie(res);
+        return res.status(200).json({ status: 'ok' });
+      }
+
+      if (req.body.action === 'session') {
+        try {
+          verifyJwt(req, { allowCookie: true });
+          return res.status(200).json({ status: 'ok' });
+        } catch {
+          return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        }
+      }
+
       if (req.body.action === 'login') {
-        if (!SHARED_SECRET || !JWT_SECRET) {
+        if (!SHARED_SECRET || Buffer.byteLength(SHARED_SECRET) < 12 || !JWT_SECRET || Buffer.byteLength(JWT_SECRET) < 32) {
           return res.status(500).json({ status: 'error', message: 'Server authentication is not configured' });
+        }
+        const failureState = currentLoginFailures(req);
+        if (failureState.count >= LOGIN_MAX_FAILURES) {
+          res.setHeader('Retry-After', String(Math.ceil((failureState.resetAt - Date.now()) / 1000)));
+          return res.status(429).json({ status: 'error', message: 'Too many login attempts' });
         }
         const providedSecret = Buffer.from(String(req.body.secret || ''));
         const storedSecret = Buffer.from(String(SHARED_SECRET || ''));
         
         if (providedSecret.length === storedSecret.length && 
             crypto.timingSafeEqual(providedSecret, storedSecret)) {
+          loginFailures.delete(failureState.key);
           // Secret is correct, issue a token
           const token = jwt.sign(
             { authorized: true }, // payload
             JWT_SECRET,
-            { expiresIn: '8h' } // Token expires in 8 hours
+            { expiresIn: '1h' }
           );
-          return res.status(200).json({ status: 'ok', token });
+          setAuthCookie(res, token);
+          return res.status(200).json({ status: 'ok' });
         } else {
+          recordLoginFailure(failureState);
           // Incorrect secret
           return res.status(401).json({ status: 'error', message: 'Password salah' });
         }
@@ -67,7 +115,7 @@ export default async function handler(req, res) {
       // If not login, handle it as an attendance submission
       // --- Token validation for this specific action is required ---
       try {
-        verifyJwt(req);
+        verifyJwt(req, { allowCookie: true });
       } catch (err) {
         return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
       }

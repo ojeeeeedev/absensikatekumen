@@ -13,9 +13,9 @@ const storage = {
 };
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn(() => ({ storage })) }));
 
-import handler, { parseMultipart } from '../api/upload-photo.js';
+import handler, { matchesMimeSignature, parseMultipart } from '../api/upload-photo.js';
 
-const JWT_SECRET = 'test-secret';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-characters';
 const BOUNDARY = 'test-boundary';
 
 function multipartBody({ studentId, file, mimeType = 'image/jpeg' } = {}) {
@@ -134,6 +134,20 @@ describe('/api/upload-photo multipart validation', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body.message).toMatch(/JPG, PNG, atau WebP/);
+  });
+
+  it('rejects bytes that do not match the declared image type', async () => {
+    configureEnvironment();
+    const req = streamRequest(multipartBody({
+      studentId: '2025/SAB/001',
+      file: Buffer.from('not-a-jpeg'),
+      mimeType: 'image/jpeg',
+    }));
+    const res = createMockResponse();
+    await handler(req, res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.message).toMatch(/format gambar/);
+    expect(matchesMimeSignature(Buffer.from('not-a-jpeg'), 'image/jpeg')).toBe(false);
   });
 
   it('stops reading requests that exceed the upload limit', async () => {

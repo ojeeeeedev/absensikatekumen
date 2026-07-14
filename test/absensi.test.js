@@ -6,7 +6,7 @@ vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }));
 import { createClient } from '@supabase/supabase-js';
 import handler from '../api/absensi.js';
 
-const JWT_SECRET = 'test-jwt';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-characters';
 const GAS_URL = 'https://gas.example/exec';
 const originalEnv = { ...process.env };
 const originalFetch = global.fetch;
@@ -29,12 +29,34 @@ describe('/api/absensi', () => {
     process.env.GAS_SECRET_KEY = 'gas-secret';
   }
 
-  it('returns an HS256 authorized token for the configured login secret', async () => {
+  it('sets an HttpOnly session cookie without exposing the token body', async () => {
     configure();
     const res = createMockResponse();
     await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: 'shared-secret' } }), res);
     expect(res.statusCode).toBe(200);
-    expect(jwt.verify(res.body.token, JWT_SECRET, { algorithms: ['HS256'] })).toMatchObject({ authorized: true });
+    expect(res.body).toEqual({ status: 'ok' });
+    const cookie = res.headers['Set-Cookie'];
+    expect(cookie).toContain('HttpOnly');
+    expect(cookie).toContain('Secure');
+    expect(cookie).toContain('SameSite=Strict');
+    expect(cookie).toContain('Max-Age=3600');
+    const signedToken = decodeURIComponent(cookie.match(/^auth_token=([^;]+)/)[1]);
+    expect(jwt.verify(signedToken, JWT_SECRET, { algorithms: ['HS256'] })).toMatchObject({ authorized: true });
+    expect(res.body.token).toBeUndefined();
+  });
+
+  it('validates and clears cookie sessions', async () => {
+    configure();
+    const signedToken = token();
+    const sessionRes = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', headers: { cookie: `auth_token=${signedToken}` }, body: { action: 'session' } }), sessionRes);
+    expect(sessionRes.statusCode).toBe(200);
+
+    const logoutRes = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', body: { action: 'logout' } }), logoutRes);
+    expect(logoutRes.statusCode).toBe(200);
+    expect(logoutRes.headers['Set-Cookie']).toContain('Max-Age=0');
+    expect(logoutRes.headers['Set-Cookie']).toContain('HttpOnly');
   });
 
   it('fails closed when AUTH_SECRET is missing', async () => {
@@ -65,6 +87,29 @@ describe('/api/absensi', () => {
     expect(createClient).not.toHaveBeenCalled();
   });
 
+  it('fails closed when authentication secrets are below the minimum length', async () => {
+    configure();
+    process.env.AUTH_SECRET = 'too-short';
+    process.env.JWT_SECRET = 'also-too-short';
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: 'too-short' } }), res);
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe('Server authentication is not configured');
+    expect(res.headers['Set-Cookie']).toBeUndefined();
+  });
+
+  it('rejects a correctly signed token without the authorized claim', async () => {
+    configure();
+    const signedToken = jwt.sign({ role: 'facilitator' }, JWT_SECRET, { algorithm: 'HS256' });
+    const res = createMockResponse();
+    await handler(createMockRequest({
+      method: 'POST',
+      headers: { cookie: `auth_token=${signedToken}` },
+      body: { action: 'session' },
+    }), res);
+    expect(res.statusCode).toBe(401);
+  });
+
   it('rejects a wrong login secret without calling GAS', async () => {
     configure();
     global.fetch = vi.fn();
@@ -72,6 +117,22 @@ describe('/api/absensi', () => {
     await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: 'wrong' } }), res);
     expect(res.statusCode).toBe(401);
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rate limits repeated failed logins on the deployed handler path', async () => {
+    configure();
+    const statuses = [];
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const res = createMockResponse();
+      await handler(createMockRequest({
+        method: 'POST',
+        headers: { 'x-forwarded-for': '198.51.100.25' },
+        body: { action: 'login', secret: `wrong-${attempt}` },
+      }), res);
+      statuses.push(res.statusCode);
+      if (attempt === 5) expect(res.headers['Retry-After']).toBeDefined();
+    }
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
   });
 
   it('rejects attendance without a bearer token', async () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { createMockRequest, createMockResponse } from './helpers.js';
 
@@ -21,7 +21,7 @@ import handler from '../api/init-bucket.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const JWT_SECRET = 'test-secret';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-characters';
 
 function makeToken() {
   return jwt.sign({ authorized: true }, JWT_SECRET, { algorithm: 'HS256' });
@@ -38,11 +38,20 @@ describe('/api/init-bucket', () => {
   const originalJwtSecret = process.env.JWT_SECRET;
   const originalSupabaseUrl = process.env.SUPABASE_URL;
   const originalSupabaseKey = process.env.SUPABASE_KEY;
+  const originalScriptMap = process.env.VERCEL_SCRIPT_MAP_JSON;
+
+  beforeEach(() => {
+    process.env.VERCEL_SCRIPT_MAP_JSON = JSON.stringify({
+      SAB: 'https://gas.example/sab',
+      TOM: 'https://gas.example/tom',
+    });
+  });
 
   afterEach(() => {
     process.env.JWT_SECRET = originalJwtSecret;
     process.env.SUPABASE_URL = originalSupabaseUrl;
     process.env.SUPABASE_KEY = originalSupabaseKey;
+    process.env.VERCEL_SCRIPT_MAP_JSON = originalScriptMap;
     vi.clearAllMocks();
   });
 
@@ -53,7 +62,7 @@ describe('/api/init-bucket', () => {
     const res = createMockResponse();
     await handler(req, res);
     expect(res.statusCode).toBe(200);
-    expect(res.headers['Access-Control-Allow-Origin']).toBe('*');
+    expect(res.headers['Access-Control-Allow-Origin']).toBeUndefined();
   });
 
   it('should return 405 for non-POST methods', async () => {
@@ -117,6 +126,21 @@ describe('/api/init-bucket', () => {
     const res = createMockResponse();
     await handler(req, res);
     expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects bucket creation for an unconfigured class', async () => {
+    process.env.JWT_SECRET = JWT_SECRET;
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_KEY = 'anon-key';
+    const req = createMockRequest({
+      method: 'POST',
+      headers: { authorization: `Bearer ${makeToken()}` },
+      body: { classCode: 'URS' },
+    });
+    const res = createMockResponse();
+    await handler(req, res);
+    expect(res.statusCode).toBe(403);
+    expect(createClient).not.toHaveBeenCalled();
   });
 
   it('should return 500 when Supabase env vars are missing', async () => {

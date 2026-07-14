@@ -5,7 +5,7 @@ import { createMockRequest, createMockResponse } from './helpers.js';
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }));
 import handler from '../api/students.js';
 
-const JWT_SECRET = 'test-jwt';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-characters';
 const GAS_URL = 'https://gas.example/students';
 const originalEnv = { ...process.env };
 const originalFetch = global.fetch;

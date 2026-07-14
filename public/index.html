@@ -5,15 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sistem Presensi Katekumen Dewasa</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
-    <script>
-      (function() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        window.__themeLogoSrc = savedTheme === 'dark' ? 'assets/pewartaan_invert.png' : 'assets/pewartaan_normal.png';
-        window.__setThemeLogo = (img) => { img.src = window.__themeLogoSrc; };
-      })();
-    </script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="bootstrap.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+" crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://script.google.com">
@@ -44,54 +37,32 @@
           <span>Profil Katekumen</span>
         </a>
       </div>
-      <a href="#" class="nav-item logout-btn" onclick="handleLogout(event)" aria-label="Keluar">
+      <a href="#" id="logout-btn" class="nav-item logout-btn" aria-label="Keluar">
         <re-icon icon="logout" decorative></re-icon>
       </a>
     </nav>
 
     <main id="app-container" class="glass-container">
-      <script>
-        (function() {
-          const cookieToken = document.cookie.split('; ').find(value => value.startsWith('auth_token='))?.split('=')[1];
-          const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
-          if (cookieToken && !sessionStorage.getItem('authToken')) {
-            sessionStorage.setItem('authToken', decodeURIComponent(cookieToken));
-          }
-          const container = document.currentScript.parentElement;
-          if (sessionToken) {
-            container.classList.add('state-scanning');
-            const savedWeek = localStorage.getItem('selectedWeek');
-            if (!savedWeek) {
-              container.classList.add('needs-topic');
-            }
-            const nav = document.getElementById('app-nav');
-            if (nav) nav.style.display = 'flex';
-          } else {
-            container.classList.add('state-auth');
-          }
-        })();
-      </script>
-      
       <!-- ==========================================
            1. STATE: AUTH (LOGIN SCREEN)
            ========================================== -->
       <div id="login-section" class="app-section">
         <div class="login-header-branding">
-          <img alt="Logo Pewartaan" width="64" height="64" class="theme-logo" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;"><script>__setThemeLogo(document.currentScript.previousElementSibling)</script>
+          <img alt="Logo Pewartaan" width="64" height="64" class="theme-logo" tabindex="0" role="button" aria-label="Ganti Tema" style="cursor: pointer;">
           <div class="branding-text">
             <div style="font-weight: bold;">Subseksi Katekumen Dewasa</div>
             <div>Paroki St. Petrus - Katedral</div>
             <div>Keuskupan Bandung</div>
           </div>
         </div>
-        <div id="login-error-box" class="login-error-message" style="display: none;" onmouseover="hideLoginError()"></div>
+        <div id="login-error-box" class="login-error-message" style="display: none;"></div>
         <div class="input-wrapper">
           <label for="login-input" class="sr-only">Password</label>
-          <input type="password" id="login-input" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter') handleLogin()" oninput="hideLoginError()">
+          <input type="password" id="login-input" placeholder="Masukkan password...">
           <re-icon id="login-success-icon" icon="check-circle" style="display: none;" decorative></re-icon>
-          <re-icon id="password-toggle" icon="eye-off" class="password-toggle-icon" onclick="togglePasswordVisibility()" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); togglePasswordVisibility(); }"></re-icon>
+          <re-icon id="password-toggle" icon="eye-off" class="password-toggle-icon" role="button" tabindex="0" aria-label="Tampilkan password" aria-pressed="false"></re-icon>
         </div>
-        <button id="login-btn" onclick="handleLogin()">
+        <button id="login-btn">
           <span>Masuk</span>
           <re-icon icon="arrow-circle-right2" decorative></re-icon>
         </button>
@@ -103,7 +74,7 @@
       </div>
 
       <header id="app-shell-header" class="header-container app-shell-header">
-        <img class="header-logo theme-logo" alt="Logo Pewartaan" onclick="toggleTheme()" tabindex="0" role="button" aria-label="Ganti Tema" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); toggleTheme(); }" style="cursor: pointer;"><script>__setThemeLogo(document.currentScript.previousElementSibling)</script>
+        <img class="header-logo theme-logo" alt="Logo Pewartaan" tabindex="0" role="button" aria-label="Ganti Tema" style="cursor: pointer;">
         <div class="header-text">
           <h1 id="app-view-title" tabindex="-1">Sistem Presensi</h1>
           <h2>Katekumen Dewasa - Paroki St. Petrus</h2>
@@ -184,8 +155,8 @@
                     <p id="history-confirm-description" class="confirm-message">Semua QR code yang berhasil dipindai tidak akan terpengaruh oleh aksi ini</p>
                   </div>
                   <div class="confirm-actions">
-                    <button id="confirm-btn-no" type="button" class="confirm-btn no" onclick="closeDeleteConfirm(event)">Batal</button>
-                    <button id="confirm-btn-yes" type="button" class="confirm-btn yes" onclick="confirmDeleteHistory(event)">Hapus</button>
+                    <button id="confirm-btn-no" type="button" class="confirm-btn no">Batal</button>
+                    <button id="confirm-btn-yes" type="button" class="confirm-btn yes">Hapus</button>
                   </div>
                 </div>
               </div>
@@ -219,7 +190,7 @@
 
               <!-- Carousel Wrapper -->
               <div class="carousel-container-outer">
-                <button id="carousel-prev-btn" type="button" class="carousel-nav-btn prev" aria-label="Slide sebelumnya" style="display: none;" onclick="scrollCarousel(-1)">
+                <button id="carousel-prev-btn" type="button" class="carousel-nav-btn prev" aria-label="Slide sebelumnya" style="display: none;">
                   <re-icon icon="chevron-left" decorative></re-icon>
                 </button>
                 
@@ -231,7 +202,7 @@
                   </div>
                 </div>
                 
-                <button id="carousel-next-btn" type="button" class="carousel-nav-btn next" aria-label="Slide berikutnya" style="display: none;" onclick="scrollCarousel(1)">
+                <button id="carousel-next-btn" type="button" class="carousel-nav-btn next" aria-label="Slide berikutnya" style="display: none;">
                   <re-icon icon="chevron-right" decorative></re-icon>
                 </button>
               </div>
@@ -306,10 +277,10 @@
     </main>
 
     <!-- Modal Student Detail -->
-    <div id="student-detail-modal" class="student-modal" style="display: none;" onclick="closeStudentModal(event)" role="dialog" aria-modal="true" aria-labelledby="modal-student-name">
-      <div class="modal-content student-modal-content" onclick="event.stopPropagation()">
+    <div id="student-detail-modal" class="student-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modal-student-name">
+      <div id="student-modal-content" class="modal-content student-modal-content">
         <div class="student-modal-header">
-          <re-icon icon="close-circle2" class="student-modal-close-icon" onclick="closeStudentModal(event)" role="button" tabindex="0" aria-label="Tutup detail katekumen" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeStudentModal(event); }"></re-icon>
+          <re-icon id="student-modal-close" icon="close-circle2" class="student-modal-close-icon" role="button" tabindex="0" aria-label="Tutup detail katekumen"></re-icon>
         </div>
         <div class="student-modal-body">
           <img id="modal-student-photo" class="modal-student-photo" src="/assets/favicon.png" alt="Foto Katekumen">
@@ -360,7 +331,7 @@
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
-    <script src="https://unpkg.com/reicon/cdn/reicon.min.js"></script>
+    <script src="https://unpkg.com/reicon@1.0.0/cdn/reicon.min.js" integrity="sha384-LUiFPYG30T/o02xtFSWN7UHwnPXYsa+w8I0p9aq9pkEzrpzNThD0xQimAdpBrQqI" crossorigin="anonymous"></script>
     <script src="icons.js"></script>
     <script src="toast.js"></script>
     <script src="theme.js"></script>

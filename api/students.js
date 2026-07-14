@@ -9,7 +9,6 @@ import { bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameFo
  * not block the roster response; GAS/auth/configuration failures do.
  */
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -22,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    verifyJwt(req);
+    verifyJwt(req, { allowCookie: true });
   } catch (err) {
     return res.status(401).json({ status: "error", message: "Akses ditolak: Token tidak valid" });
   }

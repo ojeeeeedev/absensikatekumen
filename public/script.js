@@ -287,7 +287,7 @@ function animateContainerResize(fromHeight, animate) {
 }
 
 async function applyAppView(view, { historyMode = 'push', focus = true } = {}) {
-  if (!sessionStorage.getItem('authToken')) {
+  if (sessionStorage.getItem('authState') !== 'authenticated') {
     await setAppState(0);
     return;
   }
@@ -419,7 +419,7 @@ window.handleLogin = async function() {
     });
     const data = await response.json();
 
-    if (data.status === 'ok' && data.token) {
+    if (data.status === 'ok') {
       successIcon.style.display = 'block';
       
       setTimeout(() => {
@@ -427,9 +427,7 @@ window.handleLogin = async function() {
         loginLoader.style.display = 'flex';
 
         setTimeout(() => {
-          sessionStorage.setItem('authToken', data.token);
-          // Set the cookie for server-side middleware and profile page access
-          document.cookie = `auth_token=${data.token}; path=/; max-age=28800; SameSite=Lax`;
+          sessionStorage.setItem('authState', 'authenticated');
           loginLoader.style.display = 'none';
           
           initializeApp();
@@ -596,13 +594,9 @@ class ScanQueue {
     this.save();
 
     try {
-      const token = sessionStorage.getItem('authToken');
       const response = await fetch("/api/absensi", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          "Authorization": `Bearer ${token}` 
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId: pendingItem.studentId, week: pendingItem.week }),
       });
 
@@ -612,9 +606,7 @@ class ScanQueue {
           pendingItem.status = 'pending';
           this.isProcessing = false;
           this.save();
-          sessionStorage.removeItem('authToken');
-          // Clear the auth_token cookie
-          document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          sessionStorage.removeItem('authState');
           showStatus("Sesi Habis", "error", "Silakan login kembali.");
           if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           triggerVisualFlash('error');
@@ -1282,13 +1274,13 @@ window.onload = async () => {
     scanQueue.process();
   });
 
-  const cookieToken = getCookie('auth_token');
-  const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
-  if (sessionToken) {
-    sessionStorage.setItem('authToken', sessionToken);
-    // Sync the auth_token cookie with the sessionStorage token
-    document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
-    
+  const sessionResponse = await fetch('/api/absensi', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'session' }),
+  });
+  if (sessionResponse.ok) {
+    sessionStorage.setItem('authState', 'authenticated');
     initializeApp();
     const savedWeek = localStorage.getItem('selectedWeek');
     const savedTopicName = localStorage.getItem('selectedTopicName');
@@ -1300,6 +1292,7 @@ window.onload = async () => {
     
     await window.navigateToAppView(viewFromPath(), { historyMode: 'replace', focus: false });
   } else {
+    sessionStorage.removeItem('authState');
     await setAppState(0); // Authentication screen
   }
 }

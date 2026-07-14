@@ -1,10 +1,18 @@
 // Centralized Session & Activity Management
 (function() {
   // Expose handleLogout globally
-  window.handleLogout = function(e) {
+  window.handleLogout = async function(e) {
     if (e) e.preventDefault();
-    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-    sessionStorage.removeItem('authToken');
+    try {
+      await fetch('/api/absensi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout' }),
+      });
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    }
+    sessionStorage.removeItem('authState');
     localStorage.setItem('logoutTimestamp', Date.now().toString());
     window.location.href = '/';
   };
@@ -15,7 +23,7 @@
     const now = Date.now();
     if (now - lastActivityUpdate > 30000) { // throttle to 30s
       lastActivityUpdate = now;
-      if (sessionStorage.getItem('authToken')) {
+      if (sessionStorage.getItem('authState') === 'authenticated') {
         localStorage.setItem('lastActiveTimestamp', now.toString());
       }
     }
@@ -27,7 +35,7 @@
   window.addEventListener('touchstart', updateActivity);
 
   function checkTopicExpiry() {
-    const loggedIn = !!sessionStorage.getItem('authToken');
+    const loggedIn = sessionStorage.getItem('authState') === 'authenticated';
     const now = Date.now();
     const tenMinutes = 10 * 60 * 1000;
 

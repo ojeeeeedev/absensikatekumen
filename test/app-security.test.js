@@ -27,6 +27,12 @@ describe('local server security middleware', () => {
 
       const firstResponse = await fetch(`${baseUrl}/api/version?probe=%25s`);
       expect(firstResponse.status).toBe(200);
+      expect(firstResponse.headers.get('content-security-policy')).toContain("script-src 'self' https://unpkg.com");
+      expect(firstResponse.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
+      expect(firstResponse.headers.get('strict-transport-security')).toContain('max-age=31536000');
+      expect(firstResponse.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(firstResponse.headers.get('x-frame-options')).toBe('DENY');
+      expect(firstResponse.headers.get('x-powered-by')).toBeNull();
       expect(log).toHaveBeenCalledWith(
         '[local-dev]',
         'GET',

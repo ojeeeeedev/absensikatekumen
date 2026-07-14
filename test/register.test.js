@@ -30,4 +30,11 @@ describe('/api/register', () => {
     expect(res.statusCode).toBe(500);
     expect(res.body).toContain('Daftar URL not configured');
   });
+
+  it('rejects unsupported methods', () => {
+    const res = createMockResponse();
+    handler(createMockRequest({ method: 'POST' }), res);
+    expect(res.statusCode).toBe(405);
+    expect(res.headers.Allow).toBe('GET, HEAD');
+  });
 });

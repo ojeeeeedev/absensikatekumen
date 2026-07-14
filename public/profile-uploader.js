@@ -3,7 +3,7 @@
  * Student lookup and list refresh stay with profile.js through callbacks so this
  * controller does not depend on that page's data model.
  */
-window.createProfilePhotoUploader = function createProfilePhotoUploader({ getToken, findStudent, onUploaded }) {
+window.createProfilePhotoUploader = function createProfilePhotoUploader({ findStudent, onUploaded }) {
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -161,9 +161,6 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
 
       const res = await fetch('/api/upload-photo', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`,
-        },
         body: formData,
       });
 

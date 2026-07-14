@@ -11,8 +11,8 @@ describe('/api/version', () => {
     await handler(req, res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.headers['Access-Control-Allow-Origin']).toBe('*');
-    expect(res.headers['Access-Control-Allow-Methods']).toBe('GET, OPTIONS');
+    expect(res.headers['Access-Control-Allow-Origin']).toBeUndefined();
+    expect(res.headers['Access-Control-Allow-Methods']).toBe('GET, HEAD, OPTIONS');
   });
 
   it('should return the correct version from package.json', async () => {
@@ -23,6 +23,13 @@ describe('/api/version', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ version: pkg.version });
-    expect(res.headers['Access-Control-Allow-Origin']).toBe('*');
+    expect(res.headers['Access-Control-Allow-Origin']).toBeUndefined();
+  });
+
+  it('rejects unsupported methods', async () => {
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'POST' }), res);
+    expect(res.statusCode).toBe(405);
+    expect(res.headers.Allow).toBe('GET, HEAD, OPTIONS');
   });
 });

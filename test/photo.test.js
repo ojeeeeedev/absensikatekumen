@@ -15,7 +15,7 @@ vi.mock('@supabase/supabase-js', () => ({
 
 import handler from '../api/photo.js';
 
-const JWT_SECRET = 'test-secret';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-characters';
 
 function makeToken() {
   return jwt.sign({ authorized: true }, JWT_SECRET, { algorithm: 'HS256' });

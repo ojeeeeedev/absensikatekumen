@@ -15,6 +15,17 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'; img-src 'self' data: blob:; object-src 'none'; script-src 'self' https://unpkg.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; worker-src 'self' blob:");
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  next();
+});
+
 const requestLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
@@ -68,6 +79,16 @@ app.get('/daftar', async (req, res) => {
   }
 });
 
+app.all('/api/register', async (req, res) => {
+  try {
+    const handler = (await import('./api/register.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/register:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 // Route for dashboard rewrite with cookie check matching middleware.js
 app.get('/dashboard', async (req, res) => {
   const token = req.cookies.auth_token;
@@ -102,7 +123,7 @@ app.post('/api/absensi', async (req, res) => {
 });
 
 // Route to handle dashboard direct API call
-app.get('/api/dashboard', async (req, res) => {
+app.all('/api/dashboard', async (req, res) => {
   try {
     const handler = (await import('./api/dashboard.js')).default;
     await handler(req, res);
@@ -169,7 +190,7 @@ app.post('/api/init-bucket', bucketInitLimiter, async (req, res) => {
 
 
 // Route to handle version retrieval
-app.get('/api/version', async (req, res) => {
+app.all('/api/version', async (req, res) => {
   try {
     const handler = (await import('./api/version.js')).default;
     await handler(req, res);

@@ -33,7 +33,7 @@ try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
   await context.addInitScript(() => {
-    sessionStorage.setItem('authToken', 'preview');
+    sessionStorage.setItem('authState', 'authenticated');
     localStorage.setItem('hasSeenOnboardingV2', 'true');
     localStorage.setItem('selectedWeek', '0');
     localStorage.setItem('selectedTopicName', 'Pembukaan Kelas');
@@ -44,6 +44,10 @@ try {
     ]));
   });
 
+  await context.route('**/api/absensi', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ status: 'ok' }),
+  }));
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.evaluate(() => {
