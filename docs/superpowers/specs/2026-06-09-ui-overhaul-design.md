@@ -12,7 +12,7 @@ Pembaruan ini bertujuan untuk merancang ulang antarmuka aplikasi menjadi modern,
 ## 2. Sistem Visual & Tipografi
 
 ### A. Tipografi
-- **Branding & Judul Utama:** `Cinzel` (serif, elegan, cathedral-style).
+- **Branding & Judul Utama:** `DM Serif Display Regular Italic` (serif, elegan, cathedral-style).
 - **UI Kontrol & Konten:** `Inter` atau `Outfit` (sans-serif, clean, modern).
 
 ### B. Variabel CSS Tema (CSS Variables)

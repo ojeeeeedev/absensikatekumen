@@ -228,6 +228,8 @@ const PhotoUploader = (() => {
 // Class / Student Loading
 // ============================================================
 
+let classCombobox;
+
 async function loadClasses() {
   try {
     const res = await fetch('/api/classes', {
@@ -237,21 +239,14 @@ async function loadClasses() {
     });
     const data = await res.json();
     if (data.status === 'ok') {
-      const select = document.getElementById('class-selector');
-      if (select) {
-        select.innerHTML = '<option value="" disabled selected>Pilih Kelas...</option>';
-        data.classes.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c.code;
-          opt.textContent = `Kelompok ${c.name}`;
-          select.appendChild(opt);
-        });
-      }
+      classCombobox.setItems(data.classes, 'Kelas tidak tersedia');
     } else {
+      classCombobox.setItems([], 'Gagal memuat kelas');
       showToast(data.message || "Gagal memuat daftar kelas", "error");
     }
   } catch (e) {
     console.error("Error loading classes:", e);
+    classCombobox.setItems([], 'Gagal memuat kelas');
     showToast("Gagal memuat daftar kelas", "error");
   }
 }
@@ -566,29 +561,23 @@ function filterStudents() {
   renderStudents(filtered);
 }
 
-function showToast(message, type = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  
-  container.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.add('show');
-  }, 10);
-  
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => {
-      toast.remove();
-    }, 300);
-  }, 3000);
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   PhotoUploader.init();
+  classCombobox = createSearchCombobox({
+    rootId: 'class-combobox',
+    triggerId: 'class-combobox-trigger',
+    popoverId: 'class-combobox-popover',
+    searchId: 'class-combobox-search',
+    listId: 'class-combobox-options',
+    emptyId: 'class-combobox-empty',
+    valueId: 'class-combobox-value',
+    selectId: 'class-selector',
+    placeholder: 'Pilih Kelas...',
+    getValue: item => item.code,
+    getLabel: item => `Kelompok ${item.name}`,
+    getSearchText: item => `${item.code} ${item.name}`
+  });
   loadClasses();
 
   // Scroll listener for header minimization

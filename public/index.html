@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://script.google.com">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Google+Sans+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@300;400;500;600&family=Google+Sans+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
 
@@ -30,17 +30,7 @@
 
     <!-- Loading screen for login -->
     <div id="login-loader" style="display: none;">
-      <svg class="grid-column-scan-loader spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
-        <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
-        <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
-        <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
-        <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
-        <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
-        <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
-        <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
-        <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
-      </svg>
+      <app-spinner class="app-spinner spinner" aria-hidden="true"></app-spinner>
     </div>
 
     <nav class="app-nav" id="app-nav" style="display: none;">
@@ -127,42 +117,52 @@
             <re-icon icon="info-circle" decorative></re-icon>
             <p>Silakan pilih topik pertemuan hari ini sebelum memulai pemindaian QR katekumen.</p>
           </div>
-          <button id="topic-trigger-large" class="topic-selector-btn-large" onclick="openTopicModal()">
-            <span>Pilih Topik Pertemuan...</span>
-            <re-icon icon="chevron-down" decorative></re-icon>
-          </button>
+          <div class="search-combobox" id="topic-combobox-large">
+            <select id="topic-selector-large" hidden aria-hidden="true" tabindex="-1">
+              <option value="" disabled selected>Pilih Topik Pertemuan...</option>
+            </select>
+            <button id="topic-trigger-large" class="topic-selector-btn-large search-combobox-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="topic-combobox-large-popover" disabled>
+              <span class="topic-selector-label">
+                <re-icon icon="calendar" decorative></re-icon>
+                <span id="topic-trigger-large-label">Pilih Topik Pertemuan...</span>
+              </span>
+              <span class="search-combobox-arrow" aria-hidden="true"></span>
+            </button>
+            <div id="topic-combobox-large-popover" class="search-combobox-popover topic-combobox-popover" hidden>
+              <label for="topic-combobox-large-search" class="sr-only">Cari topik pertemuan</label>
+              <input id="topic-combobox-large-search" class="search-combobox-search" type="search" placeholder="Cari topik..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="topic-combobox-large-options">
+              <div id="topic-combobox-large-options" class="search-combobox-options" role="listbox" aria-label="Daftar topik pertemuan"></div>
+              <p id="topic-combobox-large-empty" class="search-combobox-empty" hidden>Topik tidak ditemukan.</p>
+            </div>
+          </div>
         </div>
 
         <!-- STATE 2: ACTIVE SCANNING -->
         <div id="scanning-panel" class="panel-state">
-          <!-- Mini Active Topic Bar (Acts as a dropdown) -->
-          <div class="active-topic-bar" 
-               role="button" 
-               tabindex="0" 
-               aria-haspopup="dialog" 
-               onclick="openTopicModal()"
-               onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); openTopicModal(); }">
-            <div class="topic-info">
-              <re-icon icon="calendar" decorative></re-icon>
-              <span id="active-topic-name">Belum memilih topik</span>
+          <!-- Searchable active topic selector -->
+          <div class="search-combobox" id="topic-combobox-active">
+            <select id="topic-selector-active" hidden aria-hidden="true" tabindex="-1">
+              <option value="" disabled selected>Ketuk di sini untuk memilih topik...</option>
+            </select>
+            <button id="topic-combobox-trigger" class="active-topic-bar class-selector-control search-combobox-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="topic-combobox-popover" disabled>
+              <span class="topic-info">
+                <re-icon icon="calendar" decorative></re-icon>
+                <span id="active-topic-name">Ketuk di sini untuk memilih topik...</span>
+              </span>
+              <span class="search-combobox-arrow" aria-hidden="true"></span>
+            </button>
+            <div id="topic-combobox-popover" class="search-combobox-popover topic-combobox-popover" hidden>
+              <label for="topic-combobox-search" class="sr-only">Cari topik pertemuan</label>
+              <input id="topic-combobox-search" class="search-combobox-search" type="search" placeholder="Cari topik..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="topic-combobox-options">
+              <div id="topic-combobox-options" class="search-combobox-options" role="listbox" aria-label="Daftar topik pertemuan"></div>
+              <p id="topic-combobox-empty" class="search-combobox-empty" hidden>Topik tidak ditemukan.</p>
             </div>
-            <re-icon icon="chevron-down" class="dropdown-arrow-icon" decorative></re-icon>
           </div>
 
           <!-- Camera Viewer -->
           <div id="reader-container">
             <div id="camera-loader">
-              <svg class="grid-column-scan-loader spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
-                <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
-                <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
-                <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
-                <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
-                <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
-                <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
-                <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
-                <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
-              </svg>
+              <app-spinner class="app-spinner spinner" aria-hidden="true"></app-spinner>
               <span>Memuat Kamera...</span>
             </div>
             <div id="reader"></div>
@@ -172,6 +172,19 @@
 
             <!-- Queue History List -->
             <div id="queue-history-panel">
+              <div id="history-confirm-overlay" class="confirm-overlay" style="display: none;" role="alertdialog" aria-modal="true" aria-labelledby="history-confirm-title" aria-describedby="history-confirm-description">
+                <div class="confirm-content">
+                  <div>
+                    <strong id="history-confirm-title" class="confirm-title">Hapus riwayat pemindaian?</strong>
+                    <p id="history-confirm-description" class="confirm-message">Semua QR code yang berhasil dipindai tidak akan terpengaruh oleh aksi ini</p>
+                  </div>
+                  <div class="confirm-actions">
+                    <button id="confirm-btn-no" type="button" class="confirm-btn no" onclick="closeDeleteConfirm(event)">Batal</button>
+                    <button id="confirm-btn-yes" type="button" class="confirm-btn yes" onclick="confirmDeleteHistory(event)">Hapus</button>
+                  </div>
+                </div>
+              </div>
+
               <!-- Segmented Progress Bar Area -->
               <div id="history-progress-area" class="history-progress-container">
                 <div class="progress-bar-row">
@@ -181,20 +194,7 @@
                     <div id="segment-error" class="progress-segment error" style="width: 0%;"></div>
                     <div id="segment-pending" class="progress-segment pending" style="width: 0%;"></div>
                   </div>
-                  <svg id="history-sync-spinner" class="grid-column-scan-loader spinner-small" style="display: none; margin-right: 4px;" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
-                    <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
-                    <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
-                    <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
-                    <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
-                    <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
-                    <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
-                    <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
-                    <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
-                  </svg>
-                  <button id="history-trash-btn" type="button" class="compact-trash-btn" aria-label="Hapus riwayat pemindaian" style="display: none;" onclick="openDeleteConfirm(event)">
-                    <re-icon icon="trash" class="icon-default" decorative></re-icon>
-                  </button>
+                  <app-spinner id="history-sync-spinner" class="app-spinner spinner-small" aria-hidden="true" style="display: none; margin-right: 4px;"></app-spinner>
                 </div>
                 <div class="progress-legend">
                   <span id="legend-success" class="legend-item success" style="display: none;">
@@ -214,22 +214,13 @@
 
               <!-- Carousel Wrapper -->
               <div class="carousel-container-outer">
-                <!-- Trash Delete Confirmation Overlay -->
-                <div id="history-confirm-overlay" class="confirm-overlay" style="display: none;">
-                  <div class="confirm-content">
-                    <span class="confirm-message">Hapus riwayat pindaian?</span>
-                    <div class="confirm-actions">
-                      <button id="confirm-btn-yes" class="confirm-btn yes" onclick="confirmDeleteHistory(event)">Hapus</button>
-                      <button id="confirm-btn-no" class="confirm-btn no" onclick="closeDeleteConfirm(event)">Batal</button>
-                    </div>
-                  </div>
-                </div>
-
                 <button id="carousel-prev-btn" type="button" class="carousel-nav-btn prev" aria-label="Slide sebelumnya" style="display: none;" onclick="scrollCarousel(-1)">
                   <re-icon icon="chevron-left" decorative></re-icon>
                 </button>
                 
                 <div class="carousel-container">
+                  <button id="bulk-delete-start" type="button" class="bulk-delete-action start" aria-label="Hapus seluruh riwayat dari awal">Hapus</button>
+                  <button id="bulk-delete-end" type="button" class="bulk-delete-action end" aria-label="Hapus seluruh riwayat dari akhir">Hapus</button>
                   <div id="queue-list" class="queue-list-container horizontal-carousel">
                     <!-- Dynamically populated via script -->
                   </div>
@@ -254,19 +245,6 @@
         </footer>
       </div>
     </main>
-
-    <!-- Modal Topic Selection -->
-    <div id="topic-modal" role="dialog" aria-modal="true" aria-labelledby="topic-modal-title">
-      <div class="modal-content">
-        <h3 id="topic-modal-title">Pilih Topik Pertemuan</h3>
-        <label for="topic-search-input" class="sr-only">Cari topik pertemuan</label>
-        <input type="text" id="topic-search-input" oninput="filterTopics()" placeholder="Cari topik...">
-        <div id="topic-list-container">
-          <div class="topic-loading-placeholder">Memuat topik...</div>
-        </div>
-        <button class="modal-close-btn" type="button" onclick="closeTopicModal()">Tutup</button>
-      </div>
-    </div>
 
     <!-- Modal Student Detail -->
     <div id="student-detail-modal" class="student-modal" style="display: none;" onclick="closeStudentModal(event)" role="dialog" aria-modal="true" aria-labelledby="modal-student-name">
@@ -293,9 +271,11 @@
 
     <script src="https://unpkg.com/reicon/cdn/reicon.min.js"></script>
     <script src="icons.js"></script>
+    <script src="toast.js"></script>
     <script src="theme.js"></script>
     <script src="session.js"></script>
     <script src="topics.js"></script>
+    <script src="search-combobox.js"></script>
     <script src="script.js"></script>
     <script src="onboarding.js" defer></script>
   </body>

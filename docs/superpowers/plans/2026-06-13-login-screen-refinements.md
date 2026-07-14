@@ -109,7 +109,7 @@ Delete the `.login-header-title` selector style rules (around lines 210-213) as 
 
 ```css
 .login-header-title {
-  font-family: 'Cinzel', serif; font-size: 1.5rem; font-weight: 500;
+  font-family: 'DM Serif Display', serif; font-size: 1.5rem; font-style: italic; font-weight: 400;
   text-align: center; margin-bottom: 1.5rem; color: var(--text-primary);
 }
 ```

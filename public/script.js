@@ -1,5 +1,11 @@
 let html5QrcodeScanner = null;
 let selectedWeek = null;
+let topicComboboxLarge = null;
+let topicComboboxActive = null;
+let viewfinderDimTimer = null;
+const LAST_QR_SCAN_KEY = 'last_qr_scan';
+const SCAN_REPEAT_WINDOW_MS = 5000;
+const VIEWFINDER_INACTIVE_MS = 800;
 
 window.scrollCarousel = function(direction) {
   const listContainer = document.getElementById('queue-list');
@@ -45,6 +51,107 @@ function updateNavButtons(listContainer, renderItemsLength) {
     nextBtn.classList.remove('disabled');
     nextBtn.removeAttribute('disabled');
   }
+}
+
+const BULK_DELETE_DEAD_ZONE = 8;
+const BULK_DELETE_MAX_REVEAL = 72;
+const BULK_DELETE_THRESHOLD = 56;
+
+function setBulkDeleteAvailability(available) {
+  document.querySelectorAll('.bulk-delete-action').forEach(action => {
+    action.hidden = !available;
+  });
+}
+
+function bindHistoryBulkDelete() {
+  const list = document.getElementById('queue-list');
+  const carousel = list?.closest('.carousel-container');
+  const startAction = document.getElementById('bulk-delete-start');
+  const endAction = document.getElementById('bulk-delete-end');
+  if (!list || !carousel || !startAction || !endAction || list.dataset.bulkDeleteBound === 'true') return;
+  list.dataset.bulkDeleteBound = 'true';
+
+  let startX = null;
+  let direction = null;
+  let reveal = 0;
+  let pointerId = null;
+  let suppressClick = false;
+
+  const reset = () => {
+    list.style.removeProperty('transform');
+    list.classList.remove('bulk-delete-dragging');
+    carousel.classList.remove('bulk-delete-revealing');
+    startAction.classList.remove('active');
+    endAction.classList.remove('active');
+    startX = null;
+    direction = null;
+    reveal = 0;
+    pointerId = null;
+  };
+
+  const begin = clientX => {
+    if (startAction.hidden || endAction.hidden) return;
+    startX = clientX;
+  };
+
+  const move = (clientX, event) => {
+    if (startX === null) return;
+    const delta = clientX - startX;
+    if (!direction) {
+      if (Math.abs(delta) <= BULK_DELETE_DEAD_ZONE) return;
+      const atStart = list.scrollLeft <= 5;
+      const atEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth - 5;
+      if (delta > 0 && atStart) direction = 'start';
+      else if (delta < 0 && atEnd) direction = 'end';
+      else return;
+    }
+
+    event.preventDefault();
+    suppressClick = true;
+    reveal = Math.min(BULK_DELETE_MAX_REVEAL, Math.max(0, Math.abs(delta)));
+    const offset = direction === 'start' ? reveal : -reveal;
+    list.style.transform = `translateX(${offset}px)`;
+    list.classList.add('bulk-delete-dragging');
+    carousel.classList.add('bulk-delete-revealing');
+    startAction.classList.toggle('active', direction === 'start');
+    endAction.classList.toggle('active', direction === 'end');
+  };
+
+  const finish = event => {
+    const shouldDelete = direction && reveal >= BULK_DELETE_THRESHOLD;
+    const trigger = direction === 'start' ? startAction : endAction;
+    reset();
+    if (shouldDelete) window.openDeleteConfirm(event, trigger);
+  };
+
+  list.addEventListener('touchstart', event => begin(event.touches[0].clientX), { passive: true });
+  list.addEventListener('touchmove', event => move(event.touches[0].clientX, event), { passive: false });
+  list.addEventListener('touchend', finish);
+  list.addEventListener('touchcancel', reset);
+
+  list.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'touch') return;
+    pointerId = event.pointerId;
+    begin(event.clientX);
+  });
+  list.addEventListener('pointermove', event => {
+    if (event.pointerId !== pointerId) return;
+    move(event.clientX, event);
+    if (direction && !list.hasPointerCapture(pointerId)) list.setPointerCapture(pointerId);
+  });
+  list.addEventListener('pointerup', event => {
+    if (event.pointerId === pointerId) finish(event);
+  });
+  list.addEventListener('pointercancel', reset);
+  list.addEventListener('click', event => {
+    if (!suppressClick) return;
+    suppressClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
+  startAction.addEventListener('click', event => window.openDeleteConfirm(event, startAction));
+  endAction.addEventListener('click', event => window.openDeleteConfirm(event, endAction));
 }
 
 
@@ -109,51 +216,17 @@ function setViewportHeight() {
 setViewportHeight();
 window.addEventListener('resize', setViewportHeight);
 
-// --- MODAL FUNCTIONS ---
-window.openTopicModal = function() {
-  const modal = document.getElementById('topic-modal');
-  modal.style.display = 'flex';
-  setTimeout(() => document.getElementById('topic-search-input')?.focus(), 0);
-}
-window.closeTopicModal = function() { document.getElementById('topic-modal').style.display = 'none'; }
-
-function setTopicTriggerText(week, name) {
-  const btn = document.getElementById('topic-trigger-large');
-  if (!btn) return;
-  btn.textContent = '';
-
-  const label = document.createElement('span');
-  label.textContent = `${week}. ${name}`;
-
-  const icon = window.createAppIcon('chevron-down');
-
-  btn.append(label, icon);
-}
-
-window.selectTopic = function(week, name, element) {
+window.selectTopic = function(week, name) {
   selectedWeek = week;
   localStorage.setItem('selectedWeek', week);
   localStorage.setItem('selectedTopicName', name);
-  setTopicTriggerText(week, name);
-  const activeTopicText = document.getElementById('active-topic-name');
-  if (activeTopicText) {
-    activeTopicText.textContent = `${week}. ${name}`;
-  }
-  document.querySelectorAll('.topic-option').forEach(el => el.classList.remove('active'));
-  element.classList.add('active');
-  setTimeout(() => {
-    window.closeTopicModal();
-    setAppState(2); // Go straight to scanner state on selection
-  }, 200);
+  topicComboboxLarge?.setValue(week);
+  topicComboboxActive?.setValue(week);
+  setTimeout(() => setAppState(2), 200);
 }
 
-window.filterTopics = function() {
-  const searchTerm = document.getElementById('topic-search-input').value.toLowerCase();
-  const topics = document.querySelectorAll('.topic-option');
-  topics.forEach(topic => {
-    const topicText = topic.textContent.toLowerCase();
-    topic.style.display = topicText.includes(searchTerm) ? 'block' : 'none';
-  });
+window.openTopicSelector = function() {
+  topicComboboxActive?.open();
 }
 
 window.togglePasswordVisibility = function() {
@@ -261,7 +334,6 @@ class ScanQueue {
     if (modified) this.save();
 
     this.isProcessing = false;
-    this.cooldowns = {}; // For preventing duplicate double scans
     const initialPending = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
     this.totalInBatch = initialPending;
     this.cleanExpiredItems();
@@ -278,15 +350,59 @@ class ScanQueue {
     this.render();
   }
 
+  dismiss(id) {
+    const index = this.queue.findIndex(item => item.id === id);
+    if (index < 0) return false;
+    const item = this.queue[index];
+    if (item.status === 'pending' || item.status === 'processing') return false;
+
+    this.queue.splice(index, 1);
+    this.save();
+    showToast('Riwayat pemindaian dihapus', 'info', {
+      actionLabel: 'Urungkan',
+      duration: 5000,
+      onAction: () => this.restore(item, index)
+    });
+    return true;
+  }
+
+  restore(item, index) {
+    if (!item || this.queue.some(existing => existing.id === item.id)) return false;
+    this.queue.splice(Math.min(index, this.queue.length), 0, item);
+    this.save();
+    return true;
+  }
+
+  clearCompleted() {
+    const initialLength = this.queue.length;
+    this.queue = this.queue.filter(item => item.status === 'pending' || item.status === 'processing');
+    if (this.queue.length === initialLength) return 0;
+    this.save();
+    return initialLength - this.queue.length;
+  }
+
   add(studentId, week) {
     const timestamp = Date.now();
-    
-    // Prevent double scan check (cooldown 3s for same studentId)
-    if (this.cooldowns[studentId] && (timestamp - this.cooldowns[studentId] < 3000)) {
-      console.log(`Scan blocked by cooldown: ${studentId}`);
-      return;
+
+    let lastScan = null;
+    try {
+      lastScan = JSON.parse(localStorage.getItem(LAST_QR_SCAN_KEY) || 'null');
+    } catch {
+      localStorage.removeItem(LAST_QR_SCAN_KEY);
     }
-    this.cooldowns[studentId] = timestamp;
+    if (lastScan?.studentId === studentId && lastScan.expiresAt > timestamp) {
+      return false;
+    }
+    const expiresAt = timestamp + SCAN_REPEAT_WINDOW_MS;
+    localStorage.setItem(LAST_QR_SCAN_KEY, JSON.stringify({ studentId, expiresAt }));
+    setTimeout(() => {
+      try {
+        const current = JSON.parse(localStorage.getItem(LAST_QR_SCAN_KEY) || 'null');
+        if (current?.studentId === studentId && current.expiresAt <= Date.now()) localStorage.removeItem(LAST_QR_SCAN_KEY);
+      } catch {
+        localStorage.removeItem(LAST_QR_SCAN_KEY);
+      }
+    }, SCAN_REPEAT_WINDOW_MS);
 
     const id = 'scan_' + Math.random().toString(36).substring(2, 9) + '_' + timestamp;
     const item = {
@@ -311,6 +427,7 @@ class ScanQueue {
     
     // Trigger immediate sequential processing loop
     this.process();
+    return true;
   }
 
   async process() {
@@ -469,15 +586,15 @@ class ScanQueue {
     const queueLength = this.queue.length;
     const progressArea = document.getElementById('history-progress-area');
     const dotsContainer = document.getElementById('carousel-dots');
-    const trashBtn = document.getElementById('history-trash-btn');
     const prevBtn = document.getElementById('carousel-prev-btn');
     const nextBtn = document.getElementById('carousel-next-btn');
+    const hasDismissibleHistory = this.queue.some(item => item.status !== 'pending' && item.status !== 'processing');
+    setBulkDeleteAvailability(hasDismissibleHistory);
 
     // Ensure progress area is always visible (V3 Spec)
     if (progressArea) progressArea.style.display = 'block';
 
     if (queueLength === 0) {
-      if (trashBtn) trashBtn.style.display = 'none';
       if (dotsContainer) dotsContainer.style.display = 'none';
       if (prevBtn) prevBtn.style.display = 'none';
       if (nextBtn) nextBtn.style.display = 'none';
@@ -510,9 +627,6 @@ class ScanQueue {
       `;
       return;
     }
-
-    // Show trash button if at least one scan has been conducted
-    if (trashBtn) trashBtn.style.display = 'flex';
 
     // 1. Calculate counters
     let successCount = 0;
@@ -596,6 +710,24 @@ class ScanQueue {
         }
       };
 
+      if (item.status !== 'pending' && item.status !== 'processing') {
+        row.classList.add('dismissible');
+        const dismissButton = document.createElement('button');
+        dismissButton.type = 'button';
+        dismissButton.className = 'history-dismiss-btn';
+        dismissButton.setAttribute('aria-label', `Hapus riwayat ${item.name || item.studentId || 'pemindaian'}`);
+        const dismissGlyph = document.createElement('span');
+        dismissGlyph.setAttribute('aria-hidden', 'true');
+        dismissGlyph.textContent = '×';
+        dismissButton.appendChild(dismissGlyph);
+        dismissButton.addEventListener('click', event => {
+          event.stopPropagation();
+          this.dismiss(item.id);
+        });
+        dismissButton.addEventListener('keydown', event => event.stopPropagation());
+        row.appendChild(dismissButton);
+      }
+
       const avatarSrc = item.image || '/assets/favicon.png';
       
       const studentInfo = document.createElement('div');
@@ -640,10 +772,12 @@ class ScanQueue {
         success: 'check',
         error: 'close-circle2',
         duplicate: 'refresh',
-        processing: 'refresh',
         pending: 'timer-alt'
       };
-      const icon = window.createAppIcon(statusIconByStatus[item.status] || statusIconByStatus.pending);
+      const icon = item.status === 'processing'
+        ? Object.assign(document.createElement('app-spinner'), { className: 'app-spinner status-spinner' })
+        : window.createAppIcon(statusIconByStatus[item.status] || statusIconByStatus.pending);
+      if (item.status === 'processing') icon.setAttribute('aria-hidden', 'true');
       
       statusBadge.appendChild(icon);
       row.appendChild(statusBadge);
@@ -746,51 +880,6 @@ class ScanQueue {
 // Instantiate globally
 window.scanQueue = new ScanQueue();
 
-// --- TOAST NOTIFICATIONS ---
-window.showToast = function(message, type = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  
-  let iconName = 'check-circle';
-  if (type === 'error') iconName = 'close-circle2';
-  if (type === 'info') iconName = 'info-circle';
-
-  // Safe element construction to prevent XSS
-  const icon = window.createAppIcon(iconName, 'toast-icon');
-
-  const text = document.createElement('span');
-  text.className = 'toast-message';
-  text.textContent = message;
-
-  toast.appendChild(icon);
-  toast.appendChild(text);
-  container.appendChild(toast);
-
-  let autoDismissTimer;
-
-  // Smooth dismiss helper
-  const dismiss = () => {
-    if (toast.classList.contains('hide')) return;
-    if (autoDismissTimer) clearTimeout(autoDismissTimer);
-    toast.removeEventListener('click', dismiss);
-    toast.classList.remove('show');
-    toast.classList.add('hide');
-    setTimeout(() => toast.remove(), 400);
-  };
-
-  // Click to dismiss early
-  toast.addEventListener('click', dismiss);
-
-  // Trigger entry animation
-  setTimeout(() => toast.classList.add('show'), 10);
-
-  // Auto-remove timer
-  autoDismissTimer = setTimeout(dismiss, 3000);
-}
-
 // --- STATUS HANDLER ---
 function showStatus(mainText, type, subText = "") {
   const el = document.getElementById("status");
@@ -869,11 +958,19 @@ function triggerVisualFlash(type) {
   }, 100);
 }
 
+function dimViewfinder() {
+  const readerContainer = document.getElementById('reader-container');
+  if (!readerContainer) return;
+  readerContainer.classList.add('scan-inactive');
+  clearTimeout(viewfinderDimTimer);
+  viewfinderDimTimer = setTimeout(() => readerContainer.classList.remove('scan-inactive'), VIEWFINDER_INACTIVE_MS);
+}
+
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
   if (!selectedWeek) {
     showStatus("Pilih topik terlebih dahulu!", "error");
-    openTopicModal();
+    openTopicSelector();
     return;
   }
 
@@ -888,11 +985,10 @@ async function handleScan(decodedText) {
     return;
   }
 
-  // Optimistic tactile feedback on read
-  if (navigator.vibrate) navigator.vibrate(80);
-
   // Add scan to queue instantly and keep camera running!
-  scanQueue.add(originalStudentId, selectedWeek);
+  if (!scanQueue.add(originalStudentId, selectedWeek)) return;
+  dimViewfinder();
+  if (navigator.vibrate) navigator.vibrate(80);
 }
 
 async function startScanner() {
@@ -961,61 +1057,6 @@ async function stopScanner() {
   }
 }
 
-async function loadTopikList() {
-  const listContainer = document.getElementById("topic-list-container");
-  if (!listContainer) return;
-
-  try {
-    if (typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS)) {
-      listContainer.innerHTML = "";
-      STATIC_TOPICS.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "topic-option";
-        if (item.name.includes("(P)")) div.classList.add("topic-p");
-        else if (item.name.includes("(KI)")) div.classList.add("topic-ki");
-        
-        if (item.week === "R1" || item.week === "R2") {
-          div.classList.add("topic-rekoleksi");
-        }
-        div.textContent = `${item.week}. ${item.name}`;
-        
-        if (item.week === selectedWeek) {
-          div.classList.add("active");
-        }
-        
-        // Accessibility attributes
-        div.setAttribute("role", "button");
-        div.tabIndex = 0;
-        
-        div.onclick = () => selectTopic(item.week, item.name, div);
-        div.onkeydown = (event) => {
-          if (event.key === ' ' || event.key === 'Enter') {
-            event.preventDefault();
-            selectTopic(item.week, item.name, div);
-          }
-        };
-        
-        listContainer.appendChild(div);
-      });
-    } else {
-      listContainer.innerHTML = "";
-      const errorDiv = document.createElement("div");
-      errorDiv.className = "topic-loading-placeholder";
-      errorDiv.style.color = "var(--status-duplicate-text)";
-      errorDiv.textContent = "Data topik tidak ditemukan.";
-      listContainer.appendChild(errorDiv);
-    }
-  } catch (err) {
-    console.error(err);
-    listContainer.innerHTML = "";
-    const errorDiv = document.createElement("div");
-    errorDiv.className = "topic-loading-placeholder";
-    errorDiv.style.color = "var(--status-duplicate-text)";
-    errorDiv.textContent = "Gagal memuat topik.";
-    listContainer.appendChild(errorDiv);
-  }
-}
-
 async function loadVersion() {
   try {
     const res = await fetch('/api/version');
@@ -1035,8 +1076,45 @@ async function loadVersion() {
   }
 }
 
-async function initializeApp() {
-  await loadTopikList();
+function initializeTopicComboboxes() {
+  const topics = typeof STATIC_TOPICS !== 'undefined' && Array.isArray(STATIC_TOPICS) ? STATIC_TOPICS : [];
+  const createTopicCombobox = (suffix, placeholder) => {
+    const combobox = createSearchCombobox({
+      rootId: `topic-combobox-${suffix}`,
+      triggerId: suffix === 'large' ? 'topic-trigger-large' : 'topic-combobox-trigger',
+      popoverId: suffix === 'large' ? 'topic-combobox-large-popover' : 'topic-combobox-popover',
+      searchId: `topic-combobox-${suffix === 'large' ? 'large-' : ''}search`,
+      listId: `topic-combobox-${suffix === 'large' ? 'large-' : ''}options`,
+      emptyId: `topic-combobox-${suffix === 'large' ? 'large-' : ''}empty`,
+      valueId: suffix === 'large' ? 'topic-trigger-large-label' : 'active-topic-name',
+      selectId: `topic-selector-${suffix}`,
+      placeholder,
+      getValue: item => item.week,
+      getLabel: item => `${item.week}. ${item.name}`,
+      getSearchText: item => `${item.week} ${item.name}`,
+      getOptionClass: item => {
+        if (item.week.startsWith('R')) return 'topic-option-r';
+        if (item.name.includes('(KI)')) return 'topic-option-ki';
+        if (item.name.includes('(P)')) return 'topic-option-p';
+        return '';
+      }
+    });
+    const select = document.getElementById(`topic-selector-${suffix}`);
+    select?.addEventListener('change', () => {
+      const topic = topics.find(item => item.week === select.value);
+      if (topic) selectTopic(topic.week, topic.name);
+    });
+    combobox?.setItems(topics, 'Data topik tidak ditemukan');
+    return combobox;
+  };
+
+  topicComboboxLarge = createTopicCombobox('large', 'Pilih Topik Pertemuan...');
+  topicComboboxActive = createTopicCombobox('active', 'Ketuk di sini untuk memilih topik...');
+}
+
+function initializeApp() {
+  if (!topicComboboxActive) initializeTopicComboboxes();
+  bindHistoryBulkDelete();
   scanQueue.render();
   scanQueue.process(); // Process any leftover queue from last load
 }
@@ -1056,19 +1134,16 @@ window.onload = () => {
     // Sync the auth_token cookie with the sessionStorage token
     document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
     
+    initializeApp();
     const savedWeek = localStorage.getItem('selectedWeek');
     const savedTopicName = localStorage.getItem('selectedTopicName');
     if (savedWeek && savedTopicName) {
       selectedWeek = savedWeek;
-      setTopicTriggerText(savedWeek, savedTopicName);
-      const activeTopicText = document.getElementById('active-topic-name');
-      if (activeTopicText) {
-        activeTopicText.textContent = `${savedWeek}. ${savedTopicName}`;
-      }
+      topicComboboxLarge?.setValue(savedWeek);
+      topicComboboxActive?.setValue(savedWeek);
     }
     
     setAppState(2); // Set to scanner page initially
-    initializeApp();
   } else {
     setAppState(0); // Authentication screen
   }
@@ -1119,7 +1194,18 @@ window.closeStudentModal = function(event) {
   }
 };
 
-window.openDeleteConfirm = function(event) {
+let historyDeleteReturnFocus = null;
+
+function setHistoryContentInert(inert) {
+  const panel = document.getElementById('queue-history-panel');
+  const overlay = document.getElementById('history-confirm-overlay');
+  if (!panel || !overlay) return;
+  [...panel.children].forEach(child => {
+    if (child !== overlay) child.inert = inert;
+  });
+}
+
+window.openDeleteConfirm = function(event, trigger) {
   if (event) event.stopPropagation();
 
   if (typeof scanQueue !== 'undefined') {
@@ -1134,10 +1220,13 @@ window.openDeleteConfirm = function(event) {
 
   const overlay = document.getElementById('history-confirm-overlay');
   if (overlay) {
+    historyDeleteReturnFocus = trigger || event?.currentTarget || document.activeElement;
+    setHistoryContentInert(true);
     overlay.style.display = 'flex';
     // Force a reflow to trigger transition animation
     overlay.offsetHeight;
     overlay.classList.add('show');
+    document.getElementById('confirm-btn-yes')?.focus({ preventScroll: true });
   }
 };
 
@@ -1146,11 +1235,14 @@ window.closeDeleteConfirm = function(event) {
   const overlay = document.getElementById('history-confirm-overlay');
   if (overlay) {
     overlay.classList.remove('show');
+    setHistoryContentInert(false);
     setTimeout(() => {
       if (!overlay.classList.contains('show')) {
         overlay.style.display = 'none';
+        historyDeleteReturnFocus?.focus?.({ preventScroll: true });
+        historyDeleteReturnFocus = null;
       }
-    }, 300);
+    }, 280);
   }
 };
 
@@ -1167,8 +1259,7 @@ window.confirmDeleteHistory = function(event) {
       return;
     }
     
-    scanQueue.queue = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing');
-    scanQueue.save();
+    scanQueue.clearCompleted();
     showToast("Riwayat pemindaian berhasil dibersihkan", "info");
   }
   
@@ -1179,8 +1270,7 @@ window.confirmDeleteHistory = function(event) {
 document.addEventListener('click', (event) => {
   const overlay = document.getElementById('history-confirm-overlay');
   if (overlay && overlay.classList.contains('show')) {
-    const trashBtn = document.getElementById('history-trash-btn');
-    if (!overlay.contains(event.target) && (!trashBtn || !trashBtn.contains(event.target))) {
+    if (!overlay.contains(event.target)) {
       window.closeDeleteConfirm();
     }
   }
@@ -1188,10 +1278,6 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  const topicModal = document.getElementById('topic-modal');
-  if (topicModal && topicModal.style.display === 'flex') {
-    window.closeTopicModal();
-  }
   const studentModal = document.getElementById('student-detail-modal');
   if (studentModal && studentModal.style.display === 'flex') {
     window.closeStudentModal(event);

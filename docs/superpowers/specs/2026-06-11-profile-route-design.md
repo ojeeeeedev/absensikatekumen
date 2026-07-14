@@ -22,7 +22,7 @@ Establish the `profilecard` development branch and introduce a new `/profile` ro
 
 ### C. Frontend Page (`public/profile.html`)
 - Create a new file `public/profile.html` with a basic structure matching the project's design guidelines:
-  - Import the same Google Fonts (`Cinzel`, `Inter`) and Material Icons.
+  - Import the same Google Fonts (`DM Serif Display Regular Italic`, `Inter`) and Material Icons.
   - Import the stylesheet `style.css`.
   - Include the standard `liquid-background` divs.
   - Render a container matching the glassmorphism card style (`glass-container`), with a header and a placeholder for the future Profile Card component.

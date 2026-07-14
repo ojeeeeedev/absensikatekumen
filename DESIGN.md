@@ -83,7 +83,7 @@ Transitions:
 ## 4. Typography System
 
 - Primary font: Inter.
-- Brand/display text may use Cinzel only in compact headers and identity moments.
+- Brand/display text may use DM Serif Display Regular Italic only in compact headers and identity moments.
 - Numeric/data text uses Google Sans Code or monospace with `font-variant-numeric: tabular-nums`.
 - Page titles: 18-20px, 600.
 - Section/card titles: 14-16px, 600.
@@ -134,10 +134,15 @@ Dialogs/drawers/dropdowns/popovers/tooltips:
 - Modal surfaces use `popover` tokens and visible focus.
 - Dialogs should close with Escape where JS supports it and return focus where feasible.
 
+Toasts:
+- Use the shared top-center toast controller on scanner and profile surfaces; newest notifications appear first and no more than four remain visible.
+- Destructive actions should be confirmed or reversible; use a toast action for lightweight Undo flows.
+
 Tables/lists:
 - Prefer native tables for true tabular data.
 - Current profile accordion is a list; it must remain keyboard accessible and scannable.
 - Metadata uses tabular numeric styling.
+- Edge-swipe destructive actions need a visible text rail plus a keyboard-accessible equivalent.
 
 Empty, loading, error states:
 - Empty states include what is missing and next action.

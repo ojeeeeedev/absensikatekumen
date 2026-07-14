@@ -1,6 +1,6 @@
 {
   "name": "absensikatekumen",
-  "version": "2.5.4",
+  "version": "2.6.0",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
@@ -10,6 +10,9 @@
     "dev": "node app.js",
     "build": "echo 'No build step needed'",
     "test": "vitest run",
+    "test:profile-combobox": "node scripts/check-profile-combobox.js",
+    "test:scan-history": "node scripts/check-scan-history-ui.js",
+    "test:topic-combobox": "node scripts/check-profile-combobox.js",
     "clasp-push-all": "node scripts/clasp-push-all.js"
   },
   "dependencies": {

@@ -15,7 +15,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Google+Sans+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&family=Inter:wght@300;400;500;600&family=Google+Sans+Code:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
   <body id="profile-page">
@@ -64,10 +64,24 @@
         </div>
 
         <div class="profile-selector-container">
-          <label for="class-selector" class="sr-only">Pilih kelas katekumen</label>
-          <select id="class-selector">
+          <select id="class-selector" hidden aria-hidden="true" tabindex="-1">
             <option value="" disabled selected>Memuat kelas...</option>
           </select>
+          <div class="search-combobox" id="class-combobox">
+            <button id="class-combobox-trigger" class="active-topic-bar class-selector-control search-combobox-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="class-combobox-popover" disabled>
+              <span class="topic-info">
+                <re-icon icon="users" decorative></re-icon>
+                <span id="class-combobox-value">Memuat kelas...</span>
+              </span>
+              <span class="search-combobox-arrow" aria-hidden="true"></span>
+            </button>
+            <div id="class-combobox-popover" class="search-combobox-popover" hidden>
+              <label for="class-combobox-search" class="sr-only">Cari kelas katekumen</label>
+              <input id="class-combobox-search" class="search-combobox-search" type="search" placeholder="Cari kelas..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="class-combobox-options">
+              <div id="class-combobox-options" class="search-combobox-options" role="listbox" aria-label="Daftar kelas katekumen"></div>
+              <p id="class-combobox-empty" class="search-combobox-empty" hidden>Kelas tidak ditemukan.</p>
+            </div>
+          </div>
           
           <div id="students-summary" class="students-summary-container" style="display: none;">
             <div class="summary-badge summary-total">
@@ -89,17 +103,7 @@
         </div>
 
         <div id="students-loader" style="display: none;">
-          <svg class="grid-column-scan-loader spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
-            <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
-            <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
-            <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
-            <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
-            <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
-            <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
-            <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
-            <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
-          </svg>
+          <app-spinner class="app-spinner spinner" aria-hidden="true"></app-spinner>
           <span style="font-size: 0.85rem; color: var(--text-primary); opacity: 0.8;">Memuat katekumen...</span>
         </div>
 
@@ -141,17 +145,7 @@
           <div class="upload-actions">
             <button class="upload-cancel-btn" id="upload-cancel-btn" type="button">Batal</button>
             <button class="upload-confirm-btn" id="upload-confirm-btn" type="button" disabled>
-              <svg class="grid-column-scan-loader btn-spinner" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="25" cy="25" fill="currentColor" class="gc-dot gc-col-0" />
-                <circle cx="25" cy="50" fill="currentColor" class="gc-dot gc-col-0" />
-                <circle cx="25" cy="75" fill="currentColor" class="gc-dot gc-col-0" />
-                <circle cx="50" cy="25" fill="currentColor" class="gc-dot gc-col-1" />
-                <circle cx="50" cy="50" fill="currentColor" class="gc-dot gc-col-1" />
-                <circle cx="50" cy="75" fill="currentColor" class="gc-dot gc-col-1" />
-                <circle cx="75" cy="25" fill="currentColor" class="gc-dot gc-col-2" />
-                <circle cx="75" cy="50" fill="currentColor" class="gc-dot gc-col-2" />
-                <circle cx="75" cy="75" fill="currentColor" class="gc-dot gc-col-2" />
-              </svg>
+              <app-spinner class="app-spinner btn-spinner" aria-hidden="true"></app-spinner>
               <span class="btn-label">Unggah Foto</span>
             </button>
           </div>
@@ -164,8 +158,10 @@
 
     <script src="https://unpkg.com/reicon/cdn/reicon.min.js"></script>
     <script src="icons.js"></script>
+    <script src="toast.js"></script>
     <script src="theme.js"></script>
     <script src="session.js"></script>
+    <script src="search-combobox.js"></script>
     <script src="profile.js"></script>
   </body>
 </html>
