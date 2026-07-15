@@ -948,8 +948,8 @@ a:focus-visible,
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
+  gap: var(--space-2);
+  padding: 4px 10px;
   border-radius: 12px;
   background: color-mix(in srgb, color-mix(in srgb, var(--toast-accent) 10%, var(--popover)) 72%, transparent);
   backdrop-filter: blur(20px) saturate(1.2);
@@ -1013,12 +1013,36 @@ a:focus-visible,
 }
 
 .toast-icon {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
 }
 
+.toast-content {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.toast-badge {
+  max-width: 100%;
+  padding: 2px 6px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--toast-accent) 72%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--toast-accent) 10%, transparent);
+  color: var(--toast-accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .toast-message {
-  flex-grow: 1;
+  width: 100%;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -1052,9 +1076,9 @@ a:focus-visible,
 }
 
 .toast-dismiss {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
   display: inline-grid;
   place-items: center;
   padding: 0;
@@ -1063,7 +1087,7 @@ a:focus-visible,
   background: transparent;
   color: var(--muted-foreground);
   font: inherit;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-standard),

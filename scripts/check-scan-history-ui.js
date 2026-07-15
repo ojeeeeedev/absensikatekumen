@@ -317,8 +317,11 @@ try {
     document.activeElement?.blur();
     const types = ['success', 'error', 'duplicate', 'info', 'info'];
     for (let index = 1; index <= 5; index += 1) {
-      const message = index === 5 ? 'Toast 5 - Nama Katekumen Yang Sangat Panjang Dan Harus Dipotong' : `Toast ${index}`;
-      showToast(message, types[index - 1], { duration: 60000 });
+      const message = index === 5 ? 'Toast 5 - Nama Katekumen Yang Sangat Panjang Dan Harus Dipotong' : index === 3 ? 'Yasmin Syaffiah Naraisha Dengan Nama Panjang' : `Toast ${index}`;
+      showToast(message, types[index - 1], {
+        duration: 60000,
+        badge: index === 3 ? 'Duplikat · Topik 2' : undefined,
+      });
     }
   });
   await page.waitForTimeout(350);
@@ -342,6 +345,20 @@ try {
         clipped: element.scrollWidth > element.clientWidth,
       };
     })(),
+    structured: (() => {
+      const toast = container.querySelector('.toast.duplicate');
+      const badge = toast.querySelector('.toast-badge');
+      const message = toast.querySelector('.toast-message');
+      const badgeRect = badge.getBoundingClientRect();
+      const messageRect = message.getBoundingClientRect();
+      return {
+        height: toast.getBoundingClientRect().height,
+        badgeText: badge.textContent,
+        badgeAboveName: badgeRect.bottom <= messageRect.top,
+        badgeBorderWidth: getComputedStyle(badge).borderTopWidth,
+        messageClipped: message.scrollWidth > message.clientWidth,
+      };
+    })(),
     backgroundAlpha: (() => {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 1;
@@ -355,7 +372,7 @@ try {
     collapsedOverlap: container.children[container.children.length - 2].getBoundingClientRect().bottom
       > container.lastElementChild.getBoundingClientRect().top,
   }));
-  if (toastState.count !== 4 || !toastState.newest.includes('Toast 5') || toastState.bottom === 'auto' || toastState.bottomGap < 15 || toastState.bottomGap > 24 || toastState.dismissButtons !== 4 || toastState.backdropFilter === 'none' || toastState.backgroundAlpha < 0.65 || toastState.backgroundAlpha > 0.75 || toastState.borderWidths.some(width => width !== '1px') || new Set(toastState.borderColors).size < 2 || new Set(toastState.fillColors).size < 2 || toastState.message.overflow !== 'hidden' || toastState.message.whiteSpace !== 'nowrap' || toastState.message.textOverflow !== 'ellipsis' || !toastState.message.clipped || Math.abs(toastState.newestScale - 1) > 0.01 || toastState.previousScale >= toastState.newestScale || !toastState.collapsedOverlap) {
+  if (toastState.count !== 4 || !toastState.newest.includes('Toast 5') || toastState.bottom === 'auto' || toastState.bottomGap < 15 || toastState.bottomGap > 24 || toastState.dismissButtons !== 4 || toastState.backdropFilter === 'none' || toastState.backgroundAlpha < 0.65 || toastState.backgroundAlpha > 0.75 || toastState.borderWidths.some(width => width !== '1px') || new Set(toastState.borderColors).size < 2 || new Set(toastState.fillColors).size < 2 || toastState.message.overflow !== 'hidden' || toastState.message.whiteSpace !== 'nowrap' || toastState.message.textOverflow !== 'ellipsis' || !toastState.message.clipped || toastState.structured.height > 52 || toastState.structured.badgeText !== 'Duplikat · Topik 2' || !toastState.structured.badgeAboveName || toastState.structured.badgeBorderWidth !== '1px' || !toastState.structured.messageClipped || Math.abs(toastState.newestScale - 1) > 0.01 || toastState.previousScale >= toastState.newestScale || !toastState.collapsedOverlap) {
     throw new Error(`Toast stack is incorrect: ${JSON.stringify(toastState)}`);
   }
   await page.locator('.toast').last().locator('.toast-dismiss').focus();

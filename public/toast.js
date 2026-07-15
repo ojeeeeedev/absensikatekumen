@@ -6,17 +6,26 @@
     const container = document.getElementById('toast-container');
     if (!container) return null;
 
-    const { actionLabel, onAction } = options;
+    const { actionLabel, onAction, badge } = options;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
     const iconName = type === 'error' ? 'close-circle2' : type === 'info' ? 'info-circle' : type === 'duplicate' ? 'refresh' : 'check-circle';
     const icon = window.createAppIcon(iconName, 'toast-icon');
+    const content = document.createElement('span');
+    content.className = 'toast-content';
+    if (badge) {
+      const badgeElement = document.createElement('span');
+      badgeElement.className = 'toast-badge';
+      badgeElement.textContent = badge;
+      content.appendChild(badgeElement);
+    }
     const text = document.createElement('span');
     text.className = 'toast-message';
     text.textContent = message;
-    toast.append(icon, text);
+    content.appendChild(text);
+    toast.append(icon, content);
 
     let timer = null;
 

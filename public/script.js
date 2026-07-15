@@ -636,7 +636,9 @@ class ScanQueue {
           pendingItem.status = 'error';
           pendingItem.errorMsg = `HTTP ${response.status}`;
           
-          showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
+          showToast(pendingItem.errorMsg || 'Gagal sinkronisasi', 'error', {
+            badge: `Gagal · Topik ${pendingItem.week}`
+          });
 
           triggerVisualFlash('error');
           const container = document.getElementById('app-container');
@@ -653,7 +655,9 @@ class ScanQueue {
           const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
           pendingItem.image = data.image || (localMatch ? localMatch.image : '');
           
-          showToast(`Berhasil: ${data.name} hadir!`, 'success');
+          showToast(data.name || 'Katekumen', 'success', {
+            badge: `Hadir · Topik ${pendingItem.week}`
+          });
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
@@ -669,7 +673,9 @@ class ScanQueue {
           const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
           pendingItem.image = data.image || (localMatch ? localMatch.image : '');
           
-          showToast(`Duplikat - Topik ${pendingItem.week} - ${data.name || 'Katekumen'}`, 'duplicate');
+          showToast(data.name || 'Katekumen', 'duplicate', {
+            badge: `Duplikat · Topik ${pendingItem.week}`
+          });
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
@@ -683,7 +689,9 @@ class ScanQueue {
           pendingItem.status = 'error';
           pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
           
-          showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
+          showToast(pendingItem.errorMsg || 'Gagal sinkronisasi', 'error', {
+            badge: `Gagal · Topik ${pendingItem.week}`
+          });
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
