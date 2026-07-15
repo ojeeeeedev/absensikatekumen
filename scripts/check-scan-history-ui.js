@@ -151,27 +151,29 @@ try {
   const mariaCard = page.locator('.queue-row').filter({ hasText: 'Maria' });
   const drawer = page.locator('#student-detail-modal');
   await mariaCard.click({ position: { x: 120, y: 36 } });
+  const firstFrameBottom = await drawer.evaluate(modal => Math.round(innerHeight - modal.getBoundingClientRect().bottom));
+  if (firstFrameBottom !== 0) throw new Error(`Student detail drawer was not bottom-anchored on first render: ${firstFrameBottom}`);
   await page.waitForTimeout(320);
   const drawerState = await drawer.evaluate(modal => {
+    const drawerRect = modal.getBoundingClientRect();
     const sheet = modal.querySelector('.student-modal-content').getBoundingClientRect();
     const handle = modal.querySelector('.student-modal-swipe-handle').getBoundingClientRect();
-    const close = modal.querySelector('.student-modal-close').getBoundingClientRect();
     return {
       tag: modal.tagName,
       open: modal.open,
       active: modal.classList.contains('is-open'),
+      drawerBottom: Math.round(innerHeight - drawerRect.bottom),
       sheetBottom: Math.round(innerHeight - sheet.bottom),
       handleWidth: handle.width,
       handleHeight: handle.height,
-      closeWidth: close.width,
-      closeHeight: close.height,
+      closeButtons: modal.querySelectorAll('.student-modal-close').length,
       touchAction: getComputedStyle(modal.querySelector('[data-drawer-handle]')).touchAction,
-      focused: document.activeElement?.className,
+      focused: document.activeElement?.id,
       transformY: new DOMMatrix(getComputedStyle(modal.querySelector('.student-modal-content')).transform).m42,
       backdrop: getComputedStyle(modal, '::backdrop').backgroundColor,
     };
   });
-  if (drawerState.tag !== 'DIALOG' || !drawerState.open || !drawerState.active || drawerState.sheetBottom !== 0 || drawerState.handleWidth !== 40 || drawerState.handleHeight !== 4 || drawerState.closeWidth !== 44 || drawerState.closeHeight !== 44 || drawerState.touchAction !== 'none' || drawerState.focused !== 'student-modal-close' || Math.abs(drawerState.transformY) > 1 || drawerState.backdrop === 'rgba(0, 0, 0, 0)') {
+  if (drawerState.tag !== 'DIALOG' || !drawerState.open || !drawerState.active || drawerState.drawerBottom !== 0 || drawerState.sheetBottom !== 0 || drawerState.handleWidth !== 40 || drawerState.handleHeight !== 4 || drawerState.closeButtons !== 0 || drawerState.touchAction !== 'none' || drawerState.focused !== 'student-detail-modal' || Math.abs(drawerState.transformY) > 1 || drawerState.backdrop === 'rgba(0, 0, 0, 0)') {
     throw new Error(`Student detail drawer did not open correctly: ${JSON.stringify(drawerState)}`);
   }
 
@@ -199,7 +201,7 @@ try {
 
   await mariaCard.click({ position: { x: 120, y: 36 } });
   await page.waitForTimeout(50);
-  await drawer.click({ position: { x: 8, y: 8 } });
+  await page.mouse.click(8, 8);
   await page.waitForTimeout(320);
   if (await drawer.evaluate(modal => modal.open)) throw new Error('Backdrop tap did not close the drawer');
 

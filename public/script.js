@@ -1356,7 +1356,7 @@ window.showStudentModal = function(item, trigger) {
     requestAnimationFrame(() => {
       if (!modal.open) return;
       modal.classList.add('is-open');
-      modal.querySelector('.student-modal-close')?.focus({ preventScroll: true });
+      modal.focus({ preventScroll: true });
     });
   }
 };
@@ -1386,8 +1386,7 @@ function bindStudentDrawer() {
   const modal = document.getElementById('student-detail-modal');
   const sheet = modal?.querySelector('.student-modal-content');
   const handle = modal?.querySelector('[data-drawer-handle]');
-  const closeButton = modal?.querySelector('.student-modal-close');
-  if (!modal || !sheet || !handle || !closeButton) return;
+  if (!modal || !sheet || !handle) return;
 
   let pointerId = null;
   let startY = 0;
@@ -1401,7 +1400,7 @@ function bindStudentDrawer() {
   };
 
   handle.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || event.target.closest('button') || !modal.open) return;
+    if (event.button !== 0 || !modal.open) return;
     pointerId = event.pointerId;
     startY = event.clientY;
     startTime = performance.now();
@@ -1428,7 +1427,6 @@ function bindStudentDrawer() {
   });
   handle.addEventListener('pointercancel', snapBack);
 
-  closeButton.addEventListener('click', window.closeStudentModal);
   modal.addEventListener('click', event => {
     if (event.target === modal) window.closeStudentModal(event);
   });

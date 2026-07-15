@@ -271,6 +271,15 @@ try {
       summaryLabels: summaryBadges.map(element => element.getAttribute('aria-label')),
       numberWidths: summaryBadges.map(element => element.querySelector('span').getBoundingClientRect().width),
       numberAlignments: summaryBadges.map(element => getComputedStyle(element.querySelector('span')).textAlign),
+      summaryGeometry: summaryBadges.map(element => {
+        const children = [...element.children].map(child => child.getBoundingClientRect());
+        return {
+          columnGap: getComputedStyle(element).columnGap,
+          iconWidths: children.slice(0, 2).map(rect => rect.width),
+          gaps: [children[1].left - children[0].right, children[2].left - children[1].right],
+          numberCenter: (children[2].left + children[2].right) / 2,
+        };
+      }),
       totalRemoved: !document.querySelector('.summary-total, #summary-total-text'),
       profileScrollListeners: window.__profileScrollListeners,
       backgroundAlpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
@@ -287,7 +296,9 @@ try {
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorTop)) < 1;
   const triggerTopStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.triggerTop))
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.triggerTop)) < 1;
-  if (!selectorTopStable || !triggerTopStable || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'left') || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
+  const summaryColumnsAligned = Math.max(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) - Math.min(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) < 1;
+  const summarySpacingUniform = stickyProfileHeader.summaryGeometry.every(row => row.columnGap === '3px' && row.iconWidths.every(width => width === 11) && row.gaps.every(gap => Math.abs(gap - 3) < 1));
+  if (!selectorTopStable || !triggerTopStable || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'center') || !summaryColumnsAligned || !summarySpacingUniform || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
