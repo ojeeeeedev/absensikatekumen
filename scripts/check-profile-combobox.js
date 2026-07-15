@@ -49,11 +49,11 @@ try {
   }));
   await page.route('**/api/students?*', route => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify({ status: 'ok', students: Array.from({ length: 16 }, (_, index) => ({
+    body: JSON.stringify({ status: 'ok', students: Array.from({ length: 35 }, (_, index) => ({
       studentId: `2026/MAL/${String(index + 1).padStart(3, '0')}`,
       name: `Katekumen ${index + 1}`,
       image: '',
-      status: 'active'
+      kelasKi: index < 31 ? 'active' : 'inactive'
     })) })
   }));
 
@@ -177,6 +177,7 @@ try {
     const placeholderStyle = getComputedStyle(document.querySelector('#profile-view .welcome-placeholder'));
     return {
       above: trigger.top - header.bottom,
+      selectorTop: container.top,
       triggerTop: trigger.top,
       centerDelta: Math.abs((placeholder.top + placeholder.bottom) / 2 - (list.top + list.bottom) / 2),
       placeholderBackground: placeholderStyle.backgroundColor,
@@ -203,7 +204,7 @@ try {
   }
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
   if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger).animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
-  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 16);
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
   const expandedShell = await page.evaluate(() => {
     const nav = document.getElementById('app-nav').getBoundingClientRect();
     const container = document.getElementById('app-container').getBoundingClientRect();
@@ -233,6 +234,7 @@ try {
         scrollTop: profile.scrollTop,
         selectorHeight: selectorElement.getBoundingClientRect().height,
         selectorTop: selectorElement.getBoundingClientRect().top,
+        triggerTop: document.getElementById('class-combobox-trigger').getBoundingClientRect().top,
       });
     }
     const header = document.getElementById('app-shell-header').getBoundingClientRect();
@@ -240,7 +242,8 @@ try {
     const classTrigger = document.getElementById('class-combobox-trigger').getBoundingClientRect();
     const infoBar = document.getElementById('profile-info-bar').getBoundingClientRect();
     const summary = summaryElement.getBoundingClientRect();
-    const summaryBadges = [...summaryElement.children].map(element => element.getBoundingClientRect());
+    const summaryBadges = [...summaryElement.children];
+    const summaryBadgeRects = summaryBadges.map(element => element.getBoundingClientRect());
     const search = document.getElementById('search-input').getBoundingClientRect();
     const searchIcon = document.querySelector('.profile-search-field > re-icon').getBoundingClientRect();
     const firstCard = document.querySelector('.student-accordion-item').getBoundingClientRect();
@@ -256,11 +259,16 @@ try {
       scrolledHeight: selector.height,
       controlGap: infoBar.top - classTrigger.bottom,
       rowGap: summary.left - search.right,
-      badgeGap: summaryBadges[1].left - summaryBadges[0].right,
+      badgeGap: summaryBadgeRects[1].top - summaryBadgeRects[0].bottom,
       summaryHeight: summary.height,
+      summaryWidth: summary.width,
       searchHeight: search.height,
       searchIconInside: searchIcon.left >= search.left && searchIcon.right < search.right,
       summaryCount: summaryElement.children.length,
+      summaryIcons: summaryBadges.map(element => element.querySelectorAll('re-icon').length),
+      summaryValues: summaryBadges.map(element => element.textContent.trim()),
+      summaryLabels: summaryBadges.map(element => element.getAttribute('aria-label')),
+      numberWidths: summaryBadges.map(element => element.querySelector('span').getBoundingClientRect().width),
       totalRemoved: !document.querySelector('.summary-total, #summary-total-text'),
       profileScrollListeners: window.__profileScrollListeners,
       backgroundAlpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
@@ -272,7 +280,11 @@ try {
   });
   const selectorHeightStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.selectorHeight))
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorHeight)) < 1;
-  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 4 || stickyProfileHeader.summaryHeight > stickyProfileHeader.searchHeight || stickyProfileHeader.searchHeight < 44 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.9 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.cardBehindControls) {
+  const selectorTopStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.selectorTop))
+    - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorTop)) < 1;
+  const triggerTopStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.triggerTop))
+    - Math.min(...stickyProfileHeader.samples.map(sample => sample.triggerTop)) < 1;
+  if (!selectorTopStable || !triggerTopStable || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.9 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.cardBehindControls) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 

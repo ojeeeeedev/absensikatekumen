@@ -1916,46 +1916,51 @@ a:focus-visible,
 .students-summary-container {
   display: flex;
   flex: 0 0 auto;
-  gap: var(--space-1);
+  flex-direction: column;
+  align-items: stretch;
+  width: 64px;
+  height: 44px;
+  gap: 0;
   justify-content: flex-end;
-  align-items: center;
-  background: transparent;
-  border: none;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
   padding: 0;
   margin: 0;
 }
 
 .summary-badge {
-  flex: 0 0 auto;
+  flex: 1 1 50%;
   min-width: 0;
-  min-height: 32px;
+  min-height: 0;
   white-space: nowrap;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  padding: var(--space-1) 6px;
-  border-radius: var(--radius-sm);
-  font-size: 0.675rem;
+  gap: 2px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: 0;
+  font-size: 0.6875rem;
   font-weight: 600;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 .summary-badge re-icon {
-  font-size: 0.85rem !important;
+  font-size: 0.6875rem !important;
   flex-shrink: 0;
 }
 
-/* Media query for smaller mobile screens to keep them on one line with perfect proportions */
-@media (max-width: 360px) {
-  .summary-badge {
-    padding-inline: var(--space-1);
-    font-size: 0.625rem;
-  }
-  .summary-badge re-icon {
-    display: none;
-  }
+.summary-badge span {
+  min-width: 2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-badge + .summary-badge {
+  border-top: 1px solid var(--border-glass);
 }
 
 @media (max-height: 700px) {
@@ -1974,13 +1979,11 @@ a:focus-visible,
 
 .summary-active {
   background: var(--status-success-bg);
-  border: 1px solid var(--status-success-border);
   color: var(--status-success-text);
 }
 
 .summary-inactive {
   background: var(--status-duplicate-bg);
-  border: 1px solid var(--status-duplicate-border);
   color: var(--status-duplicate-text);
 }
 
@@ -2341,7 +2344,7 @@ body[data-active-view="profile"] .nav-tabs::before {
    PROFILE PAGE CUSTOM LAYOUT
    ========================================= */
 #profile-view .profile-selector-container {
-  top: -1rem;
+  top: 0;
   width: 100%;
   margin-left: 0;
   margin-right: 0;
@@ -2368,7 +2371,7 @@ body[data-active-view="profile"] .nav-tabs::before {
 
 #profile-view .students-summary-container {
   padding: 0;
-  width: auto;
+  width: 64px;
 }
 
 #profile-view .students-list-container {

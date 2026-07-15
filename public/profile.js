@@ -131,8 +131,10 @@ function renderStudents(students) {
       const currentActive = activeAll.length;
       const currentInactive = inactiveAll.length;
 
-      summaryActiveText.textContent = `Aktif: ${currentActive}`;
-      summaryInactiveText.textContent = `Nonaktif: ${currentInactive}`;
+      summaryActiveText.textContent = String(currentActive);
+      summaryInactiveText.textContent = String(currentInactive);
+      summaryActiveText.parentElement.setAttribute('aria-label', `${currentActive} katekumen aktif`);
+      summaryInactiveText.parentElement.setAttribute('aria-label', `${currentInactive} katekumen nonaktif`);
     } else {
       summaryContainer.style.display = 'none';
     }
