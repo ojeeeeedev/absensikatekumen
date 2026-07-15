@@ -56,8 +56,7 @@ async function loadStudents(classCode) {
   }
   
   // Reset the list position when loading a new class.
-  const appSection = document.getElementById('profile-view');
-  if (appSection) appSection.scrollTop = 0;
+  if (listContainer) listContainer.scrollTop = 0;
   
   if (listContainer) listContainer.innerHTML = '';
   if (loader) loader.style.display = 'flex';
@@ -101,6 +100,7 @@ function renderStudents(students) {
   const summaryInactiveText = document.getElementById('summary-inactive-text');
   
   if (!listContainer) return;
+  listContainer.style.removeProperty('--profile-scroll-slack');
   listContainer.innerHTML = '';
 
   // Inactive helper
@@ -149,6 +149,24 @@ function renderStudents(students) {
     `;
     return;
   }
+
+  const closeTimers = new WeakMap();
+  const finishClose = (body) => {
+    clearTimeout(closeTimers.get(body));
+    closeTimers.delete(body);
+    body.classList.remove('expanded', 'closing');
+    body.classList.add('collapsed');
+    const header = body.previousElementSibling;
+    header.classList.remove('active', 'closing');
+    header.setAttribute('aria-expanded', 'false');
+  };
+
+  const withoutMotion = (items, update) => {
+    items.forEach(item => item.classList.add('skip-transition'));
+    update();
+    items[0]?.offsetHeight;
+    requestAnimationFrame(() => items.forEach(item => item.classList.remove('skip-transition')));
+  };
   
   // Helper to build a single student accordion item
   const buildStudentItem = (student, index, totalOffset = 0) => {
@@ -166,13 +184,17 @@ function renderStudents(students) {
     header.setAttribute('tabindex', '0');
     header.setAttribute('role', 'button');
     header.setAttribute('aria-expanded', 'false');
+    header.setAttribute('aria-label', `${student.name || 'Katekumen'}, ${student.studentId || 'tanpa ID'}`);
 
     const displayImgUrl = student.image;
     const hasPhoto = !!displayImgUrl;
 
     const photoHtml = hasPhoto
-      ? `<img class="student-thumb" src="${escapeHTML(displayImgUrl)}" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-         <div class="student-thumb-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>`
+      ? `<div class="student-photo-frame student-thumb-frame" aria-busy="true">
+           <app-spinner class="app-spinner profile-photo-spinner" aria-hidden="true"></app-spinner>
+           <img class="student-thumb" src="${escapeHTML(displayImgUrl)}" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'; this.parentElement.setAttribute('aria-busy', 'false');" onerror="this.style.display='none'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex'; this.parentElement.setAttribute('aria-busy', 'false');">
+           <div class="student-thumb-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>
+         </div>`
       : `<div class="student-thumb-placeholder"><re-icon icon="user" decorative></re-icon></div>`;
 
     const inactiveBadge = studentInactive
@@ -199,11 +221,14 @@ function renderStudents(students) {
     body.className = 'student-accordion-body collapsed';
 
     const largePhotoHtml = hasPhoto
-      ? `<img class="student-photo-large" src="${escapeHTML(displayImgUrl)}" alt="Foto ${escapeHTML(student.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-         <div class="student-photo-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>`
+      ? `<div class="student-photo-frame student-photo-large-frame" aria-busy="true">
+           <app-spinner class="app-spinner profile-photo-spinner" aria-hidden="true"></app-spinner>
+           <img class="student-photo-large" src="${escapeHTML(displayImgUrl)}" alt="Foto ${escapeHTML(student.name)}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'; this.parentElement.setAttribute('aria-busy', 'false');" onerror="this.style.display='none'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex'; this.parentElement.setAttribute('aria-busy', 'false');">
+           <div class="student-photo-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>
+         </div>`
       : `<div class="student-photo-placeholder"><re-icon icon="user" decorative></re-icon></div>`;
 
-    const kelasKiVal = student.kelasKi ? escapeHTML(student.kelasKi) : `<span class="text-na">N/A</span>`;
+    const katekisKiVal = student.kelasKi ? escapeHTML(student.kelasKi) : `<span class="text-na">N/A</span>`;
     const katekisKkVal = student.katekisKk ? escapeHTML(student.katekisKk) : `<span class="text-na">N/A</span>`;
 
     body.innerHTML = `
@@ -214,19 +239,20 @@ function renderStudents(students) {
           <p class="detail-id">ID: ${escapeHTML(student.studentId)}</p>
           <div class="detail-info-grid">
             <div class="detail-item">
-              <span class="detail-value detail-value-with-icon">
-                <re-icon icon="cake2" class="detail-icon-inline" decorative></re-icon>${escapeHTML(student.dob) || '-'}
+              <span class="detail-label">
+                <re-icon icon="cake2" class="detail-icon-inline" decorative></re-icon>TTL:
               </span>
+              <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
-                <re-icon icon="home-user" class="detail-icon-inline" decorative></re-icon>Kelompok Induk
+                <re-icon icon="home-user" class="detail-icon-inline" decorative></re-icon>KI:
               </span>
-              <span class="detail-value">${kelasKiVal}</span>
+              <span class="detail-value">${katekisKiVal}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
-                <re-icon icon="user" class="detail-icon-inline" decorative></re-icon>Kelompok Kecil
+                <re-icon icon="user" class="detail-icon-inline" decorative></re-icon>KK:
               </span>
               <span class="detail-value">${katekisKkVal}</span>
             </div>
@@ -247,43 +273,80 @@ function renderStudents(students) {
       });
     }
 
-    const toggle = () => {
+    const toggle = (animate = true) => {
+      const shouldAnimate = animate && !matchMedia('(prefers-reduced-motion: reduce)').matches;
       const isExpanded = body.classList.contains('expanded');
-      document.querySelectorAll('.student-accordion-body').forEach(b => {
-        b.classList.remove('expanded');
-        b.classList.add('collapsed');
-      });
-      document.querySelectorAll('.student-accordion-header').forEach(h => {
-        h.classList.remove('active');
-        h.setAttribute('aria-expanded', 'false');
-      });
-      if (!isExpanded) {
-        body.classList.remove('collapsed');
+      const previousBodies = [...document.querySelectorAll('.student-accordion-body:is(.expanded, .closing)')]
+        .filter(openBody => openBody !== body);
+      const list = document.getElementById('students-list');
+      const shouldStabilize = previousBodies.length > 0 || list?.style.getPropertyValue('--profile-scroll-slack');
+      const itemTopBeforeSwitch = shouldStabilize ? item.getBoundingClientRect().top : null;
+      list?.style.removeProperty('--profile-scroll-slack');
+
+      const closeCurrent = () => {
+        body.classList.remove('expanded');
+        body.classList.add('closing');
+        header.classList.remove('active');
+        header.classList.add('closing');
+        header.setAttribute('aria-expanded', 'false');
+        closeTimers.set(body, setTimeout(() => finishClose(body), 150));
+      };
+
+      const openCurrent = () => {
+        clearTimeout(closeTimers.get(body));
+        closeTimers.delete(body);
+        body.classList.remove('collapsed', 'closing');
         body.classList.add('expanded');
+        header.classList.remove('closing');
         header.classList.add('active');
         header.setAttribute('aria-expanded', 'true');
-        header.focus({ preventScroll: true });
-        requestAnimationFrame(() => {
-          Promise.allSettled(body.getAnimations().map(animation => animation.finished)).then(() => {
-            if (!body.classList.contains('expanded')) return;
-            const profile = document.getElementById('profile-view');
-            const controls = profile?.querySelector('.profile-selector-container');
-            if (!profile || !controls) return;
-            const gap = parseFloat(getComputedStyle(controls).marginBottom) || 0;
-            profile.scrollBy({
-              top: item.getBoundingClientRect().top - controls.getBoundingClientRect().bottom - gap,
-              behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-            });
-          });
-        });
+      };
+
+      if (isExpanded) {
+        if (shouldAnimate) closeCurrent();
+        else withoutMotion([item], () => finishClose(body));
+        return;
       }
+
+      if (previousBodies.length > 0 || !shouldAnimate) {
+        const affectedItems = [...new Set([item, ...previousBodies.map(openBody => openBody.parentElement)])];
+        withoutMotion(affectedItems, () => {
+          previousBodies.forEach(finishClose);
+          openCurrent();
+        });
+      } else {
+        openCurrent();
+      }
+
+      if (shouldStabilize) {
+        const itemTopAfterSwitch = item.getBoundingClientRect().top;
+        if (list) list.scrollTop += itemTopAfterSwitch - itemTopBeforeSwitch;
+      }
+
+      header.focus({ preventScroll: true });
+      requestAnimationFrame(() => {
+        if (!body.classList.contains('expanded')) return;
+        if (!list) return;
+        const scrollDistance = item.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        const missingScrollRange = Math.max(
+          0,
+          list.scrollTop + scrollDistance - (list.scrollHeight - list.clientHeight)
+        );
+        if (missingScrollRange > 0) {
+          list.style.setProperty('--profile-scroll-slack', `${Math.ceil(missingScrollRange)}px`);
+        }
+        list.scrollBy({
+          top: scrollDistance,
+          behavior: shouldAnimate ? 'smooth' : 'auto'
+        });
+      });
     };
 
-    header.addEventListener('click', toggle);
+    header.addEventListener('click', () => toggle());
     header.addEventListener('keydown', (e) => {
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
-        toggle();
+        toggle(false);
       }
     });
 
@@ -357,9 +420,21 @@ function filterStudents() {
   const searchInput = document.getElementById('search-input');
   if (!searchInput) return;
   const query = searchInput.value.toLowerCase().trim();
+  const scopedQuery = query.match(/^(ki|kk)\s*:(.*)$/);
+  if (scopedQuery) {
+    const [, scope, rawTerm] = scopedQuery;
+    const term = rawTerm.trim();
+    const field = scope === 'ki' ? 'kelasKi' : 'katekisKk';
+    renderStudents(allStudents.filter(student =>
+      (student[field] || '').toLowerCase().includes(term)
+    ));
+    return;
+  }
   const filtered = allStudents.filter(s => 
     (s.name || '').toLowerCase().includes(query) || 
-    (s.studentId || '').toLowerCase().includes(query)
+    (s.studentId || '').toLowerCase().includes(query) ||
+    (s.kelasKi || '').toLowerCase().includes(query) ||
+    (s.katekisKk || '').toLowerCase().includes(query)
   );
   renderStudents(filtered);
 }

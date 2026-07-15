@@ -1,12 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
 import { getScriptMap, readJsonResponse } from './_gas-utils.js';
-import { bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
+import { photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
 /**
- * Returns the GAS student roster for one validated class and enriches matching
- * records with authenticated same-origin photo URLs. Storage-list failures do
- * not block the roster response; GAS/auth/configuration failures do.
+ * Returns the GAS student roster with authenticated same-origin photo URLs.
+ * The browser loads those photos independently so storage latency does not
+ * block names and IDs from rendering.
  */
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -55,9 +54,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ status: "error", message: "Server GAS authentication is not configured" });
   }
 
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_KEY;
-  const supabase = (SUPABASE_URL && SUPABASE_KEY) ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  const photosEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_KEY);
 
   try {
     const gasResponse = await fetch(scriptURL, {
@@ -79,32 +76,12 @@ export default async function handler(req, res) {
       return res.status(502).json({ status: "error", message: data.message || "Failed to fetch students from sheet" });
     }
 
-    const students = data.students;
-
-    if (supabase && students.length > 0) {
-      const bucketName = bucketNameForClass(normalizedClassCode);
-
-      const { data: files, error: listError } = await listAllFiles(supabase, bucketName);
-
-      if (!listError && files && files.length > 0) {
-        const fileMap = {};
-        files.forEach(f => {
-          const parts = f.name.split('.');
-          const ext = parts.pop()?.toLowerCase();
-          const nameWithoutExt = parts.join('.').toLowerCase();
-          if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
-            fileMap[nameWithoutExt] = f.name;
-          }
-        });
-
-        students.forEach(s => {
-          const baseName = storageBaseNameForStudent(s.studentId)?.toLowerCase();
-          if (baseName && fileMap[baseName]) {
-            s.image = photoUrlForStudent(s.studentId);
-          }
-        });
-      }
-    }
+    const students = data.students.map(student => ({
+      ...student,
+      image: photosEnabled && storageBaseNameForStudent(student.studentId)
+        ? photoUrlForStudent(student.studentId)
+        : ''
+    }));
 
     return res.status(200).json({ status: "ok", students });
   } catch (err) {
