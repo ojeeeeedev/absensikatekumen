@@ -1538,6 +1538,8 @@ a:focus-visible,
 }
 
 .class-selector-control {
+  position: relative;
+  isolation: isolate;
   width: 100%;
   margin-bottom: 0;
   border-color: var(--accent);
@@ -1546,11 +1548,23 @@ a:focus-visible,
   font-size: 0.8rem;
   font-weight: 500;
   text-align: left;
+}
+
+.class-selector-control::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  will-change: box-shadow;
   animation: pulse-border 2s infinite;
 }
 
-.class-selector-control.has-selection,
-.needs-topic .class-selector-control.has-selection { animation: none; }
+.class-selector-control > * { position: relative; z-index: 1; }
+
+.class-selector-control.has-selection::after,
+.needs-topic .class-selector-control.has-selection::after { animation: none; }
 
 #topic-combobox-active {
   width: calc(100% - 2.5rem);
@@ -2345,7 +2359,6 @@ body[data-active-view="profile"] .nav-tabs::before {
 .needs-topic .active-topic-bar {
   border-color: var(--accent);
   box-shadow: 0 0 15px var(--accent-glow);
-  animation: pulse-border 2s infinite;
 }
 
 @keyframes pulse-border {

@@ -185,10 +185,11 @@ try {
       placeholderShadow: placeholderStyle.boxShadow,
       pickerWidth: root.width,
       sideClearance: (container.width - root.width) / 2,
-      animationName: getComputedStyle(triggerElement).animationName,
+      animationName: getComputedStyle(triggerElement, '::after').animationName,
+      triggerAnimationName: getComputedStyle(triggerElement).animationName,
     };
   });
-  if (profileSpacing.centerDelta >= 1 || profileSpacing.placeholderBackground !== 'rgba(0, 0, 0, 0)' || profileSpacing.placeholderBorder !== '0px' || profileSpacing.placeholderShadow !== 'none' || profileSpacing.animationName === 'none') {
+  if (profileSpacing.centerDelta >= 1 || profileSpacing.placeholderBackground !== 'rgba(0, 0, 0, 0)' || profileSpacing.placeholderBorder !== '0px' || profileSpacing.placeholderShadow !== 'none' || profileSpacing.animationName === 'none' || profileSpacing.triggerAnimationName !== 'none') {
     throw new Error(`Profile empty state is not centered and unboxed: ${JSON.stringify(profileSpacing)}`);
   }
   await page.locator('#class-combobox-trigger').click();
@@ -203,7 +204,7 @@ try {
     throw new Error(`Class selection failed: ${JSON.stringify({ selectedClass, activeElement })}`);
   }
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
-  if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger).animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
+  if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
   const expandedShell = await page.evaluate(() => {
     const nav = document.getElementById('app-nav').getBoundingClientRect();
@@ -454,7 +455,7 @@ try {
   const pOption = topicPopover.locator('.topic-option-p').first();
   const pIdleBackground = await pOption.evaluate(option => getComputedStyle(option).backgroundColor);
   await pOption.click();
-  if (await scanPage.locator('#topic-combobox-trigger').evaluate(trigger => getComputedStyle(trigger).animationName) !== 'none') throw new Error('Selected topic trigger is still glowing');
+  if (await scanPage.locator('#topic-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected topic trigger is still glowing');
   await scanPage.locator('#topic-combobox-trigger').click();
   const selectedP = topicPopover.locator('.topic-option-p[aria-selected="true"]');
   if (await selectedP.evaluate(option => getComputedStyle(option).backgroundColor) === pIdleBackground) throw new Error('Selected P topic fill is missing');
@@ -491,7 +492,7 @@ try {
       triggerHeight: trigger.height,
       progressWidth: progress.width,
       optionsHeight: options.height,
-      animationName: getComputedStyle(triggerElement).animationName,
+      animationName: getComputedStyle(triggerElement, '::after').animationName,
       topGlowClearance,
     };
   });
