@@ -574,8 +574,8 @@ button:disabled,
 }
 
 #reader-container {
-  width: clamp(180px, calc(38vh - 8px), 292px);
-  width: clamp(180px, calc(38dvh - 8px), 292px);
+  width: clamp(180px, calc(38vh + 4px), 304px);
+  width: clamp(180px, calc(38dvh + 4px), 304px);
   max-width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
@@ -697,7 +697,7 @@ button:disabled,
   display: flex;
   flex-direction: row;
   gap: 12px;
-  padding: 4px 5%;
+  padding: 0 5%;
   box-sizing: border-box;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
@@ -1163,7 +1163,7 @@ a:focus-visible,
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 86px;
+  min-height: 74px;
 }
 .carousel-container {
   position: relative;
@@ -1248,6 +1248,8 @@ a:focus-visible,
   justify-content: center;
   gap: 0;
   height: 6px;
+  min-height: 0;
+  flex: 0 0 6px;
   margin: var(--space-3) 0 var(--space-2);
 }
 .carousel-dot {
@@ -2021,7 +2023,7 @@ a:focus-visible,
   }
 
   #reader-container {
-    width: clamp(180px, calc(38dvh - 32px), 292px);
+    width: clamp(180px, calc(38dvh - 40px), 292px);
   }
 }
 

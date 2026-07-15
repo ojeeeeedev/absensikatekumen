@@ -495,6 +495,8 @@ try {
         cameraHeight: reader.height,
         historyHeight: history.height,
         mainOverflowY: getComputedStyle(main).overflowY,
+        mainClientHeight: main.clientHeight,
+        mainScrollHeight: main.scrollHeight,
         mainScrollable: main.scrollHeight > main.clientHeight,
         horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
       };
@@ -503,7 +505,7 @@ try {
       || scanViewport.horizontalOverflow
       || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
       || scanViewport.cameraWidth < 179
-      || scanViewport.cameraWidth > 293
+      || scanViewport.cameraWidth > 305
       || (viewport.width === 390 && viewport.height === 664 && scanViewport.mainScrollable)
       || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 111))) {
       throw new Error(`Scan viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(scanViewport)}`);

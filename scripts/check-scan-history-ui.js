@@ -166,19 +166,21 @@ try {
     const dots = Array.from(container.children);
     const first = dots[0].getBoundingClientRect();
     const second = dots[1].getBoundingClientRect();
-    const carousel = document.querySelector('.carousel-container-outer').getBoundingClientRect();
+    const card = document.querySelector('.queue-row').getBoundingClientRect();
     const footer = document.querySelector('.app-footer').getBoundingClientRect();
+    const footerText = document.querySelector('.footer-text').getBoundingClientRect();
     const dotCenter = first.top + first.height / 2;
     return {
       gap: style.gap,
       trackHeight: container.getBoundingClientRect().height,
       hitHeight: first.height,
       centerDistance: Math.round((second.left + second.width / 2) - (first.left + first.width / 2)),
-      historyGap: dotCenter - 3 - carousel.bottom,
+      historyGap: dotCenter - 3 - card.bottom,
       footerGap: footer.top - dotCenter - 3,
+      footerTextGap: footerText.top - footer.top,
     };
   });
-  if (dotSpacing.gap !== '0px' || dotSpacing.trackHeight !== 6 || dotSpacing.hitHeight !== 44 || dotSpacing.centerDistance !== 20 || dotSpacing.footerGap > 13 || Math.abs(dotSpacing.historyGap - dotSpacing.footerGap) > 1) {
+  if (dotSpacing.gap !== '0px' || dotSpacing.trackHeight !== 6 || dotSpacing.hitHeight !== 44 || dotSpacing.centerDistance !== 20 || Math.max(dotSpacing.historyGap, dotSpacing.footerGap, dotSpacing.footerTextGap) - Math.min(dotSpacing.historyGap, dotSpacing.footerGap, dotSpacing.footerTextGap) > 1) {
     throw new Error(`Carousel indicators are not compact: ${JSON.stringify(dotSpacing)}`);
   }
   await page.locator('.queue-row').filter({ hasText: 'Maria' }).locator('.history-dismiss-btn').click();
