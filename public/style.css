@@ -574,8 +574,8 @@ button:disabled,
 }
 
 #reader-container {
-  width: clamp(180px, calc(38vh + 24px), 324px);
-  width: clamp(180px, calc(38dvh + 24px), 324px);
+  width: clamp(180px, calc(38vh + 40px), 340px);
+  width: clamp(180px, calc(38dvh + 40px), 340px);
   max-width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
@@ -2364,8 +2364,15 @@ body[data-active-view="profile"] .nav-tabs::before {
 
 #profile-view .welcome-placeholder,
 #profile-view .empty-state {
-  margin-top: 0;
+  margin: 0;
+  padding: var(--space-6);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
+
+#profile-view .empty-state { flex: 1 1 auto; }
 
 #app-container.profile-expanded #profile-view .profile-selector-container {
   top: -1rem;
@@ -2404,11 +2411,10 @@ body[data-active-view="profile"] .nav-tabs::before {
 }
 
 .glass-container.state-profile:not(.profile-expanded) #students-list {
+  flex: 1 1 auto;
   min-height: 0;
-}
-
-.glass-container.state-profile:not(.profile-expanded) #profile-view .welcome-placeholder {
-  margin-bottom: 0;
+  justify-content: center;
+  padding-bottom: 0;
 }
 
 #profile-view #students-loader {

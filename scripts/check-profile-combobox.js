@@ -167,16 +167,21 @@ try {
     const triggerElement = document.getElementById('class-combobox-trigger');
     const trigger = triggerElement.getBoundingClientRect();
     const placeholder = document.querySelector('#profile-view .welcome-placeholder').getBoundingClientRect();
+    const list = document.getElementById('students-list').getBoundingClientRect();
+    const placeholderStyle = getComputedStyle(document.querySelector('#profile-view .welcome-placeholder'));
     return {
       above: trigger.top - header.bottom,
-      below: placeholder.top - trigger.bottom,
+      centerDelta: Math.abs((placeholder.top + placeholder.bottom) / 2 - (list.top + list.bottom) / 2),
+      placeholderBackground: placeholderStyle.backgroundColor,
+      placeholderBorder: placeholderStyle.borderTopWidth,
+      placeholderShadow: placeholderStyle.boxShadow,
       pickerWidth: root.width,
       sideClearance: (container.width - root.width) / 2,
       animationName: getComputedStyle(triggerElement).animationName,
     };
   });
-  if (Math.abs(profileSpacing.above - profileSpacing.below) >= 1 || profileSpacing.animationName === 'none') {
-    throw new Error(`Profile selector spacing is not uniform: ${JSON.stringify(profileSpacing)}`);
+  if (profileSpacing.centerDelta >= 1 || profileSpacing.placeholderBackground !== 'rgba(0, 0, 0, 0)' || profileSpacing.placeholderBorder !== '0px' || profileSpacing.placeholderShadow !== 'none' || profileSpacing.animationName === 'none') {
+    throw new Error(`Profile empty state is not centered and unboxed: ${JSON.stringify(profileSpacing)}`);
   }
   await page.locator('#class-combobox-trigger').click();
   await page.locator('#class-combobox-search').fill('mal');
@@ -503,8 +508,9 @@ try {
       || scanViewport.horizontalOverflow
       || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
       || scanViewport.cameraWidth < 179
-      || scanViewport.cameraWidth > 325
+      || scanViewport.cameraWidth > 341
       || (viewport.width === 390 && viewport.height === 664 && scanViewport.mainScrollable)
+      || (viewport.width === 390 && viewport.height === 844 && (Math.abs(scanViewport.cameraWidth - 340) >= 1 || scanViewport.mainScrollable))
       || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 111))) {
       throw new Error(`Scan viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(scanViewport)}`);
     }
