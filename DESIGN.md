@@ -74,12 +74,6 @@ Z-index:
 - Modal: 300.
 - Toast/loader: 1000.
 
-Transitions:
-- Fast: 120ms.
-- Normal: 180ms.
-- Slow: 280ms.
-- Never use `transition: all` in new CSS.
-
 ## 4. Typography System
 
 - Primary font: Inter.
@@ -173,14 +167,11 @@ Pagination/search/filter UI:
 - Native controls must use explicit background, text, border, and `color-scheme`.
 - Logos may swap through `theme.js`; colors still come from tokens.
 
-## 9. Motion and Interaction
+## 9. AI Skills for Design Engineers
 
-- Use motion for state changes only.
-- Prefer transform and opacity.
-- Use 120-280ms durations.
-- Respect `prefers-reduced-motion`.
-- Avoid bounce, theatrical transitions, and layout animation unless it improves clarity.
-- Spinners and progress shimmer must stop under reduced motion.
+For designers and engineers to help them build better user interfaces.
+
+Use 'emil-design-eng' to build animations and help you make better motion decisions. Follow it up with 'review-animations' skill to review your animations.
 
 ## 10. Accessibility Standards
 
@@ -212,7 +203,7 @@ Pagination/search/filter UI:
 - Preserve business logic in `public/script.js`, `public/profile.js`, API files, session logic, and Apps Script.
 - Remove inline style only when it is visual and safe; do not move behavior-driving styles unless tested.
 - Update this file when adding a reusable UI pattern.
-- Use CSS variables for new colors, shadows, radii, spacing, and transitions.
+- Use CSS variables for new colors, shadows, radii, and spacing.
 - Keep onboarding styling aligned with the same tokens.
 
 ## 13. AI Agent Instructions
@@ -226,6 +217,7 @@ Pagination/search/filter UI:
 - Use accessible defaults.
 - Keep light and dark mode working.
 - Prefer small systematic refactors over chaotic redesigns.
+- For animation work, follow Section 9 only; do not use `ultimate-design-guideline` as an animation authority.
 - When unsure, choose clarity, consistency, and maintainability.
 - If a requested UI change conflicts with `DESIGN.md`, explain the conflict and either follow `DESIGN.md` or update `DESIGN.md` intentionally with a clear reason.
 
