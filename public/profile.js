@@ -55,14 +55,9 @@ async function loadStudents(classCode) {
     summaryContainer.style.display = 'none';
   }
   
-  // Reset scroll position and remove scrolled class on loading new students
+  // Reset the list position when loading a new class.
   const appSection = document.getElementById('profile-view');
-  if (appSection) {
-    appSection.scrollTop = 0;
-    appSection.classList.remove('scrolled');
-    const glass = appSection.querySelector('.profile-controls-glass');
-    if (glass) glass.style.opacity = '0';
-  }
+  if (appSection) appSection.scrollTop = 0;
   
   if (listContainer) listContainer.innerHTML = '';
   if (loader) loader.style.display = 'flex';
@@ -102,7 +97,6 @@ function renderStudents(students) {
   const listContainer = document.getElementById('students-list');
   const summaryContainer = document.getElementById('students-summary');
   
-  const summaryTotalText = document.getElementById('summary-total-text');
   const summaryActiveText = document.getElementById('summary-active-text');
   const summaryInactiveText = document.getElementById('summary-inactive-text');
   
@@ -123,7 +117,7 @@ function renderStudents(students) {
   const processedStudents = [...activeList, ...inactiveList];
   
   // Update count summary badges
-  if (summaryContainer && summaryTotalText && summaryActiveText && summaryInactiveText) {
+  if (summaryContainer && summaryActiveText && summaryInactiveText) {
     const selector = document.getElementById('class-selector');
     const classCode = selector ? selector.value : '';
     
@@ -134,11 +128,9 @@ function renderStudents(students) {
       const activeAll = allStudents.filter(s => !isInactive(s));
       const inactiveAll = allStudents.filter(s => isInactive(s));
       
-      const currentTotal = allStudents.length;
       const currentActive = activeAll.length;
       const currentInactive = inactiveAll.length;
 
-      summaryTotalText.textContent = `Total: ${currentTotal}`;
       summaryActiveText.textContent = `Aktif: ${currentActive}`;
       summaryInactiveText.textContent = `Nonaktif: ${currentInactive}`;
     } else {
@@ -380,29 +372,14 @@ window.initializeProfileView = function initializeProfileView() {
   });
   loadClasses();
 
-  // Fade in the sticky glass layer without changing layout during scrolling.
-  const appSection = document.getElementById('profile-view');
-  if (appSection) {
-    const glass = appSection.querySelector('.profile-controls-glass');
-    let scrollFrame = 0;
-    appSection.addEventListener('scroll', () => {
-      if (scrollFrame) return;
-      scrollFrame = requestAnimationFrame(() => {
-        const scrollProgress = Math.min(appSection.scrollTop / 24, 1);
-        if (glass) glass.style.opacity = String(scrollProgress);
-        appSection.classList.toggle('scrolled', appSection.scrollTop > 0);
-        scrollFrame = 0;
-      });
-    }, { passive: true });
-  }
-  
   const selector = document.getElementById('class-selector');
   if (selector) {
     selector.addEventListener('change', (e) => {
       document.getElementById('app-container')?.classList.add('profile-expanded');
+      const infoBar = document.getElementById('profile-info-bar');
       const searchInput = document.getElementById('search-input');
+      if (infoBar) infoBar.style.display = 'flex';
       if (searchInput) {
-        searchInput.style.display = 'block';
         searchInput.value = '';
       }
       loadStudents(e.target.value);

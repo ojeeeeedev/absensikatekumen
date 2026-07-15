@@ -57,7 +57,7 @@ try {
     const style = getComputedStyle(photo);
     return { width: photo.offsetWidth, height: photo.offsetHeight, radius: style.borderRadius };
   });
-  if (photoGeometry.width !== 56 || photoGeometry.height !== 56 || photoGeometry.radius !== '12px') {
+  if (photoGeometry.width !== 56 || photoGeometry.height !== 56 || photoGeometry.radius !== '8px') {
     throw new Error(`History photo is not a squircle: ${JSON.stringify(photoGeometry)}`);
   }
   const compactCard = await page.locator('.queue-row').filter({ hasText: 'Maria' }).evaluate(card => {
@@ -169,6 +169,47 @@ try {
   if (dotSpacing.gap !== '0px' || dotSpacing.trackHeight !== 6 || dotSpacing.hitHeight !== 44 || dotSpacing.centerDistance !== 20 || Math.max(dotSpacing.historyGap, dotSpacing.footerGap, dotSpacing.footerTextGap) - Math.min(dotSpacing.historyGap, dotSpacing.footerGap, dotSpacing.footerTextGap) > 1) {
     throw new Error(`Carousel indicators are not compact: ${JSON.stringify(dotSpacing)}`);
   }
+  await page.setViewportSize({ width: 390, height: 664 });
+  const shortViewportLayout = await page.evaluate(() => {
+    const rect = selector => document.querySelector(selector).getBoundingClientRect();
+    const reader = rect('#reader-container');
+    const panel = rect('#queue-history-panel');
+    const topic = rect('#topic-combobox-active');
+    const dots = rect('#carousel-dots');
+    const footer = rect('.app-footer');
+    const footerText = rect('.footer-text');
+    const main = document.getElementById('main-app-section');
+    return {
+      readerWidth: reader.width,
+      panelWidth: panel.width,
+      topicWidth: topic.width,
+      dotFooterGap: footer.top - dots.bottom,
+      footerTextGap: footerText.top - footer.top,
+      scrollable: main.scrollHeight > main.clientHeight,
+    };
+  });
+  if (Math.abs(shortViewportLayout.readerWidth - 216.3125) >= 1 || Math.abs(shortViewportLayout.panelWidth - shortViewportLayout.topicWidth) >= 1 || Math.abs(shortViewportLayout.dotFooterGap - shortViewportLayout.footerTextGap) >= 1 || shortViewportLayout.scrollable) {
+    throw new Error(`Short scan layout does not reclaim the footer gap: ${JSON.stringify(shortViewportLayout)}`);
+  }
+  await page.setViewportSize({ width: 390, height: 700 });
+  const tallShortLayout = await page.evaluate(() => {
+    const rect = selector => document.querySelector(selector).getBoundingClientRect();
+    const reader = rect('#reader-container');
+    const dots = rect('#carousel-dots');
+    const footer = rect('.app-footer');
+    const footerText = rect('.footer-text');
+    const main = document.getElementById('main-app-section');
+    return {
+      readerWidth: reader.width,
+      dotFooterGap: footer.top - dots.bottom,
+      footerTextGap: footerText.top - footer.top,
+      scrollable: main.scrollHeight > main.clientHeight,
+    };
+  });
+  if (Math.abs(tallShortLayout.readerWidth - 252) >= 1 || Math.abs(tallShortLayout.dotFooterGap - tallShortLayout.footerTextGap) >= 1 || tallShortLayout.scrollable) {
+    throw new Error(`Tall short scan layout does not reclaim the footer gap: ${JSON.stringify(tallShortLayout)}`);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('.queue-row').filter({ hasText: 'Maria' }).locator('.history-dismiss-btn').click();
   const dismissalState = await page.evaluate(() => ({
     storedIds: JSON.parse(localStorage.getItem('scan_queue')).map(item => item.id),
@@ -298,7 +339,7 @@ try {
   await profilePage.locator('.student-accordion-item').first().waitFor();
   for (const selector of ['.student-thumb', '.student-thumb-placeholder']) {
     const radius = await profilePage.locator(selector).first().evaluate(element => getComputedStyle(element).borderRadius);
-    if (radius !== '12px') throw new Error(`${selector} is not a squircle`);
+    if (radius !== '8px') throw new Error(`${selector} does not align with its card corners`);
   }
   await profilePage.evaluate(() => showToast('Profile toast', 'success', { duration: 60000 }));
   const profileToastTop = await profilePage.locator('#toast-container').evaluate(container => getComputedStyle(container).top);

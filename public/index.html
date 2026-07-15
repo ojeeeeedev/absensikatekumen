@@ -251,7 +251,6 @@
 
       <section id="profile-view" class="app-section" hidden inert aria-labelledby="app-view-title">
         <div class="profile-selector-container">
-          <div class="profile-controls-glass" aria-hidden="true"></div>
           <select id="class-selector" hidden aria-hidden="true" tabindex="-1">
             <option value="" disabled selected>Memuat kelas...</option>
           </select>
@@ -271,23 +270,23 @@
             </div>
           </div>
 
-          <div id="students-summary" class="students-summary-container" style="display: none;">
-            <div class="summary-badge summary-total">
-              <re-icon icon="users" decorative></re-icon>
-              <span id="summary-total-text">Total: 0</span>
+          <div id="profile-info-bar" class="profile-info-bar" style="display: none;">
+            <div class="profile-search-field">
+              <re-icon icon="search" decorative></re-icon>
+              <label for="search-input" class="sr-only">Cari nama atau ID katekumen</label>
+              <input type="text" id="search-input" placeholder="Cari...">
             </div>
-            <div class="summary-badge summary-active">
-              <re-icon icon="check-circle" decorative></re-icon>
-              <span id="summary-active-text">Aktif: 0</span>
-            </div>
-            <div class="summary-badge summary-inactive">
-              <re-icon icon="close-circle2" decorative></re-icon>
-              <span id="summary-inactive-text">Nonaktif: 0</span>
+            <div id="students-summary" class="students-summary-container" style="display: none;">
+              <div class="summary-badge summary-active">
+                <re-icon icon="check-circle" decorative></re-icon>
+                <span id="summary-active-text">Aktif: 0</span>
+              </div>
+              <div class="summary-badge summary-inactive">
+                <re-icon icon="close-circle2" decorative></re-icon>
+                <span id="summary-inactive-text">Nonaktif: 0</span>
+              </div>
             </div>
           </div>
-
-          <label for="search-input" class="sr-only">Cari nama atau ID katekumen</label>
-          <input type="text" id="search-input" placeholder="Cari nama atau ID..." style="display: none;">
         </div>
 
         <div id="students-loader" style="display: none;">

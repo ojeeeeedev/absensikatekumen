@@ -32,6 +32,12 @@ try {
   await context.addInitScript(() => {
     sessionStorage.setItem('authToken', 'preview');
     localStorage.setItem('hasSeenOnboardingV2', 'true');
+    const addEventListener = EventTarget.prototype.addEventListener;
+    window.__profileScrollListeners = 0;
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+      if (type === 'scroll' && this instanceof Element && this.id === 'profile-view') window.__profileScrollListeners += 1;
+      return addEventListener.call(this, type, listener, options);
+    };
   });
   const page = await context.newPage();
   await page.route('**/api/classes', route => route.fulfill({
@@ -171,6 +177,7 @@ try {
     const placeholderStyle = getComputedStyle(document.querySelector('#profile-view .welcome-placeholder'));
     return {
       above: trigger.top - header.bottom,
+      triggerTop: trigger.top,
       centerDelta: Math.abs((placeholder.top + placeholder.bottom) / 2 - (list.top + list.bottom) / 2),
       placeholderBackground: placeholderStyle.backgroundColor,
       placeholderBorder: placeholderStyle.borderTopWidth,
@@ -204,11 +211,12 @@ try {
     return {
       navTop: nav.top,
       containerHeight: container.height,
+      triggerTop: document.getElementById('class-combobox-trigger').getBoundingClientRect().top,
       expanded: document.getElementById('app-container').classList.contains('profile-expanded'),
       scrollable: profile.scrollHeight > profile.clientHeight
     };
   });
-  if (!expandedShell.expanded || !expandedShell.scrollable || Math.abs(expandedShell.containerHeight - initialShell.containerHeight) >= 1 || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1) {
+  if (!expandedShell.expanded || !expandedShell.scrollable || Math.abs(expandedShell.containerHeight - initialShell.containerHeight) >= 1 || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1 || Math.abs(expandedShell.triggerTop - profileSpacing.triggerTop) >= 1) {
     throw new Error(`Profile shell did not preserve the full-height viewport layout: ${JSON.stringify({ initialShell, expandedShell })}`);
   }
 
@@ -216,50 +224,55 @@ try {
     const profile = document.getElementById('profile-view');
     const selectorElement = document.querySelector('#profile-view .profile-selector-container');
     const summaryElement = document.getElementById('students-summary');
-    const glassElement = document.querySelector('.profile-controls-glass');
     const restingHeight = selectorElement.getBoundingClientRect().height;
-    const restingSummaryHeight = summaryElement.getBoundingClientRect().height;
     const samples = [];
     for (const scrollTop of [0, 6, 12, 24, 100]) {
       profile.scrollTop = scrollTop;
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       samples.push({
         scrollTop: profile.scrollTop,
-        opacity: Number(getComputedStyle(glassElement).opacity),
         selectorHeight: selectorElement.getBoundingClientRect().height,
+        selectorTop: selectorElement.getBoundingClientRect().top,
       });
     }
     const header = document.getElementById('app-shell-header').getBoundingClientRect();
     const selector = selectorElement.getBoundingClientRect();
+    const classTrigger = document.getElementById('class-combobox-trigger').getBoundingClientRect();
+    const infoBar = document.getElementById('profile-info-bar').getBoundingClientRect();
     const summary = summaryElement.getBoundingClientRect();
+    const summaryBadges = [...summaryElement.children].map(element => element.getBoundingClientRect());
     const search = document.getElementById('search-input').getBoundingClientRect();
+    const searchIcon = document.querySelector('.profile-search-field > re-icon').getBoundingClientRect();
     const firstCard = document.querySelector('.student-accordion-item').getBoundingClientRect();
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 1;
     const context = canvas.getContext('2d');
-    context.fillStyle = getComputedStyle(glassElement).backgroundColor;
+    context.fillStyle = getComputedStyle(selectorElement).backgroundColor;
     context.fillRect(0, 0, 1, 1);
     return {
       headerBottom: header.bottom,
       selectorTop: selector.top,
       restingHeight,
       scrolledHeight: selector.height,
-      restingSummaryHeight,
-      scrolledSummaryHeight: summary.height,
+      controlGap: infoBar.top - classTrigger.bottom,
+      rowGap: summary.left - search.right,
+      badgeGap: summaryBadges[1].left - summaryBadges[0].right,
+      summaryHeight: summary.height,
       searchHeight: search.height,
+      searchIconInside: searchIcon.left >= search.left && searchIcon.right < search.right,
+      summaryCount: summaryElement.children.length,
+      totalRemoved: !document.querySelector('.summary-total, #summary-total-text'),
+      profileScrollListeners: window.__profileScrollListeners,
       backgroundAlpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
-      backdropFilter: getComputedStyle(glassElement).backdropFilter,
+      backdropFilter: getComputedStyle(selectorElement).backdropFilter,
       selectorTransitionDuration: getComputedStyle(selectorElement).transitionDuration,
-      cardBehindSearch: firstCard.top < search.bottom,
+      cardBehindControls: firstCard.top < selector.bottom,
       samples,
     };
   });
-  const opacityRisesWithScroll = stickyProfileHeader.samples[0].opacity === 0
-    && stickyProfileHeader.samples.at(-1).opacity === 1
-    && stickyProfileHeader.samples.every((sample, index, samples) => index === 0 || sample.opacity >= samples[index - 1].opacity);
   const selectorHeightStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.selectorHeight))
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorHeight)) < 1;
-  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1 || !opacityRisesWithScroll || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.scrolledSummaryHeight >= 30 || stickyProfileHeader.searchHeight < 44 || stickyProfileHeader.backgroundAlpha < 0.9 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.cardBehindSearch) {
+  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 4 || stickyProfileHeader.summaryHeight > stickyProfileHeader.searchHeight || stickyProfileHeader.searchHeight < 44 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.9 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.cardBehindControls) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
@@ -532,13 +545,18 @@ try {
 
     const profileViewport = await page.evaluate(() => {
       const container = document.getElementById('app-container').getBoundingClientRect();
+      const infoBar = document.getElementById('profile-info-bar').getBoundingClientRect();
+      const search = document.querySelector('.profile-search-field').getBoundingClientRect();
+      const summary = document.getElementById('students-summary').getBoundingClientRect();
       return {
         bottomGap: innerHeight - container.bottom,
         bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
         horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+        controlsShareRow: Math.abs((search.top + search.bottom) / 2 - (summary.top + summary.bottom) / 2) < 1,
+        controlsContained: search.left >= infoBar.left && summary.right <= infoBar.right,
       };
     });
-    if (Math.abs(profileViewport.bottomGap - profileViewport.bodyPaddingBottom) >= 1 || profileViewport.horizontalOverflow) {
+    if (Math.abs(profileViewport.bottomGap - profileViewport.bodyPaddingBottom) >= 1 || profileViewport.horizontalOverflow || !profileViewport.controlsShareRow || !profileViewport.controlsContained) {
       throw new Error(`Profile viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(profileViewport)}`);
     }
   }
