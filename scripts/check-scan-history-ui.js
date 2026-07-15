@@ -125,19 +125,19 @@ try {
     const status = button.closest('.queue-row').querySelector('.status-badge').getBoundingClientRect();
     return {
       rightInset: Math.round(card.right - hitTarget.right),
-      bottomInset: Math.round(card.bottom - hitTarget.bottom),
+      topInset: Math.round(hitTarget.top - card.top),
       hitWidth: hitTarget.width,
       glyphFontSize: getComputedStyle(glyph).fontSize,
       glyphBackground: getComputedStyle(glyph).backgroundColor,
       statusRightInset: Math.round(card.right - status.right),
       statusBottomInset: Math.round(card.bottom - status.bottom),
-      glyphRightOfStatus: glyphRect.left > status.right,
-      centerDelta: Math.round((glyphRect.top + glyphRect.bottom - status.top - status.bottom) / 2),
+      glyphAboveStatus: glyphRect.bottom < status.top,
+      centerDelta: Math.round((glyphRect.left + glyphRect.right - status.left - status.right) / 2),
       glyphRightInset: Math.round(card.right - glyphRect.right),
-      glyphBottomInset: Math.round(card.bottom - glyphRect.bottom),
+      glyphTopInset: Math.round(glyphRect.top - card.top),
     };
   });
-  if (dismissGeometry.rightInset !== 1 || dismissGeometry.bottomInset !== 1 || dismissGeometry.hitWidth !== 44 || dismissGeometry.glyphFontSize !== '16px' || dismissGeometry.glyphBackground !== 'rgba(0, 0, 0, 0)' || dismissGeometry.statusRightInset !== 33 || dismissGeometry.statusBottomInset !== 9 || !dismissGeometry.glyphRightOfStatus || Math.abs(dismissGeometry.centerDelta) > 1 || dismissGeometry.glyphRightInset < 12 || dismissGeometry.glyphBottomInset < 12) {
+  if (dismissGeometry.rightInset !== 3 || dismissGeometry.topInset !== 1 || dismissGeometry.hitWidth !== 44 || dismissGeometry.glyphFontSize !== '16px' || dismissGeometry.glyphBackground !== 'rgba(0, 0, 0, 0)' || dismissGeometry.statusRightInset !== 11 || dismissGeometry.statusBottomInset !== 9 || !dismissGeometry.glyphAboveStatus || Math.abs(dismissGeometry.centerDelta) > 1 || dismissGeometry.glyphRightInset < 12 || dismissGeometry.glyphTopInset < 12) {
     throw new Error(`History card controls are not aligned vertically on the right: ${JSON.stringify(dismissGeometry)}`);
   }
 

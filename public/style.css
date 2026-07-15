@@ -754,7 +754,7 @@ button:disabled,
   position: relative;
   display: flex; align-items: center; justify-content: space-between;
   min-width: 0;
-  padding: 8px 68px 8px 14px; border-radius: 12px; background: var(--bg-body);
+  padding: 8px 52px 8px 14px; border-radius: 12px; background: var(--bg-body);
   border: 1px solid var(--border-glass);
 }
 .queue-row.success { border: 1px solid color-mix(in srgb, var(--status-success-text) 72%, transparent); }
@@ -773,8 +773,8 @@ button:disabled,
 
 .history-dismiss-btn {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  top: 0;
+  right: 2px;
   width: 44px;
   height: 44px;
   display: grid;
@@ -1102,7 +1102,7 @@ a:focus-visible,
 /* Circular icon badge on scan card rows */
 .queue-row .status-badge {
   position: absolute;
-  right: 32px;
+  right: 10px;
   bottom: 8px;
   display: flex;
   align-items: center;
