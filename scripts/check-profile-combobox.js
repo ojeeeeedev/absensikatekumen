@@ -40,6 +40,15 @@ try {
     };
   });
   const page = await context.newPage();
+  let releaseProfilePhoto;
+  const profilePhotoGate = new Promise(resolve => { releaseProfilePhoto = resolve; });
+  await page.route('**/api/photo?*', async route => {
+    await profilePhotoGate;
+    await route.fulfill({
+      contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
+    });
+  });
   await page.route('**/api/classes', route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ status: 'ok', classes: [
@@ -51,9 +60,14 @@ try {
     contentType: 'application/json',
     body: JSON.stringify({ status: 'ok', students: Array.from({ length: 35 }, (_, index) => ({
       studentId: `2026/MAL/${String(index + 1).padStart(3, '0')}`,
-      name: `Katekumen ${index + 1}`,
-      image: '',
-      kelasKi: index < 31 ? 'active' : 'inactive'
+      name: index === 2
+        ? 'Katekis Induk Khusus'
+        : index === 3
+          ? 'Katekis Kecil Khusus'
+          : `Katekumen ${index + 1}`,
+      image: index === 0 ? '/api/photo?studentId=2026%2FMAL%2F001' : '',
+      kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
+      katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
     })) })
   }));
 
@@ -206,33 +220,75 @@ try {
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
   if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
+  const progressivePhotoState = await page.locator('.student-accordion-item').first().evaluate(item => {
+    const frame = item.querySelector('.student-thumb-frame');
+    const spinner = frame.querySelector('.profile-photo-spinner');
+    const image = frame.querySelector('.student-thumb');
+    return {
+      name: item.querySelector('.student-name-text').textContent,
+      busy: frame.getAttribute('aria-busy'),
+      spinnerDisplay: getComputedStyle(spinner).display,
+      imageLoaded: image.classList.contains('loaded')
+    };
+  });
+  if (progressivePhotoState.name !== 'Katekumen 1' || progressivePhotoState.busy !== 'true' || progressivePhotoState.spinnerDisplay === 'none' || progressivePhotoState.imageLoaded) {
+    throw new Error(`Names did not render ahead of profile photos: ${JSON.stringify(progressivePhotoState)}`);
+  }
+  releaseProfilePhoto();
+  await page.waitForFunction(() => {
+    const frame = document.querySelector('.student-thumb-frame');
+    return frame?.getAttribute('aria-busy') === 'false'
+      && frame.querySelector('.student-thumb')?.classList.contains('loaded')
+      && getComputedStyle(frame.querySelector('.profile-photo-spinner')).display === 'none';
+  });
+  const assertProfileSearch = async (query, expectedIds) => {
+    await page.locator('#search-input').fill(query);
+    await page.waitForFunction(ids => {
+      const renderedIds = [...document.querySelectorAll('.student-id-text')]
+        .map(element => element.textContent.trim());
+      return JSON.stringify(renderedIds) === JSON.stringify(ids);
+    }, expectedIds);
+  };
+  await assertProfileSearch('Katekis Induk Khusus', ['2026/MAL/001', '2026/MAL/003']);
+  await assertProfileSearch('ki:Katekis Induk Khusus', ['2026/MAL/001']);
+  await assertProfileSearch('Katekis Kecil Khusus', ['2026/MAL/002', '2026/MAL/004']);
+  await assertProfileSearch('kk:Katekis Kecil Khusus', ['2026/MAL/002']);
+  await assertProfileSearch('', Array.from({ length: 35 }, (_, index) =>
+    `2026/MAL/${String(index + 1).padStart(3, '0')}`
+  ));
   const expandedShell = await page.evaluate(() => {
     const nav = document.getElementById('app-nav').getBoundingClientRect();
     const container = document.getElementById('app-container').getBoundingClientRect();
     const profile = document.getElementById('profile-view');
+    const list = document.getElementById('students-list');
     return {
       navTop: nav.top,
       containerHeight: container.height,
       triggerTop: document.getElementById('class-combobox-trigger').getBoundingClientRect().top,
       expanded: document.getElementById('app-container').classList.contains('profile-expanded'),
-      scrollable: profile.scrollHeight > profile.clientHeight
+      listScrollable: list.scrollHeight > list.clientHeight,
+      profileScrollable: profile.scrollHeight > profile.clientHeight,
+      profileOverflow: getComputedStyle(profile).overflowY,
+      listOverflow: getComputedStyle(list).overflowY
     };
   });
-  if (!expandedShell.expanded || !expandedShell.scrollable || Math.abs(expandedShell.containerHeight - initialShell.containerHeight) >= 1 || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1 || Math.abs(expandedShell.triggerTop - profileSpacing.triggerTop) >= 1) {
+  if (!expandedShell.expanded || !expandedShell.listScrollable || expandedShell.profileScrollable || expandedShell.profileOverflow !== 'hidden' || expandedShell.listOverflow !== 'auto' || Math.abs(expandedShell.containerHeight - initialShell.containerHeight) >= 1 || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1 || Math.abs(expandedShell.triggerTop - profileSpacing.triggerTop) >= 1) {
     throw new Error(`Profile shell did not preserve the full-height viewport layout: ${JSON.stringify({ initialShell, expandedShell })}`);
   }
 
   const stickyProfileHeader = await page.evaluate(async () => {
     const profile = document.getElementById('profile-view');
+    const list = document.getElementById('students-list');
     const selectorElement = document.querySelector('#profile-view .profile-selector-container');
     const summaryElement = document.getElementById('students-summary');
     const restingHeight = selectorElement.getBoundingClientRect().height;
     const samples = [];
     for (const scrollTop of [0, 6, 12, 24, 100, 300]) {
-      profile.scrollTop = scrollTop;
+      list.scrollTop = scrollTop;
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       samples.push({
-        scrollTop: profile.scrollTop,
+        scrollTop: list.scrollTop,
+        profileScrollTop: profile.scrollTop,
         selectorHeight: selectorElement.getBoundingClientRect().height,
         selectorTop: selectorElement.getBoundingClientRect().top,
         triggerTop: document.getElementById('class-combobox-trigger').getBoundingClientRect().top,
@@ -257,6 +313,7 @@ try {
     return {
       headerBottom: header.bottom,
       selectorTop: selector.top,
+      selectorBottom: selector.bottom,
       restingHeight,
       scrolledHeight: selector.height,
       controlGap: infoBar.top - classTrigger.bottom,
@@ -286,6 +343,8 @@ try {
       backgroundAlpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
       backdropFilter: getComputedStyle(selectorElement).backdropFilter,
       selectorTransitionDuration: getComputedStyle(selectorElement).transitionDuration,
+      listTop: list.getBoundingClientRect().top,
+      listScrollbarColor: getComputedStyle(list).scrollbarColor,
       gapOccluded: selectorElement.contains(gapPoint),
       cardBehindControls: firstCard.top < selector.bottom,
       samples,
@@ -297,19 +356,207 @@ try {
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorTop)) < 1;
   const triggerTopStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.triggerTop))
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.triggerTop)) < 1;
+  const profileStayedStill = stickyProfileHeader.samples.every(sample => sample.profileScrollTop === 0);
   const summaryColumnsAligned = Math.max(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) - Math.min(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) < 1;
   const summarySpacingUniform = stickyProfileHeader.summaryGeometry.every(row => row.columnGap === '3px' && row.iconWidths.every(width => width === 11) && row.gaps.every(gap => Math.abs(gap - 3) < 1));
-  if (!selectorTopStable || !triggerTopStable || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'center') || !summaryColumnsAligned || !summarySpacingUniform || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
+  if (!selectorTopStable || !triggerTopStable || !profileStayedStill || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'center') || !summaryColumnsAligned || !summarySpacingUniform || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || stickyProfileHeader.listTop < stickyProfileHeader.selectorBottom || stickyProfileHeader.listScrollbarColor === 'auto' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
+  const firstProfile = page.locator('.student-accordion-item').first();
+  await page.locator('#students-list').evaluate(list => { list.scrollTop = 0; });
+  const hoverBefore = await firstProfile.evaluate(item => ({
+    top: item.getBoundingClientRect().top,
+    borderColor: getComputedStyle(item).borderTopColor
+  }));
+  await firstProfile.hover();
+  await page.waitForTimeout(150);
+  const hoverState = await firstProfile.evaluate(item => ({
+    top: item.getBoundingClientRect().top,
+    shadow: getComputedStyle(item).boxShadow,
+    borderColor: getComputedStyle(item).borderTopColor
+  }));
+  if (Math.abs(hoverState.top - hoverBefore.top) >= 1 || hoverState.shadow !== 'none' || hoverState.borderColor === hoverBefore.borderColor) {
+    throw new Error(`Profile card hover moved or painted outside its scroll container: ${JSON.stringify({ hoverBefore, hoverState })}`);
+  }
+
   const focusedProfile = page.locator('.student-accordion-item').nth(20);
+  const collapsedChevronCenterInset = await focusedProfile.evaluate(item => {
+    const itemRect = item.getBoundingClientRect();
+    const arrowRect = item.querySelector('.expand-arrow').getBoundingClientRect();
+    return itemRect.right - (arrowRect.left + arrowRect.right) / 2;
+  });
   await focusedProfile.locator('.student-accordion-header').click();
+  const pointerOpenMotion = await focusedProfile.evaluate(item => [
+    ...item.querySelector('.student-accordion-inner').getAnimations(),
+    ...item.querySelector('.expand-arrow').getAnimations()
+  ].map(animation => ({
+    property: animation.transitionProperty,
+    duration: animation.effect.getTiming().duration,
+    easing: animation.effect.getTiming().easing
+  })));
+  if (pointerOpenMotion.length !== 3 || pointerOpenMotion.some(animation => !['opacity', 'transform'].includes(animation.property) || animation.duration !== 180 || animation.easing !== 'cubic-bezier(0.23, 1, 0.32, 1)')) {
+    throw new Error(`Profile accordion opening motion is not composited and aligned: ${JSON.stringify(pointerOpenMotion)}`);
+  }
   await page.waitForFunction(() => {
     const item = document.querySelectorAll('.student-accordion-item')[20];
     const header = item.querySelector('.student-accordion-header');
-    const controls = document.querySelector('#profile-view .profile-selector-container');
-    const expectedTop = controls.getBoundingClientRect().bottom + parseFloat(getComputedStyle(controls).marginBottom);
+    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
+    return header === document.activeElement
+      && header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+  });
+  await page.waitForFunction(() => {
+    const header = document.querySelectorAll('.student-accordion-header')[20];
+    const detail = header.nextElementSibling.querySelector('.student-detail-card');
+    return Math.abs(detail.getBoundingClientRect().top - header.getBoundingClientRect().bottom - 8) < 1;
+  });
+  const compactExpandedHeader = await focusedProfile.locator('.student-accordion-header').evaluate(header => {
+    const arrow = header.querySelector('.expand-arrow');
+    const headerRect = header.getBoundingClientRect();
+    const arrowRect = arrow.getBoundingClientRect();
+    const item = header.closest('.student-accordion-item');
+    const itemRect = item.getBoundingClientRect();
+    const body = header.nextElementSibling;
+    const bodyRect = body.getBoundingClientRect();
+    const detailRect = body.querySelector('.student-detail-card').getBoundingClientRect();
+    const dividerStyle = getComputedStyle(header, '::after');
+    return {
+      label: header.getAttribute('aria-label'),
+      height: headerRect.height,
+      width: headerRect.width,
+      itemWidth: itemRect.width,
+      position: getComputedStyle(header).position,
+      identityDisplay: getComputedStyle(header.querySelector('.header-left')).display,
+      arrowDisplay: getComputedStyle(arrow).display,
+      arrowWidth: arrowRect.width,
+      arrowHeight: arrowRect.height,
+      arrowCenterInset: itemRect.right - (arrowRect.left + arrowRect.right) / 2,
+      background: getComputedStyle(header).backgroundColor,
+      bodyBackgroundImage: getComputedStyle(body).backgroundImage,
+      dividerTop: dividerStyle.top,
+      dividerWidth: dividerStyle.borderTopWidth,
+      bodyTopOffset: bodyRect.top - itemRect.top,
+      detailTopGap: detailRect.top - headerRect.bottom,
+      topLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 8)),
+      bottomLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 42))
+    };
+  });
+  if (!compactExpandedHeader.label?.includes('Katekumen 21, 2026/MAL/021') || compactExpandedHeader.height !== 44 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '40px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
+    throw new Error(`Expanded profile header is not a full-width accessible collapse control: ${JSON.stringify(compactExpandedHeader)}`);
+  }
+  await focusedProfile.locator('.student-accordion-header').click();
+  const pointerCloseMotion = await focusedProfile.evaluate(item => ({
+    closing: item.querySelector('.student-accordion-body').classList.contains('closing'),
+    animations: [
+      ...item.querySelector('.student-accordion-inner').getAnimations(),
+      ...item.querySelector('.expand-arrow').getAnimations()
+    ].map(animation => ({
+      property: animation.transitionProperty,
+      duration: animation.effect.getTiming().duration,
+      easing: animation.effect.getTiming().easing
+    }))
+  }));
+  if (!pointerCloseMotion.closing || pointerCloseMotion.animations.length !== 3 || pointerCloseMotion.animations.some(animation => !['opacity', 'transform'].includes(animation.property) || animation.duration !== 150 || animation.easing !== 'cubic-bezier(0.23, 1, 0.32, 1)')) {
+    throw new Error(`Profile accordion closing motion is not composited and aligned: ${JSON.stringify(pointerCloseMotion)}`);
+  }
+  await page.waitForTimeout(50);
+  await focusedProfile.locator('.student-accordion-header').click();
+  if (await focusedProfile.locator('.student-accordion-header').getAttribute('aria-expanded') !== 'true') {
+    throw new Error('Interrupted accordion close did not reverse cleanly');
+  }
+  await page.waitForTimeout(180);
+  const originalTheme = await page.evaluate(() => document.documentElement.dataset.theme || '');
+  for (const width of [320, 390, 420]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const theme of ['light', 'dark']) {
+      const responsiveState = await page.evaluate(async selectedTheme => {
+        document.documentElement.dataset.theme = selectedTheme;
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const header = document.querySelector('.student-accordion-header.active');
+        const item = header.closest('.student-accordion-item');
+        const arrow = header.querySelector('.expand-arrow').getBoundingClientRect();
+        const itemRect = item.getBoundingClientRect();
+        return {
+          overflow: item.scrollWidth - item.clientWidth,
+          identityDisplay: getComputedStyle(header.querySelector('.header-left')).display,
+          arrowWidth: arrow.width,
+          arrowHeight: arrow.height,
+          overflowSelectors: [...item.querySelectorAll('*')]
+            .filter(element => {
+              const rect = element.getBoundingClientRect();
+              return rect.right > itemRect.right + 1 || rect.left < itemRect.left - 1;
+            })
+            .slice(0, 8)
+            .map(element => `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${[...element.classList].map(name => `.${name}`).join('')}`)
+        };
+      }, theme);
+      if (responsiveState.overflow > 1 || responsiveState.identityDisplay !== 'none' || responsiveState.arrowWidth === 0 || responsiveState.arrowHeight === 0) {
+        throw new Error(`Expanded profile header failed at ${width}px in ${theme} theme: ${JSON.stringify(responsiveState)}`);
+      }
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(theme => {
+    if (theme) document.documentElement.dataset.theme = theme;
+    else delete document.documentElement.dataset.theme;
+  }, originalTheme);
+  await focusedProfile.locator('.student-accordion-header').press('Enter');
+  const keyboardCloseAnimations = await focusedProfile.evaluate(item => [
+    ...item.querySelector('.student-accordion-inner').getAnimations(),
+    ...item.querySelector('.expand-arrow').getAnimations()
+  ].length);
+  if (keyboardCloseAnimations !== 0) throw new Error('Keyboard accordion close still animates');
+  await page.waitForFunction(() => {
+    const header = document.querySelectorAll('.student-accordion-header')[20];
+    return header.getAttribute('aria-expanded') === 'false'
+      && getComputedStyle(header.querySelector('.header-left')).display !== 'none';
+  });
+  await focusedProfile.locator('.student-accordion-header').press('Enter');
+  await page.waitForFunction(() => {
+    const item = document.querySelectorAll('.student-accordion-item')[20];
+    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
+    return item.querySelector('.student-accordion-header').getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+  });
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await focusedProfile.locator('.student-accordion-header').click();
+  const reducedMotionClose = await focusedProfile.evaluate(item => ({
+    expanded: item.querySelector('.student-accordion-header').getAttribute('aria-expanded'),
+    bodyHeight: item.querySelector('.student-accordion-body').getBoundingClientRect().height
+  }));
+  if (reducedMotionClose.expanded !== 'false' || reducedMotionClose.bodyHeight !== 0) {
+    throw new Error(`Reduced-motion accordion close was not immediate: ${JSON.stringify(reducedMotionClose)}`);
+  }
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await focusedProfile.locator('.student-accordion-header').press('Enter');
+
+  const secondFocusedProfile = page.locator('.student-accordion-item').nth(25);
+  await secondFocusedProfile.locator('.student-accordion-header').click();
+  const switchAnimations = await page.evaluate(() => [20, 25].flatMap(index => {
+    const item = document.querySelectorAll('.student-accordion-item')[index];
+    return [
+      ...item.querySelector('.student-accordion-inner').getAnimations(),
+      ...item.querySelector('.expand-arrow').getAnimations()
+    ];
+  }).length);
+  if (switchAnimations !== 0) throw new Error('Direct accordion switch is still one-sided');
+  await page.waitForFunction(() => {
+    const item = document.querySelectorAll('.student-accordion-item')[25];
+    const header = item.querySelector('.student-accordion-header');
+    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
+    return header === document.activeElement
+      && header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+  });
+
+  const lastFocusedProfile = page.locator('.student-accordion-item').nth(34);
+  await lastFocusedProfile.locator('.student-accordion-header').click();
+  await page.waitForFunction(() => {
+    const item = document.querySelectorAll('.student-accordion-item')[34];
+    const header = item.querySelector('.student-accordion-header');
+    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
     return header === document.activeElement
       && header.getAttribute('aria-expanded') === 'true'
       && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;

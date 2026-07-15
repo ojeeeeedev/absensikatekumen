@@ -170,8 +170,7 @@ Pagination/search/filter UI:
 ## 9. AI Skills for Design Engineers
 
 For designers and engineers to help them build better user interfaces.
-
-Use 'emil-design-eng' to build animations and help you make better motion decisions. Follow it up with 'review-animations' skill to review your animations.
+Use `$find-animation-opportunities` first for read-only discovery of motion that would genuinely help. Use `emil-design-eng` to build approved animations, `$review-animations` to review them, and `$improve-animations` to plan or implement fixes.
 
 ## 10. Accessibility Standards
 

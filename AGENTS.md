@@ -92,5 +92,7 @@ The following environment variables are required (configured in Vercel or `.env`
 - **Error Handling:**
   - Provide clear visual and haptic (vibration) feedback for success/error states on the mobile UI.
   - Always validate incoming `studentId` formats before processing.
+- **Animation Workflow:**
+  - Use `$find-animation-opportunities` for read-only discovery of missing motion; use `$review-animations` to assess existing motion and `$improve-animations` to plan or implement fixes.
 - **Version Bumping:**
   - When all requested modifications for a task are complete and verified, ask the user interactively if they want to bump the package version in `package.json` (major, minor, patch, or none) before final completion. After every version bump, ask the user interactively whether to commit to the local repo or push it to the remote repo.
