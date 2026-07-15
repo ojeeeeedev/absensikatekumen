@@ -503,7 +503,7 @@ try {
       || scanViewport.horizontalOverflow
       || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
       || scanViewport.cameraWidth < 179
-      || scanViewport.cameraWidth > 313
+      || scanViewport.cameraWidth > 325
       || (viewport.width === 390 && viewport.height === 664 && scanViewport.mainScrollable)
       || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 111))) {
       throw new Error(`Scan viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(scanViewport)}`);

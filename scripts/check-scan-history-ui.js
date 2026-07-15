@@ -80,12 +80,20 @@ try {
   if (compactCard.cardHeight !== 74 || compactCard.nameHeight > 18 || !compactCard.nameClipped || compactCard.overflow !== 'hidden' || compactCard.textOverflow !== 'ellipsis' || compactCard.whiteSpace !== 'nowrap') {
     throw new Error(`History card is not compact with a clipped name: ${JSON.stringify(compactCard)}`);
   }
-  const spinnerStates = await page.locator('#login-loader .app-spinner, #history-sync-spinner, .status-spinner').evaluateAll(spinners => spinners.map(spinner => ({
+  const spinnerStates = await page.locator('#login-loader .app-spinner, .status-spinner').evaluateAll(spinners => spinners.map(spinner => ({
     color: getComputedStyle(spinner).color,
     stroke: getComputedStyle(spinner.shadowRoot.querySelector('svg')).stroke,
   })));
-  if (spinnerStates.length !== 3 || spinnerStates.some(spinner => spinner.color !== spinner.stroke) || await page.locator('.grid-column-scan-loader').count()) {
+  if (spinnerStates.length !== 2 || spinnerStates.some(spinner => spinner.color !== spinner.stroke) || await page.locator('#history-sync-spinner, .grid-column-scan-loader').count()) {
     throw new Error(`Scan spinners were not replaced: ${JSON.stringify(spinnerStates)}`);
+  }
+  const loadingProgress = await page.locator('.segmented-progress-bar').evaluate(bar => ({
+    busy: bar.getAttribute('aria-busy'),
+    loading: bar.classList.contains('is-loading'),
+    animation: getComputedStyle(bar, '::after').animationName,
+  }));
+  if (loadingProgress.busy !== 'true' || !loadingProgress.loading || loadingProgress.animation !== 'progressBreath') {
+    throw new Error(`Progress bar does not show the loading state: ${JSON.stringify(loadingProgress)}`);
   }
   const visibleLegendItems = await page.locator('.progress-legend .legend-item').evaluateAll(items => items.filter(item => getComputedStyle(item).display !== 'none').length);
   if (!await page.locator('.progress-legend').isVisible() || visibleLegendItems !== 4 || await page.locator('#progress-info-trigger, #progress-breakdown').count()) {
@@ -252,6 +260,9 @@ try {
     scanQueue.queue = [];
     scanQueue.render();
   });
+  if (await page.locator('.segmented-progress-bar').getAttribute('aria-busy') !== 'false' || await page.locator('.segmented-progress-bar').evaluate(bar => bar.classList.contains('is-loading'))) {
+    throw new Error('Progress bar loading state persisted after the queue emptied');
+  }
   const emptyHistory = await page.locator('.queue-empty-state').evaluate(emptyState => ({
     icon: emptyState.querySelector('re-icon')?.getAttribute('icon'),
     text: emptyState.textContent.replace(/\s+/g, ' ').trim(),

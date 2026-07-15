@@ -574,8 +574,8 @@ button:disabled,
 }
 
 #reader-container {
-  width: clamp(180px, calc(38vh + 12px), 312px);
-  width: clamp(180px, calc(38dvh + 12px), 312px);
+  width: clamp(180px, calc(38vh + 24px), 324px);
+  width: clamp(180px, calc(38dvh + 24px), 324px);
   max-width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
@@ -864,11 +864,6 @@ button:disabled,
   width: 28px;
   height: 28px;
   color: var(--accent);
-}
-
-.spinner-small {
-  width: 14px;
-  height: 14px;
 }
 
 .app-spinner { display: block; color: var(--accent); }
@@ -1297,12 +1292,21 @@ a:focus-visible,
   margin: 0 0 4px;
 }
 .segmented-progress-bar {
+  position: relative;
   flex: 1;
   height: 6px;
   border-radius: 3px;
   background: var(--border-glass);
   display: flex;
   overflow: hidden;
+}
+.segmented-progress-bar.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0;
+  animation: progressBreath 1.5s ease-in-out infinite;
 }
 .progress-segment {
   height: 100%;
@@ -1313,12 +1317,9 @@ a:focus-visible,
 .progress-segment.error { background-color: var(--status-duplicate-text); }
 .progress-segment.pending {
   background-color: var(--accent);
-  animation: pendingPulse 1.5s infinite ease-in-out;
 }
-@keyframes pendingPulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+@keyframes progressBreath {
+  50% { opacity: 0.32; }
 }
 
 .progress-legend {

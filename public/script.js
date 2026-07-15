@@ -714,7 +714,7 @@ class ScanQueue {
 
   updateBanner() {
     const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-    const syncSpinner = document.getElementById('history-sync-spinner');
+    const progressBar = document.querySelector('.segmented-progress-bar');
     
     if (pendingCount === 0) {
       this.totalInBatch = 0;
@@ -722,8 +722,10 @@ class ScanQueue {
       this.totalInBatch = pendingCount;
     }
 
-    if (syncSpinner) {
-      syncSpinner.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    if (progressBar) {
+      const isLoading = pendingCount > 0;
+      progressBar.classList.toggle('is-loading', isLoading);
+      progressBar.setAttribute('aria-busy', String(isLoading));
     }
   }
 
