@@ -445,9 +445,9 @@ try {
   const matchesProfileClearance = Math.abs(topicLayout.sideClearance - profileSpacing.sideClearance) < 1;
   const selectedTopicIsStatic = topicLayout.animationName === 'none';
   const hasUniformSpacing = Math.abs(topicLayout.above - topicLayout.below) < 1;
-  const hasUniformScannerSpacing = Math.abs(topicLayout.below - topicLayout.scannerBottomGap) < 1;
+  const hasHistorySeparation = topicLayout.scannerBottomGap >= topicLayout.below;
   const footerIsCompactAndCentered = topicLayout.footerHeight <= 40 && Math.abs(topicLayout.footerTopGap - topicLayout.footerBottomGap) < 1;
-  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasUniformScannerSpacing || !footerIsCompactAndCentered || topicLayout.scannerSize < 295 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
+  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasHistorySeparation || !footerIsCompactAndCentered || topicLayout.scannerSize < 287 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
     throw new Error(`Topic combobox layout does not match the profile selector: ${JSON.stringify(topicLayout)}`);
   }
   await topicPopover.locator('.search-combobox-search').fill('Pentakosta');
@@ -501,8 +501,8 @@ try {
       || scanViewport.horizontalOverflow
       || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
       || scanViewport.cameraWidth < 179
-      || scanViewport.cameraWidth > 301
-      || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 124))) {
+      || scanViewport.cameraWidth > 293
+      || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 111))) {
       throw new Error(`Scan viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(scanViewport)}`);
     }
     if (scanViewport.mainScrollable) {

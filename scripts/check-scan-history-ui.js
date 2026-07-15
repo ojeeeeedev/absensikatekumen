@@ -38,7 +38,7 @@ try {
     localStorage.setItem('selectedWeek', '0');
     localStorage.setItem('selectedTopicName', 'Pembukaan Kelas');
     localStorage.setItem('scan_queue', JSON.stringify([
-      { id: 'success-1', studentId: '2026/TST/001', week: '0', status: 'success', name: 'Maria', image: '/assets/favicon.png', timestamp: Date.now() },
+      { id: 'success-1', studentId: '2026/TST/001', week: '0', status: 'success', name: 'Maria Kristiana Kaidun Dengan Nama Sangat Panjang', image: '/assets/favicon.png', timestamp: Date.now() },
       { id: 'duplicate-1', studentId: '2026/TST/002', week: '0', status: 'duplicate', name: 'Yohanes', image: '', timestamp: Date.now() },
       { id: 'error-1', studentId: '2026/TST/003', week: '0', status: 'error', name: 'Paulus', image: '', timestamp: Date.now() }
     ]));
@@ -59,6 +59,26 @@ try {
   });
   if (photoGeometry.width !== 56 || photoGeometry.height !== 56 || photoGeometry.radius !== '12px') {
     throw new Error(`History photo is not a squircle: ${JSON.stringify(photoGeometry)}`);
+  }
+  const compactCard = await page.locator('.queue-row').filter({ hasText: 'Maria' }).evaluate(card => {
+    const name = card.querySelector('.student-name');
+    const nameStyle = getComputedStyle(name);
+    return {
+      cardHeight: card.getBoundingClientRect().height,
+      cardWidth: card.getBoundingClientRect().width,
+      infoWidth: card.querySelector('.student-info').getBoundingClientRect().width,
+      textWidth: card.querySelector('.student-text').getBoundingClientRect().width,
+      nameHeight: name.getBoundingClientRect().height,
+      nameWidth: name.clientWidth,
+      nameScrollWidth: name.scrollWidth,
+      nameClipped: name.scrollWidth > name.clientWidth,
+      overflow: nameStyle.overflow,
+      textOverflow: nameStyle.textOverflow,
+      whiteSpace: nameStyle.whiteSpace,
+    };
+  });
+  if (compactCard.cardHeight !== 74 || compactCard.nameHeight > 18 || !compactCard.nameClipped || compactCard.overflow !== 'hidden' || compactCard.textOverflow !== 'ellipsis' || compactCard.whiteSpace !== 'nowrap') {
+    throw new Error(`History card is not compact with a clipped name: ${JSON.stringify(compactCard)}`);
   }
   const spinnerStates = await page.locator('#login-loader .app-spinner, #history-sync-spinner, .status-spinner').evaluateAll(spinners => spinners.map(spinner => ({
     color: getComputedStyle(spinner).color,
@@ -120,14 +140,19 @@ try {
     const dots = Array.from(container.children);
     const first = dots[0].getBoundingClientRect();
     const second = dots[1].getBoundingClientRect();
+    const carousel = document.querySelector('.carousel-container-outer').getBoundingClientRect();
+    const footer = document.querySelector('.app-footer').getBoundingClientRect();
+    const bounds = container.getBoundingClientRect();
     return {
       gap: style.gap,
       marginTop: style.marginTop,
       marginBottom: style.marginBottom,
       centerDistance: Math.round((second.left + second.width / 2) - (first.left + first.width / 2)),
+      historyGap: bounds.top - carousel.bottom,
+      footerGap: footer.top - bounds.bottom,
     };
   });
-  if (dotSpacing.gap !== '0px' || dotSpacing.marginTop !== '-6px' || dotSpacing.marginBottom !== '0px' || dotSpacing.centerDistance !== 20) {
+  if (dotSpacing.gap !== '0px' || dotSpacing.centerDistance !== 20 || dotSpacing.footerGap > 13 || Math.abs(dotSpacing.historyGap - dotSpacing.footerGap) > 1) {
     throw new Error(`Carousel indicators are not compact: ${JSON.stringify(dotSpacing)}`);
   }
   await page.locator('.queue-row').filter({ hasText: 'Maria' }).locator('.history-dismiss-btn').click();
