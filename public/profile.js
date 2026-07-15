@@ -214,20 +214,19 @@ function renderStudents(students) {
           <p class="detail-id">ID: ${escapeHTML(student.studentId)}</p>
           <div class="detail-info-grid">
             <div class="detail-item">
-              <span class="detail-label">
-                <re-icon icon="cake2" class="detail-icon-inline" decorative></re-icon>Tempat, Tanggal Lahir
+              <span class="detail-value detail-value-with-icon">
+                <re-icon icon="cake2" class="detail-icon-inline" decorative></re-icon>${escapeHTML(student.dob) || '-'}
               </span>
-              <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
-                <re-icon icon="home-user" class="detail-icon-inline" decorative></re-icon>Kelas KI
+                <re-icon icon="home-user" class="detail-icon-inline" decorative></re-icon>Kelompok Induk
               </span>
               <span class="detail-value">${kelasKiVal}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
-                <re-icon icon="user" class="detail-icon-inline" decorative></re-icon>Katekis KK
+                <re-icon icon="user" class="detail-icon-inline" decorative></re-icon>Kelompok Kecil
               </span>
               <span class="detail-value">${katekisKkVal}</span>
             </div>

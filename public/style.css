@@ -364,7 +364,7 @@ button:disabled,
   border: none; border-radius: var(--radius-md); font-size: 1.05rem; font-weight: 600;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   margin-bottom: 1rem;
-  box-shadow: 0 4px 12px var(--accent-glow);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 #login-btn re-icon {
   position: absolute;
@@ -1499,7 +1499,7 @@ a:focus-visible,
   padding: 0.5rem 0.75rem 0.5rem 2.25rem;
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 0.8125rem;
   outline: none;
@@ -1943,6 +1943,12 @@ a:focus-visible,
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-primary);
+}
+
+.detail-value-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 #students-loader {
