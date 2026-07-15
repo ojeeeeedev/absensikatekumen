@@ -315,7 +315,11 @@ try {
   await page.mouse.move(1, 1);
   await page.evaluate(() => {
     document.activeElement?.blur();
-    for (let index = 1; index <= 5; index += 1) showToast(`Toast ${index}`, 'info', { duration: 60000 });
+    const types = ['success', 'error', 'duplicate', 'info', 'info'];
+    for (let index = 1; index <= 5; index += 1) {
+      const message = index === 5 ? 'Toast 5 - Nama Katekumen Yang Sangat Panjang Dan Harus Dipotong' : `Toast ${index}`;
+      showToast(message, types[index - 1], { duration: 60000 });
+    }
   });
   await page.waitForTimeout(350);
   const toastState = await page.locator('#toast-container').evaluate(container => ({
@@ -325,6 +329,19 @@ try {
     bottomGap: innerHeight - container.getBoundingClientRect().bottom,
     dismissButtons: container.querySelectorAll('.toast-dismiss[aria-label="Tutup notifikasi"]').length,
     backdropFilter: getComputedStyle(container.lastElementChild).backdropFilter,
+    borderWidths: [...container.children].map(toast => getComputedStyle(toast).borderLeftWidth),
+    borderColors: [...container.children].map(toast => getComputedStyle(toast).borderLeftColor),
+    fillColors: [...container.children].map(toast => getComputedStyle(toast).backgroundColor),
+    message: (() => {
+      const element = container.lastElementChild.querySelector('.toast-message');
+      const style = getComputedStyle(element);
+      return {
+        overflow: style.overflow,
+        whiteSpace: style.whiteSpace,
+        textOverflow: style.textOverflow,
+        clipped: element.scrollWidth > element.clientWidth,
+      };
+    })(),
     backgroundAlpha: (() => {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 1;
@@ -338,7 +355,7 @@ try {
     collapsedOverlap: container.children[container.children.length - 2].getBoundingClientRect().bottom
       > container.lastElementChild.getBoundingClientRect().top,
   }));
-  if (toastState.count !== 4 || !toastState.newest.includes('Toast 5') || toastState.bottom === 'auto' || toastState.bottomGap < 15 || toastState.bottomGap > 24 || toastState.dismissButtons !== 4 || toastState.backdropFilter === 'none' || toastState.backgroundAlpha < 0.65 || toastState.backgroundAlpha > 0.75 || Math.abs(toastState.newestScale - 1) > 0.01 || toastState.previousScale >= toastState.newestScale || !toastState.collapsedOverlap) {
+  if (toastState.count !== 4 || !toastState.newest.includes('Toast 5') || toastState.bottom === 'auto' || toastState.bottomGap < 15 || toastState.bottomGap > 24 || toastState.dismissButtons !== 4 || toastState.backdropFilter === 'none' || toastState.backgroundAlpha < 0.65 || toastState.backgroundAlpha > 0.75 || toastState.borderWidths.some(width => width !== '1px') || new Set(toastState.borderColors).size < 2 || new Set(toastState.fillColors).size < 2 || toastState.message.overflow !== 'hidden' || toastState.message.whiteSpace !== 'nowrap' || toastState.message.textOverflow !== 'ellipsis' || !toastState.message.clipped || Math.abs(toastState.newestScale - 1) > 0.01 || toastState.previousScale >= toastState.newestScale || !toastState.collapsedOverlap) {
     throw new Error(`Toast stack is incorrect: ${JSON.stringify(toastState)}`);
   }
   await page.locator('.toast').last().locator('.toast-dismiss').focus();
@@ -354,6 +371,10 @@ try {
   if (await page.locator('.toast').count() !== 3) throw new Error('Toast dismiss button did not remove the notification');
   await page.mouse.move(1, 1);
   await page.waitForTimeout(300);
+  await page.waitForTimeout(3500);
+  if (await page.locator('.toast').count() !== 3) throw new Error('Toast dismissed before the hard five-second limit');
+  await page.waitForTimeout(1000);
+  if (await page.locator('.toast').count() !== 0) throw new Error('Toast exceeded the hard five-second limit');
 
   const list = page.locator('#queue-list');
   await list.evaluate(element => element.scrollTo({ left: 0, behavior: 'instant' }));

@@ -669,7 +669,7 @@ class ScanQueue {
           const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
           pendingItem.image = data.image || (localMatch ? localMatch.image : '');
           
-          showToast(`Sudah Hadir - Topik ${pendingItem.week} - ${data.name || 'Katekumen'}`, 'info');
+          showToast(`Duplikat - Topik ${pendingItem.week} - ${data.name || 'Katekumen'}`, 'duplicate');
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {

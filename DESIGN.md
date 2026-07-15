@@ -136,7 +136,7 @@ Dialogs/drawers/dropdowns/popovers/tooltips:
 
 Toasts:
 - Use the shared bottom-center toast controller on scanner and profile surfaces; the newest notification sits in front, up to three older notifications stack behind it, and the stack expands on hover or keyboard focus.
-- Every toast has a dismiss button, uses the frosted popover surface, pauses dismissal on hover/focus, and no more than four remain visible.
+- Every toast has a dismiss button, uses a frosted semantic border/fill, stays on one clipped line, and dismisses after five seconds without extending on hover/focus; no more than four remain visible.
 - Destructive actions should be confirmed or reversible; use a toast action for lightweight Undo flows.
 
 Tables/lists:
