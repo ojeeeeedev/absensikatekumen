@@ -1453,7 +1453,7 @@ a:focus-visible,
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--popover);
+  background: linear-gradient(var(--popover), var(--popover)), var(--background);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-glass);
@@ -2355,6 +2355,14 @@ body[data-active-view="profile"] .nav-tabs::before {
   padding-top: 0;
   padding-bottom: var(--space-3);
   margin-top: 0;
+}
+
+#profile-view .profile-selector-container::before {
+  content: "";
+  position: absolute;
+  inset: -1rem 0 auto;
+  height: 1rem;
+  background: inherit;
 }
 
 #profile-view .welcome-placeholder,

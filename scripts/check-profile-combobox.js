@@ -227,7 +227,7 @@ try {
     const summaryElement = document.getElementById('students-summary');
     const restingHeight = selectorElement.getBoundingClientRect().height;
     const samples = [];
-    for (const scrollTop of [0, 6, 12, 24, 100]) {
+    for (const scrollTop of [0, 6, 12, 24, 100, 300]) {
       profile.scrollTop = scrollTop;
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       samples.push({
@@ -252,6 +252,7 @@ try {
     const context = canvas.getContext('2d');
     context.fillStyle = getComputedStyle(selectorElement).backgroundColor;
     context.fillRect(0, 0, 1, 1);
+    const gapPoint = document.elementFromPoint((selector.left + selector.right) / 2, (header.bottom + selector.top) / 2);
     return {
       headerBottom: header.bottom,
       selectorTop: selector.top,
@@ -274,6 +275,7 @@ try {
       backgroundAlpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
       backdropFilter: getComputedStyle(selectorElement).backdropFilter,
       selectorTransitionDuration: getComputedStyle(selectorElement).transitionDuration,
+      gapOccluded: selectorElement.contains(gapPoint),
       cardBehindControls: firstCard.top < selector.bottom,
       samples,
     };
@@ -284,7 +286,7 @@ try {
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorTop)) < 1;
   const triggerTopStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.triggerTop))
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.triggerTop)) < 1;
-  if (!selectorTopStable || !triggerTopStable || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.9 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.cardBehindControls) {
+  if (!selectorTopStable || !triggerTopStable || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
