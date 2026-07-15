@@ -26,6 +26,13 @@ async function drag(page, startX, endX, y) {
   await page.mouse.up();
 }
 
+async function dragVertical(page, x, startY, endY) {
+  await page.mouse.move(x, startY);
+  await page.mouse.down();
+  await page.mouse.move(x, endY, { steps: 6 });
+  await page.mouse.up();
+}
+
 let browser;
 try {
   await waitForServer();
@@ -132,14 +139,69 @@ try {
       statusRightInset: Math.round(card.right - status.right),
       statusBottomInset: Math.round(card.bottom - status.bottom),
       glyphAboveStatus: glyphRect.bottom < status.top,
-      centerDelta: Math.round((glyphRect.left + glyphRect.right - status.left - status.right) / 2),
+      rightEdgeDelta: Math.round(glyphRect.right - status.right),
       glyphRightInset: Math.round(card.right - glyphRect.right),
       glyphTopInset: Math.round(glyphRect.top - card.top),
     };
   });
-  if (dismissGeometry.rightInset !== 3 || dismissGeometry.topInset !== 1 || dismissGeometry.hitWidth !== 44 || dismissGeometry.glyphFontSize !== '16px' || dismissGeometry.glyphBackground !== 'rgba(0, 0, 0, 0)' || dismissGeometry.statusRightInset !== 11 || dismissGeometry.statusBottomInset !== 9 || !dismissGeometry.glyphAboveStatus || Math.abs(dismissGeometry.centerDelta) > 1 || dismissGeometry.glyphRightInset < 12 || dismissGeometry.glyphTopInset < 12) {
+  if (dismissGeometry.rightInset !== 3 || dismissGeometry.topInset !== 1 || dismissGeometry.hitWidth !== 44 || dismissGeometry.glyphFontSize !== '16px' || dismissGeometry.glyphBackground !== 'rgba(0, 0, 0, 0)' || dismissGeometry.statusRightInset !== 13 || dismissGeometry.statusBottomInset !== 9 || !dismissGeometry.glyphAboveStatus || Math.abs(dismissGeometry.rightEdgeDelta) > 1 || dismissGeometry.glyphRightInset < 12 || dismissGeometry.glyphTopInset < 12) {
     throw new Error(`History card controls are not aligned vertically on the right: ${JSON.stringify(dismissGeometry)}`);
   }
+
+  const mariaCard = page.locator('.queue-row').filter({ hasText: 'Maria' });
+  const drawer = page.locator('#student-detail-modal');
+  await mariaCard.click({ position: { x: 120, y: 36 } });
+  await page.waitForTimeout(320);
+  const drawerState = await drawer.evaluate(modal => {
+    const sheet = modal.querySelector('.student-modal-content').getBoundingClientRect();
+    const handle = modal.querySelector('.student-modal-swipe-handle').getBoundingClientRect();
+    const close = modal.querySelector('.student-modal-close').getBoundingClientRect();
+    return {
+      tag: modal.tagName,
+      open: modal.open,
+      active: modal.classList.contains('is-open'),
+      sheetBottom: Math.round(innerHeight - sheet.bottom),
+      handleWidth: handle.width,
+      handleHeight: handle.height,
+      closeWidth: close.width,
+      closeHeight: close.height,
+      touchAction: getComputedStyle(modal.querySelector('[data-drawer-handle]')).touchAction,
+      focused: document.activeElement?.className,
+      transformY: new DOMMatrix(getComputedStyle(modal.querySelector('.student-modal-content')).transform).m42,
+      backdrop: getComputedStyle(modal, '::backdrop').backgroundColor,
+    };
+  });
+  if (drawerState.tag !== 'DIALOG' || !drawerState.open || !drawerState.active || drawerState.sheetBottom !== 0 || drawerState.handleWidth !== 40 || drawerState.handleHeight !== 4 || drawerState.closeWidth !== 44 || drawerState.closeHeight !== 44 || drawerState.touchAction !== 'none' || drawerState.focused !== 'student-modal-close' || Math.abs(drawerState.transformY) > 1 || drawerState.backdrop === 'rgba(0, 0, 0, 0)') {
+    throw new Error(`Student detail drawer did not open correctly: ${JSON.stringify(drawerState)}`);
+  }
+
+  let handleBox = await page.locator('[data-drawer-handle]').boundingBox();
+  await dragVertical(page, handleBox.x + handleBox.width / 2, handleBox.y + 12, handleBox.y + 28);
+  await page.waitForTimeout(320);
+  if (!await drawer.evaluate(modal => modal.open && Math.abs(new DOMMatrix(getComputedStyle(modal.querySelector('.student-modal-content')).transform).m42) < 1)) {
+    throw new Error('Short drawer swipe did not snap back');
+  }
+
+  handleBox = await page.locator('[data-drawer-handle]').boundingBox();
+  await dragVertical(page, handleBox.x + handleBox.width / 2, handleBox.y + 12, handleBox.y + 124);
+  await page.waitForTimeout(320);
+  if (await drawer.evaluate(modal => modal.open) || !await mariaCard.evaluate(card => card === document.activeElement)) {
+    throw new Error('Long drawer swipe did not dismiss and restore focus');
+  }
+
+  await mariaCard.press('Enter');
+  await page.waitForTimeout(50);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(320);
+  if (await drawer.evaluate(modal => modal.open) || !await mariaCard.evaluate(card => card === document.activeElement)) {
+    throw new Error('Escape did not close the drawer and restore focus');
+  }
+
+  await mariaCard.click({ position: { x: 120, y: 36 } });
+  await page.waitForTimeout(50);
+  await drawer.click({ position: { x: 8, y: 8 } });
+  await page.waitForTimeout(320);
+  if (await drawer.evaluate(modal => modal.open)) throw new Error('Backdrop tap did not close the drawer');
 
   const dots = page.locator('.carousel-dot');
   const dotShapes = await dots.evaluateAll(elements => elements.map(element => {
@@ -349,6 +411,12 @@ try {
   await page.setViewportSize({ width: 320, height: 720 });
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Scan history overflows at 320px');
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.evaluate(() => showStudentModal({ studentId: '2026/TST/010', week: '0', status: 'success', name: 'Reduced Motion', image: '' }));
+  await page.waitForTimeout(30);
+  const drawerTransitionSeconds = await drawer.evaluate(modal => parseFloat(getComputedStyle(modal.querySelector('.student-modal-content')).transitionDuration));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(30);
+  if (drawerTransitionSeconds > 0.02 || await drawer.evaluate(modal => modal.open)) throw new Error('Drawer does not respect reduced motion');
   await page.evaluate(() => showToast('Reduced motion', 'info', { duration: 60000 }));
   const toastTransitionSeconds = await page.locator('.toast').first().evaluate(toast => parseFloat(getComputedStyle(toast).transitionDuration));
   if (toastTransitionSeconds > 0.02) throw new Error('Toast does not respect reduced motion');

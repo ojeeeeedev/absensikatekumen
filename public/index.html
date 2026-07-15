@@ -305,11 +305,14 @@
       </section>
     </main>
 
-    <!-- Modal Student Detail -->
-    <div id="student-detail-modal" class="student-modal" style="display: none;" onclick="closeStudentModal(event)" role="dialog" aria-modal="true" aria-labelledby="modal-student-name">
-      <div class="modal-content student-modal-content" onclick="event.stopPropagation()">
-        <div class="student-modal-header">
-          <re-icon icon="close-circle2" class="student-modal-close-icon" onclick="closeStudentModal(event)" role="button" tabindex="0" aria-label="Tutup detail katekumen" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeStudentModal(event); }"></re-icon>
+    <!-- Scan History Detail Drawer -->
+    <dialog id="student-detail-modal" class="student-modal" aria-labelledby="modal-student-name">
+      <section class="student-modal-content">
+        <div class="student-modal-header" data-drawer-handle>
+          <span class="student-modal-swipe-handle" aria-hidden="true"></span>
+          <button type="button" class="student-modal-close" aria-label="Tutup detail katekumen">
+            <re-icon icon="close-circle2" decorative></re-icon>
+          </button>
         </div>
         <div class="student-modal-body">
           <img id="modal-student-photo" class="modal-student-photo" src="/assets/favicon.png" alt="Foto Katekumen">
@@ -320,8 +323,8 @@
             <span id="modal-student-status" class="status-badge">Status</span>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </dialog>
 
     <div id="upload-preview-modal" class="upload-preview-modal" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
       <div class="upload-preview-sheet">

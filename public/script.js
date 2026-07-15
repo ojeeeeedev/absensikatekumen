@@ -856,12 +856,12 @@ class ScanQueue {
       row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}, ${statusTextMap[item.status] || item.status}`);
       
       row.onclick = () => {
-        showStudentModal(item);
+        showStudentModal(item, row);
       };
       row.onkeydown = (event) => {
         if (event.key === ' ' || event.key === 'Enter') {
           event.preventDefault();
-          showStudentModal(item);
+          showStudentModal(item, row);
         }
       };
 
@@ -1306,7 +1306,13 @@ window.onload = async () => {
   }
 }
 
-window.showStudentModal = function(item) {
+let studentModalReturnFocus = null;
+let studentModalCloseTimer = null;
+const STUDENT_DRAWER_CLOSE_MS = 280;
+const STUDENT_DRAWER_DISMISS_DISTANCE = 96;
+const STUDENT_DRAWER_DISMISS_VELOCITY = 0.5;
+
+window.showStudentModal = function(item, trigger) {
   const modal = document.getElementById('student-detail-modal');
   const photoEl = document.getElementById('modal-student-photo');
   const nameEl = document.getElementById('modal-student-name');
@@ -1340,16 +1346,99 @@ window.showStudentModal = function(item) {
   if (item.status === 'processing') statusText = 'SYNCING...';
   statusEl.textContent = statusText;
 
-  modal.style.display = 'flex';
-  setTimeout(() => modal.querySelector('[role="button"], button')?.focus(), 0);
+  if (!modal.open) {
+    studentModalReturnFocus = trigger || document.activeElement;
+    clearTimeout(studentModalCloseTimer);
+    modal.classList.remove('is-open', 'is-closing', 'is-dragging');
+    modal.querySelector('.student-modal-content')?.style.removeProperty('--drawer-offset');
+    modal.showModal();
+    modal.getBoundingClientRect();
+    requestAnimationFrame(() => {
+      if (!modal.open) return;
+      modal.classList.add('is-open');
+      modal.querySelector('.student-modal-close')?.focus({ preventScroll: true });
+    });
+  }
 };
 
 window.closeStudentModal = function(event) {
   const modal = document.getElementById('student-detail-modal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
+  if (event) event.stopPropagation();
+  if (!modal?.open || modal.classList.contains('is-closing')) return;
+
+  clearTimeout(studentModalCloseTimer);
+  modal.classList.remove('is-open', 'is-dragging');
+  modal.classList.add('is-closing');
+  modal.querySelector('.student-modal-content')?.style.removeProperty('--drawer-offset');
+
+  const finishClose = () => {
+    if (!modal.open) return;
+    modal.close();
+    modal.classList.remove('is-closing');
+    studentModalReturnFocus?.isConnected && studentModalReturnFocus.focus({ preventScroll: true });
+    studentModalReturnFocus = null;
+  };
+  const delay = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : STUDENT_DRAWER_CLOSE_MS;
+  studentModalCloseTimer = setTimeout(finishClose, delay);
 };
+
+function bindStudentDrawer() {
+  const modal = document.getElementById('student-detail-modal');
+  const sheet = modal?.querySelector('.student-modal-content');
+  const handle = modal?.querySelector('[data-drawer-handle]');
+  const closeButton = modal?.querySelector('.student-modal-close');
+  if (!modal || !sheet || !handle || !closeButton) return;
+
+  let pointerId = null;
+  let startY = 0;
+  let startTime = 0;
+  let distance = 0;
+
+  const snapBack = () => {
+    pointerId = null;
+    modal.classList.remove('is-dragging');
+    sheet.style.removeProperty('--drawer-offset');
+  };
+
+  handle.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || event.target.closest('button') || !modal.open) return;
+    pointerId = event.pointerId;
+    startY = event.clientY;
+    startTime = performance.now();
+    distance = 0;
+    modal.classList.add('is-dragging');
+    handle.setPointerCapture(pointerId);
+  });
+
+  handle.addEventListener('pointermove', event => {
+    if (event.pointerId !== pointerId) return;
+    distance = Math.max(0, event.clientY - startY);
+    sheet.style.setProperty('--drawer-offset', `${distance}px`);
+  });
+
+  handle.addEventListener('pointerup', event => {
+    if (event.pointerId !== pointerId) return;
+    const velocity = distance / Math.max(performance.now() - startTime, 1);
+    pointerId = null;
+    if (distance >= STUDENT_DRAWER_DISMISS_DISTANCE || (distance >= 24 && velocity >= STUDENT_DRAWER_DISMISS_VELOCITY)) {
+      window.closeStudentModal(event);
+    } else {
+      snapBack();
+    }
+  });
+  handle.addEventListener('pointercancel', snapBack);
+
+  closeButton.addEventListener('click', window.closeStudentModal);
+  modal.addEventListener('click', event => {
+    if (event.target === modal) window.closeStudentModal(event);
+  });
+  modal.addEventListener('cancel', event => {
+    event.preventDefault();
+    window.closeStudentModal(event);
+  });
+}
+
+bindStudentDrawer();
 
 let historyDeleteReturnFocus = null;
 
@@ -1435,9 +1524,5 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  const studentModal = document.getElementById('student-detail-modal');
-  if (studentModal && studentModal.style.display === 'flex') {
-    window.closeStudentModal(event);
-  }
   window.closeDeleteConfirm(event);
 });
