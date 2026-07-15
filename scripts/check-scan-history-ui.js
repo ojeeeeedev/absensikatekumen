@@ -123,19 +123,21 @@ try {
     const glyph = button.querySelector('span');
     const glyphRect = glyph.getBoundingClientRect();
     const status = button.closest('.queue-row').querySelector('.status-badge').getBoundingClientRect();
-    const photo = button.closest('.queue-row').querySelector('.student-photo').getBoundingClientRect();
     return {
       rightInset: Math.round(card.right - hitTarget.right),
+      bottomInset: Math.round(card.bottom - hitTarget.bottom),
       hitWidth: hitTarget.width,
       glyphFontSize: getComputedStyle(glyph).fontSize,
       glyphBackground: getComputedStyle(glyph).backgroundColor,
       statusRightInset: Math.round(card.right - status.right),
       statusBottomInset: Math.round(card.bottom - status.bottom),
-      statusBelowGlyph: status.top > glyphRect.bottom,
-      glyphTopDelta: Math.round(glyphRect.top - photo.top),
+      glyphRightOfStatus: glyphRect.left > status.right,
+      centerDelta: Math.round((glyphRect.top + glyphRect.bottom - status.top - status.bottom) / 2),
+      glyphRightInset: Math.round(card.right - glyphRect.right),
+      glyphBottomInset: Math.round(card.bottom - glyphRect.bottom),
     };
   });
-  if (dismissGeometry.rightInset > 4 || dismissGeometry.hitWidth !== 44 || dismissGeometry.glyphFontSize !== '13.6px' || dismissGeometry.glyphBackground !== 'rgba(0, 0, 0, 0)' || dismissGeometry.statusRightInset > 12 || dismissGeometry.statusBottomInset > 10 || !dismissGeometry.statusBelowGlyph || Math.abs(dismissGeometry.glyphTopDelta) > 1) {
+  if (dismissGeometry.rightInset !== 1 || dismissGeometry.bottomInset !== 1 || dismissGeometry.hitWidth !== 44 || dismissGeometry.glyphFontSize !== '16px' || dismissGeometry.glyphBackground !== 'rgba(0, 0, 0, 0)' || dismissGeometry.statusRightInset !== 33 || dismissGeometry.statusBottomInset !== 9 || !dismissGeometry.glyphRightOfStatus || Math.abs(dismissGeometry.centerDelta) > 1 || dismissGeometry.glyphRightInset < 12 || dismissGeometry.glyphBottomInset < 12) {
     throw new Error(`History card controls are not aligned vertically on the right: ${JSON.stringify(dismissGeometry)}`);
   }
 
