@@ -7,23 +7,6 @@ const LAST_QR_SCAN_KEY = 'last_qr_scan';
 const SCAN_REPEAT_WINDOW_MS = 5000;
 const VIEWFINDER_INACTIVE_MS = 800;
 
-const progressInfoTrigger = document.getElementById('progress-info-trigger');
-const progressBreakdown = document.getElementById('progress-breakdown');
-
-function closeProgressBreakdown(restoreFocus = false) {
-  if (!progressInfoTrigger || !progressBreakdown || progressBreakdown.hidden) return;
-  progressBreakdown.hidden = true;
-  progressInfoTrigger.setAttribute('aria-expanded', 'false');
-  if (restoreFocus) progressInfoTrigger.focus({ preventScroll: true });
-}
-
-progressInfoTrigger?.addEventListener('click', event => {
-  event.stopPropagation();
-  const willOpen = progressBreakdown.hidden;
-  progressBreakdown.hidden = !willOpen;
-  progressInfoTrigger.setAttribute('aria-expanded', String(willOpen));
-});
-
 window.scrollCarousel = function(direction) {
   const listContainer = document.getElementById('queue-list');
   if (!listContainer) return;
@@ -751,7 +734,6 @@ class ScanQueue {
 
     const queueLength = this.queue.length;
     const progressArea = document.getElementById('history-progress-area');
-    const infoTrigger = document.getElementById('progress-info-trigger');
     const dotsContainer = document.getElementById('carousel-dots');
     const prevBtn = document.getElementById('carousel-prev-btn');
     const nextBtn = document.getElementById('carousel-next-btn');
@@ -760,10 +742,8 @@ class ScanQueue {
 
     // Ensure progress area is always visible (V3 Spec)
     if (progressArea) progressArea.style.display = 'block';
-    if (infoTrigger) infoTrigger.disabled = queueLength === 0;
 
     if (queueLength === 0) {
-      closeProgressBreakdown();
       if (dotsContainer) dotsContainer.style.display = 'none';
       if (prevBtn) prevBtn.style.display = 'none';
       if (nextBtn) nextBtn.style.display = 'none';
@@ -1443,10 +1423,6 @@ window.confirmDeleteHistory = function(event) {
 
 // Document click listener to close delete confirmation overlay when clicking outside
 document.addEventListener('click', (event) => {
-  const progressArea = document.getElementById('history-progress-area');
-  if (progressBreakdown && !progressBreakdown.hidden && !progressArea?.contains(event.target)) {
-    closeProgressBreakdown();
-  }
   const overlay = document.getElementById('history-confirm-overlay');
   if (overlay && overlay.classList.contains('show')) {
     if (!overlay.contains(event.target)) {
@@ -1457,10 +1433,6 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  if (progressBreakdown && !progressBreakdown.hidden) {
-    closeProgressBreakdown(true);
-    return;
-  }
   const studentModal = document.getElementById('student-detail-modal');
   if (studentModal && studentModal.style.display === 'flex') {
     window.closeStudentModal(event);

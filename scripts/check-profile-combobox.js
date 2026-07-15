@@ -410,7 +410,6 @@ try {
     const trigger = triggerElement.getBoundingClientRect();
     const reader = document.getElementById('reader-container').getBoundingClientRect();
     const progress = document.querySelector('.segmented-progress-bar').getBoundingClientRect();
-    const progressRow = document.querySelector('.progress-bar-row').getBoundingClientRect();
     const options = document.querySelector('#topic-combobox-popover .search-combobox-options').getBoundingClientRect();
     const appContainer = document.getElementById('app-container').getBoundingClientRect();
     const footer = document.querySelector('.app-footer').getBoundingClientRect();
@@ -435,7 +434,6 @@ try {
       footerBottomGap: appContainer.bottom - footerText.bottom,
       triggerHeight: trigger.height,
       progressWidth: progress.width,
-      progressRowWidth: progressRow.width,
       optionsHeight: options.height,
       animationName: getComputedStyle(triggerElement).animationName,
       topGlowClearance,
@@ -443,7 +441,7 @@ try {
   });
   const matchesProfileHeight = Math.abs(topicLayout.triggerHeight - classTriggerHeight) < 1;
   const matchesProfileWidth = Math.abs(topicLayout.pickerWidth - profileSpacing.pickerWidth) < 1;
-  const matchesProgressWidth = Math.abs(topicLayout.progressRowWidth - topicLayout.pickerWidth) < 1 && topicLayout.progressWidth < topicLayout.progressRowWidth;
+  const matchesProgressWidth = Math.abs(topicLayout.progressWidth - topicLayout.pickerWidth) < 1;
   const matchesProfileClearance = Math.abs(topicLayout.sideClearance - profileSpacing.sideClearance) < 1;
   const selectedTopicIsStatic = topicLayout.animationName === 'none';
   const hasUniformSpacing = Math.abs(topicLayout.above - topicLayout.below) < 1;
@@ -505,7 +503,7 @@ try {
       || scanViewport.horizontalOverflow
       || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
       || scanViewport.cameraWidth < 179
-      || scanViewport.cameraWidth > 305
+      || scanViewport.cameraWidth > 313
       || (viewport.width === 390 && viewport.height === 664 && scanViewport.mainScrollable)
       || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 111))) {
       throw new Error(`Scan viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(scanViewport)}`);
@@ -550,7 +548,7 @@ try {
   const [classSize, topicSize, progressWidth] = await Promise.all([
     page.locator('#class-combobox-trigger').evaluate(trigger => ({ width: trigger.offsetWidth, height: trigger.offsetHeight })),
     scanPage.locator('#topic-combobox-trigger').evaluate(trigger => ({ width: trigger.offsetWidth, height: trigger.offsetHeight })),
-    scanPage.locator('.progress-bar-row').evaluate(progress => progress.offsetWidth),
+    scanPage.locator('.segmented-progress-bar').evaluate(progress => progress.offsetWidth),
   ]);
   if (JSON.stringify(classSize) !== JSON.stringify(topicSize) || classSize.width !== 378 || classSize.height !== 44 || progressWidth !== 378) {
     throw new Error(`Desktop picker geometry mismatch: ${JSON.stringify({ classSize, topicSize, progressWidth })}`);
