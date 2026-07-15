@@ -32,6 +32,12 @@ try {
   await context.addInitScript(() => {
     sessionStorage.setItem('authToken', 'preview');
     localStorage.setItem('hasSeenOnboardingV2', 'true');
+    const addEventListener = EventTarget.prototype.addEventListener;
+    window.__profileScrollListeners = 0;
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+      if (type === 'scroll' && this instanceof Element && this.id === 'profile-view') window.__profileScrollListeners += 1;
+      return addEventListener.call(this, type, listener, options);
+    };
   });
   const page = await context.newPage();
   await page.route('**/api/classes', route => route.fulfill({
@@ -43,11 +49,11 @@ try {
   }));
   await page.route('**/api/students?*', route => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify({ status: 'ok', students: Array.from({ length: 16 }, (_, index) => ({
+    body: JSON.stringify({ status: 'ok', students: Array.from({ length: 35 }, (_, index) => ({
       studentId: `2026/MAL/${String(index + 1).padStart(3, '0')}`,
       name: `Katekumen ${index + 1}`,
       image: '',
-      status: 'active'
+      kelasKi: index < 31 ? 'active' : 'inactive'
     })) })
   }));
 
@@ -105,8 +111,8 @@ try {
       };
     }),
     containerHeight: document.getElementById('app-container').getBoundingClientRect().height,
-    emptyBottomGap: document.getElementById('app-container').getBoundingClientRect().bottom
-      - document.querySelector('#profile-view .welcome-placeholder').getBoundingClientRect().bottom,
+    containerBottomGap: innerHeight - document.getElementById('app-container').getBoundingClientRect().bottom,
+    bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
     profileActive: !document.getElementById('profile-view').hidden,
     scanHidden: document.getElementById('main-app-section').hidden,
     activeNav: document.querySelector('[aria-current="page"]')?.dataset.appView
@@ -120,10 +126,12 @@ try {
   if (!initialShell.profileActive || !initialShell.scanHidden || initialShell.activeNav !== 'profile' || initialShell.tabTrackRadius !== '16px' || initialShell.tabPillRadius !== '12px' || initialShell.tabPillOffset <= 0 || initialShell.headerGroupCenterOffset >= 1 || initialShell.headerVerticalGapDelta >= 1 || !tabsAligned || !tabBoundsAligned || initialShell.supportingText.join('|') !== 'Katekumen Dewasa - Paroki St. Petrus|Keuskupan Bandung' || new Set(initialShell.supportingFontSizes).size !== 1 || initialShell.supportingLineHeight > 16) {
     throw new Error(`Direct profile route did not activate the profile view: ${JSON.stringify(initialShell)}`);
   }
-  if (initialShell.emptyBottomGap > 22) {
-    throw new Error(`Compact profile left excess space below its empty state: ${JSON.stringify(initialShell)}`);
+  if (Math.abs(initialShell.containerBottomGap - initialShell.bodyPaddingBottom) >= 1) {
+    throw new Error(`Profile shell does not fill the visible viewport: ${JSON.stringify(initialShell)}`);
   }
   const compactResize = await page.evaluate(async () => {
+    const container = document.getElementById('app-container');
+    const fromHeight = container.getBoundingClientRect().height;
     const navigation = window.navigateToAppView('scan');
     const opacitySamples = [];
     for (let index = 0; index < 8; index += 1) {
@@ -131,17 +139,14 @@ try {
       opacitySamples.push(Number(getComputedStyle(document.getElementById('main-app-section')).opacity));
     }
     await navigation;
-    const animation = document.getElementById('app-container').getAnimations().find(candidate =>
+    const animation = container.getAnimations().find(candidate =>
       candidate.effect.getKeyframes().some(frame => frame.height)
     );
-    if (!animation) return null;
-    const [from, to] = animation.effect.getKeyframes();
-    await animation.finished;
-    return { from: parseFloat(from.height), to: parseFloat(to.height), opacitySamples };
+    return { from: fromHeight, to: container.getBoundingClientRect().height, heightAnimation: Boolean(animation), opacitySamples };
   });
-  const opacityRestarted = compactResize?.opacitySamples.some((opacity, index, samples) => index > 0 && opacity + 0.01 < samples[index - 1]);
-  if (!compactResize || compactResize.to <= compactResize.from || opacityRestarted) {
-    throw new Error(`Main container did not animate from compact Profile to Scan: ${JSON.stringify(compactResize)}`);
+  const opacityRestarted = compactResize.opacitySamples.some((opacity, index, samples) => index > 0 && opacity + 0.01 < samples[index - 1]);
+  if (Math.abs(compactResize.to - compactResize.from) >= 1 || compactResize.heightAnimation || opacityRestarted) {
+    throw new Error(`Full-height shell shifted while navigating from Profile to Scan: ${JSON.stringify(compactResize)}`);
   }
   await page.evaluate(async () => {
     await window.navigateToAppView('profile');
@@ -168,16 +173,24 @@ try {
     const triggerElement = document.getElementById('class-combobox-trigger');
     const trigger = triggerElement.getBoundingClientRect();
     const placeholder = document.querySelector('#profile-view .welcome-placeholder').getBoundingClientRect();
+    const list = document.getElementById('students-list').getBoundingClientRect();
+    const placeholderStyle = getComputedStyle(document.querySelector('#profile-view .welcome-placeholder'));
     return {
       above: trigger.top - header.bottom,
-      below: placeholder.top - trigger.bottom,
+      selectorTop: container.top,
+      triggerTop: trigger.top,
+      centerDelta: Math.abs((placeholder.top + placeholder.bottom) / 2 - (list.top + list.bottom) / 2),
+      placeholderBackground: placeholderStyle.backgroundColor,
+      placeholderBorder: placeholderStyle.borderTopWidth,
+      placeholderShadow: placeholderStyle.boxShadow,
       pickerWidth: root.width,
       sideClearance: (container.width - root.width) / 2,
-      animationName: getComputedStyle(triggerElement).animationName,
+      animationName: getComputedStyle(triggerElement, '::after').animationName,
+      triggerAnimationName: getComputedStyle(triggerElement).animationName,
     };
   });
-  if (Math.abs(profileSpacing.above - profileSpacing.below) >= 1 || profileSpacing.animationName === 'none') {
-    throw new Error(`Profile selector spacing is not uniform: ${JSON.stringify(profileSpacing)}`);
+  if (profileSpacing.centerDelta >= 1 || profileSpacing.placeholderBackground !== 'rgba(0, 0, 0, 0)' || profileSpacing.placeholderBorder !== '0px' || profileSpacing.placeholderShadow !== 'none' || profileSpacing.animationName === 'none' || profileSpacing.triggerAnimationName !== 'none') {
+    throw new Error(`Profile empty state is not centered and unboxed: ${JSON.stringify(profileSpacing)}`);
   }
   await page.locator('#class-combobox-trigger').click();
   await page.locator('#class-combobox-search').fill('mal');
@@ -191,8 +204,8 @@ try {
     throw new Error(`Class selection failed: ${JSON.stringify({ selectedClass, activeElement })}`);
   }
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
-  if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger).animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
-  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 16);
+  if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
   const expandedShell = await page.evaluate(() => {
     const nav = document.getElementById('app-nav').getBoundingClientRect();
     const container = document.getElementById('app-container').getBoundingClientRect();
@@ -200,64 +213,107 @@ try {
     return {
       navTop: nav.top,
       containerHeight: container.height,
+      triggerTop: document.getElementById('class-combobox-trigger').getBoundingClientRect().top,
       expanded: document.getElementById('app-container').classList.contains('profile-expanded'),
       scrollable: profile.scrollHeight > profile.clientHeight
     };
   });
-  if (!expandedShell.expanded || !expandedShell.scrollable || expandedShell.containerHeight <= initialShell.containerHeight || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1) {
-    throw new Error(`Profile shell did not grow below the anchored navbar: ${JSON.stringify({ initialShell, expandedShell })}`);
+  if (!expandedShell.expanded || !expandedShell.scrollable || Math.abs(expandedShell.containerHeight - initialShell.containerHeight) >= 1 || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1 || Math.abs(expandedShell.triggerTop - profileSpacing.triggerTop) >= 1) {
+    throw new Error(`Profile shell did not preserve the full-height viewport layout: ${JSON.stringify({ initialShell, expandedShell })}`);
   }
 
   const stickyProfileHeader = await page.evaluate(async () => {
     const profile = document.getElementById('profile-view');
     const selectorElement = document.querySelector('#profile-view .profile-selector-container');
     const summaryElement = document.getElementById('students-summary');
-    const glassElement = document.querySelector('.profile-controls-glass');
     const restingHeight = selectorElement.getBoundingClientRect().height;
-    const restingSummaryHeight = summaryElement.getBoundingClientRect().height;
     const samples = [];
-    for (const scrollTop of [0, 6, 12, 24, 100]) {
+    for (const scrollTop of [0, 6, 12, 24, 100, 300]) {
       profile.scrollTop = scrollTop;
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       samples.push({
         scrollTop: profile.scrollTop,
-        opacity: Number(getComputedStyle(glassElement).opacity),
         selectorHeight: selectorElement.getBoundingClientRect().height,
+        selectorTop: selectorElement.getBoundingClientRect().top,
+        triggerTop: document.getElementById('class-combobox-trigger').getBoundingClientRect().top,
       });
     }
     const header = document.getElementById('app-shell-header').getBoundingClientRect();
     const selector = selectorElement.getBoundingClientRect();
+    const classTrigger = document.getElementById('class-combobox-trigger').getBoundingClientRect();
+    const infoBar = document.getElementById('profile-info-bar').getBoundingClientRect();
     const summary = summaryElement.getBoundingClientRect();
+    const summaryBadges = [...summaryElement.children];
+    const summaryBadgeRects = summaryBadges.map(element => element.getBoundingClientRect());
     const search = document.getElementById('search-input').getBoundingClientRect();
+    const searchIcon = document.querySelector('.profile-search-field > re-icon').getBoundingClientRect();
     const firstCard = document.querySelector('.student-accordion-item').getBoundingClientRect();
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 1;
     const context = canvas.getContext('2d');
-    context.fillStyle = getComputedStyle(glassElement).backgroundColor;
+    context.fillStyle = getComputedStyle(selectorElement).backgroundColor;
     context.fillRect(0, 0, 1, 1);
+    const gapPoint = document.elementFromPoint((selector.left + selector.right) / 2, (header.bottom + selector.top) / 2);
     return {
       headerBottom: header.bottom,
       selectorTop: selector.top,
       restingHeight,
       scrolledHeight: selector.height,
-      restingSummaryHeight,
-      scrolledSummaryHeight: summary.height,
+      controlGap: infoBar.top - classTrigger.bottom,
+      rowGap: summary.left - search.right,
+      badgeGap: summaryBadgeRects[1].top - summaryBadgeRects[0].bottom,
+      summaryHeight: summary.height,
+      summaryWidth: summary.width,
       searchHeight: search.height,
+      searchIconInside: searchIcon.left >= search.left && searchIcon.right < search.right,
+      summaryCount: summaryElement.children.length,
+      summaryIcons: summaryBadges.map(element => element.querySelectorAll('re-icon').length),
+      summaryValues: summaryBadges.map(element => element.textContent.trim()),
+      summaryLabels: summaryBadges.map(element => element.getAttribute('aria-label')),
+      numberWidths: summaryBadges.map(element => element.querySelector('span').getBoundingClientRect().width),
+      numberAlignments: summaryBadges.map(element => getComputedStyle(element.querySelector('span')).textAlign),
+      summaryGeometry: summaryBadges.map(element => {
+        const children = [...element.children].map(child => child.getBoundingClientRect());
+        return {
+          columnGap: getComputedStyle(element).columnGap,
+          iconWidths: children.slice(0, 2).map(rect => rect.width),
+          gaps: [children[1].left - children[0].right, children[2].left - children[1].right],
+          numberCenter: (children[2].left + children[2].right) / 2,
+        };
+      }),
+      totalRemoved: !document.querySelector('.summary-total, #summary-total-text'),
+      profileScrollListeners: window.__profileScrollListeners,
       backgroundAlpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
-      backdropFilter: getComputedStyle(glassElement).backdropFilter,
+      backdropFilter: getComputedStyle(selectorElement).backdropFilter,
       selectorTransitionDuration: getComputedStyle(selectorElement).transitionDuration,
-      cardBehindSearch: firstCard.top < search.bottom,
+      gapOccluded: selectorElement.contains(gapPoint),
+      cardBehindControls: firstCard.top < selector.bottom,
       samples,
     };
   });
-  const opacityRisesWithScroll = stickyProfileHeader.samples[0].opacity === 0
-    && stickyProfileHeader.samples.at(-1).opacity === 1
-    && stickyProfileHeader.samples.every((sample, index, samples) => index === 0 || sample.opacity >= samples[index - 1].opacity);
   const selectorHeightStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.selectorHeight))
     - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorHeight)) < 1;
-  if (Math.abs(stickyProfileHeader.selectorTop - stickyProfileHeader.headerBottom) >= 1 || !opacityRisesWithScroll || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.scrolledSummaryHeight >= 30 || stickyProfileHeader.searchHeight < 44 || stickyProfileHeader.backgroundAlpha < 0.9 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.cardBehindSearch) {
+  const selectorTopStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.selectorTop))
+    - Math.min(...stickyProfileHeader.samples.map(sample => sample.selectorTop)) < 1;
+  const triggerTopStable = Math.max(...stickyProfileHeader.samples.map(sample => sample.triggerTop))
+    - Math.min(...stickyProfileHeader.samples.map(sample => sample.triggerTop)) < 1;
+  const summaryColumnsAligned = Math.max(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) - Math.min(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) < 1;
+  const summarySpacingUniform = stickyProfileHeader.summaryGeometry.every(row => row.columnGap === '3px' && row.iconWidths.every(width => width === 11) && row.gaps.every(gap => Math.abs(gap - 3) < 1));
+  if (!selectorTopStable || !triggerTopStable || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'center') || !summaryColumnsAligned || !summarySpacingUniform || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
+
+  const focusedProfile = page.locator('.student-accordion-item').nth(20);
+  await focusedProfile.locator('.student-accordion-header').click();
+  await page.waitForFunction(() => {
+    const item = document.querySelectorAll('.student-accordion-item')[20];
+    const header = item.querySelector('.student-accordion-header');
+    const controls = document.querySelector('#profile-view .profile-selector-container');
+    const expectedTop = controls.getBoundingClientRect().bottom + parseFloat(getComputedStyle(controls).marginBottom);
+    return header === document.activeElement
+      && header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+  });
 
   await page.locator('#class-combobox-trigger').click();
   const dropdownStack = await page.evaluate(() => {
@@ -399,7 +455,7 @@ try {
   const pOption = topicPopover.locator('.topic-option-p').first();
   const pIdleBackground = await pOption.evaluate(option => getComputedStyle(option).backgroundColor);
   await pOption.click();
-  if (await scanPage.locator('#topic-combobox-trigger').evaluate(trigger => getComputedStyle(trigger).animationName) !== 'none') throw new Error('Selected topic trigger is still glowing');
+  if (await scanPage.locator('#topic-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected topic trigger is still glowing');
   await scanPage.locator('#topic-combobox-trigger').click();
   const selectedP = topicPopover.locator('.topic-option-p[aria-selected="true"]');
   if (await selectedP.evaluate(option => getComputedStyle(option).backgroundColor) === pIdleBackground) throw new Error('Selected P topic fill is missing');
@@ -436,7 +492,7 @@ try {
       triggerHeight: trigger.height,
       progressWidth: progress.width,
       optionsHeight: options.height,
-      animationName: getComputedStyle(triggerElement).animationName,
+      animationName: getComputedStyle(triggerElement, '::after').animationName,
       topGlowClearance,
     };
   });
@@ -446,9 +502,9 @@ try {
   const matchesProfileClearance = Math.abs(topicLayout.sideClearance - profileSpacing.sideClearance) < 1;
   const selectedTopicIsStatic = topicLayout.animationName === 'none';
   const hasUniformSpacing = Math.abs(topicLayout.above - topicLayout.below) < 1;
-  const hasUniformScannerSpacing = Math.abs(topicLayout.below - topicLayout.scannerBottomGap) < 1;
+  const hasHistorySeparation = topicLayout.scannerBottomGap >= topicLayout.below;
   const footerIsCompactAndCentered = topicLayout.footerHeight <= 40 && Math.abs(topicLayout.footerTopGap - topicLayout.footerBottomGap) < 1;
-  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasUniformScannerSpacing || !footerIsCompactAndCentered || topicLayout.scannerSize < 295 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
+  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasHistorySeparation || !footerIsCompactAndCentered || topicLayout.scannerSize < 287 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
     throw new Error(`Topic combobox layout does not match the profile selector: ${JSON.stringify(topicLayout)}`);
   }
   await topicPopover.locator('.search-combobox-search').fill('Pentakosta');
@@ -464,6 +520,85 @@ try {
   const selectedTopic = scanPage.locator('#topic-combobox-popover [role="option"][aria-selected="true"]');
   if (!await selectedTopic.textContent().then(text => text.includes('Pentakosta'))) throw new Error('Selected topic was not marked');
   if (await selectedTopic.evaluate(option => getComputedStyle(option).backgroundColor) !== classSelectedBackground) throw new Error('Topic selected container does not match the class picker');
+  await scanPage.keyboard.press('Escape');
+
+  const viewportSizes = [
+    { width: 320, height: 568 },
+    { width: 390, height: 664 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 1280, height: 844 },
+    { width: 390, height: 664 },
+    { width: 390, height: 844 },
+  ];
+  if (!await scanPage.locator('meta[name="viewport"]').getAttribute('content').then(content => content.includes('viewport-fit=cover'))) {
+    throw new Error('Viewport metadata does not enable safe-area coverage');
+  }
+  for (const viewport of viewportSizes) {
+    await Promise.all([page.setViewportSize(viewport), scanPage.setViewportSize(viewport)]);
+    await scanPage.evaluate(() => window.setAppState(2));
+    const scanViewport = await scanPage.evaluate(() => {
+      const container = document.getElementById('app-container').getBoundingClientRect();
+      const reader = document.getElementById('reader-container').getBoundingClientRect();
+      const history = document.getElementById('queue-history-panel').getBoundingClientRect();
+      const main = document.getElementById('main-app-section');
+      return {
+        bottomGap: innerHeight - container.bottom,
+        bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
+        cameraWidth: reader.width,
+        cameraHeight: reader.height,
+        historyHeight: history.height,
+        mainOverflowY: getComputedStyle(main).overflowY,
+        mainClientHeight: main.clientHeight,
+        mainScrollHeight: main.scrollHeight,
+        mainScrollable: main.scrollHeight > main.clientHeight,
+        horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+      };
+    });
+    if (Math.abs(scanViewport.bottomGap - scanViewport.bodyPaddingBottom) >= 1
+      || scanViewport.horizontalOverflow
+      || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
+      || scanViewport.cameraWidth < 179
+      || scanViewport.cameraWidth > 341
+      || (viewport.width === 390 && viewport.height === 664 && scanViewport.mainScrollable)
+      || (viewport.width === 390 && viewport.height === 844 && (Math.abs(scanViewport.cameraWidth - 340) >= 1 || scanViewport.mainScrollable))
+      || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 111))) {
+      throw new Error(`Scan viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(scanViewport)}`);
+    }
+    if (scanViewport.mainScrollable) {
+      const footerVisibleAtEnd = await scanPage.evaluate(() => {
+        const main = document.getElementById('main-app-section');
+        main.scrollTop = main.scrollHeight;
+        return document.querySelector('.app-footer').getBoundingClientRect().bottom
+          <= document.getElementById('app-container').getBoundingClientRect().bottom + 1;
+      });
+      if (!footerVisibleAtEnd) throw new Error(`Scan footer is unreachable at ${viewport.width}x${viewport.height}`);
+    }
+    await scanPage.evaluate(() => window.setAppState(1));
+    const selectionBottomGap = await scanPage.evaluate(() => innerHeight - document.getElementById('app-container').getBoundingClientRect().bottom);
+    if (Math.abs(selectionBottomGap - scanViewport.bodyPaddingBottom) >= 1) {
+      throw new Error(`Topic selection does not fill the viewport at ${viewport.width}x${viewport.height}`);
+    }
+    await scanPage.evaluate(() => window.setAppState(2));
+
+    const profileViewport = await page.evaluate(() => {
+      const container = document.getElementById('app-container').getBoundingClientRect();
+      const infoBar = document.getElementById('profile-info-bar').getBoundingClientRect();
+      const search = document.querySelector('.profile-search-field').getBoundingClientRect();
+      const summary = document.getElementById('students-summary').getBoundingClientRect();
+      return {
+        bottomGap: innerHeight - container.bottom,
+        bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
+        horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+        controlsShareRow: Math.abs((search.top + search.bottom) / 2 - (summary.top + summary.bottom) / 2) < 1,
+        controlsContained: search.left >= infoBar.left && summary.right <= infoBar.right,
+      };
+    });
+    if (Math.abs(profileViewport.bottomGap - profileViewport.bodyPaddingBottom) >= 1 || profileViewport.horizontalOverflow || !profileViewport.controlsShareRow || !profileViewport.controlsContained) {
+      throw new Error(`Profile viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(profileViewport)}`);
+    }
+  }
   await Promise.all([
     page.setViewportSize({ width: 1280, height: 844 }),
     scanPage.setViewportSize({ width: 1280, height: 844 }),

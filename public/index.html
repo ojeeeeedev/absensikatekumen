@@ -2,7 +2,7 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Sistem Presensi Katekumen Dewasa</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
     <script>
@@ -22,11 +22,6 @@
   </head>
 
   <body>
-
-    <div class="liquid-background">
-      <div class="liquid-shape shape1"></div>
-      <div class="liquid-shape shape2"></div>
-    </div>
 
     <!-- Loading screen for login -->
     <div id="login-loader" style="display: none;">
@@ -98,7 +93,7 @@
         <div id="login-footer">
           <a href="https://wa.link/3yg0ug">Lupa password?</a>
           <span class="login-version-divider">&bull;</span>
-          <span id="login-version" class="login-version-span">v2.6.4</span>
+          <span id="login-version" class="login-version-span">v2.7.0</span>
         </div>
       </div>
 
@@ -172,9 +167,6 @@
             </div>
             <div id="reader"></div>
           </div>
-
-            <!-- Note: #status and #queue-warning-bar containers are removed from here -->
-
             <!-- Queue History List -->
             <div id="queue-history-panel">
               <div id="history-confirm-overlay" class="confirm-overlay" style="display: none;" role="alertdialog" aria-modal="true" aria-labelledby="history-confirm-title" aria-describedby="history-confirm-description">
@@ -199,7 +191,6 @@
                     <div id="segment-error" class="progress-segment error" style="width: 0%;"></div>
                     <div id="segment-pending" class="progress-segment pending" style="width: 0%;"></div>
                   </div>
-                  <app-spinner id="history-sync-spinner" class="app-spinner spinner-small" aria-hidden="true" style="display: none; margin-right: 4px;"></app-spinner>
                 </div>
                 <div class="progress-legend">
                   <span id="legend-success" class="legend-item success" style="display: none;">
@@ -244,7 +235,7 @@
         <!-- Footer -->
         <footer class="app-footer">
           <div class="footer-text">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.6.4</a> &bull; © 2026 Tim Katekumen Dewasa
+            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.7.0</a> &bull; © 2026 Tim Katekumen Dewasa
             &bull; <a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
           </div>
         </footer>
@@ -252,7 +243,6 @@
 
       <section id="profile-view" class="app-section" hidden inert aria-labelledby="app-view-title">
         <div class="profile-selector-container">
-          <div class="profile-controls-glass" aria-hidden="true"></div>
           <select id="class-selector" hidden aria-hidden="true" tabindex="-1">
             <option value="" disabled selected>Memuat kelas...</option>
           </select>
@@ -272,23 +262,25 @@
             </div>
           </div>
 
-          <div id="students-summary" class="students-summary-container" style="display: none;">
-            <div class="summary-badge summary-total">
-              <re-icon icon="users" decorative></re-icon>
-              <span id="summary-total-text">Total: 0</span>
+          <div id="profile-info-bar" class="profile-info-bar" style="display: none;">
+            <div class="profile-search-field">
+              <re-icon icon="search" decorative></re-icon>
+              <label for="search-input" class="sr-only">Cari nama atau ID katekumen</label>
+              <input type="text" id="search-input" placeholder="Cari...">
             </div>
-            <div class="summary-badge summary-active">
-              <re-icon icon="check-circle" decorative></re-icon>
-              <span id="summary-active-text">Aktif: 0</span>
-            </div>
-            <div class="summary-badge summary-inactive">
-              <re-icon icon="close-circle2" decorative></re-icon>
-              <span id="summary-inactive-text">Nonaktif: 0</span>
+            <div id="students-summary" class="students-summary-container" style="display: none;" aria-label="Status katekumen">
+              <div class="summary-badge summary-active" aria-label="0 katekumen aktif">
+                <re-icon icon="user" decorative></re-icon>
+                <re-icon icon="check-circle" decorative></re-icon>
+                <span id="summary-active-text">0</span>
+              </div>
+              <div class="summary-badge summary-inactive" aria-label="0 katekumen nonaktif">
+                <re-icon icon="user" decorative></re-icon>
+                <re-icon icon="close-circle2" decorative></re-icon>
+                <span id="summary-inactive-text">0</span>
+              </div>
             </div>
           </div>
-
-          <label for="search-input" class="sr-only">Cari nama atau ID katekumen</label>
-          <input type="text" id="search-input" placeholder="Cari nama atau ID..." style="display: none;">
         </div>
 
         <div id="students-loader" style="display: none;">
@@ -305,11 +297,11 @@
       </section>
     </main>
 
-    <!-- Modal Student Detail -->
-    <div id="student-detail-modal" class="student-modal" style="display: none;" onclick="closeStudentModal(event)" role="dialog" aria-modal="true" aria-labelledby="modal-student-name">
-      <div class="modal-content student-modal-content" onclick="event.stopPropagation()">
-        <div class="student-modal-header">
-          <re-icon icon="close-circle2" class="student-modal-close-icon" onclick="closeStudentModal(event)" role="button" tabindex="0" aria-label="Tutup detail katekumen" onkeydown="if(event.key === ' ' || event.key === 'Enter') { event.preventDefault(); closeStudentModal(event); }"></re-icon>
+    <!-- Scan History Detail Drawer -->
+    <dialog id="student-detail-modal" class="student-modal" aria-labelledby="modal-student-name" tabindex="-1">
+      <section class="student-modal-content">
+        <div class="student-modal-header" data-drawer-handle>
+          <span class="student-modal-swipe-handle" aria-hidden="true"></span>
         </div>
         <div class="student-modal-body">
           <img id="modal-student-photo" class="modal-student-photo" src="/assets/favicon.png" alt="Foto Katekumen">
@@ -320,8 +312,8 @@
             <span id="modal-student-status" class="status-badge">Status</span>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </dialog>
 
     <div id="upload-preview-modal" class="upload-preview-modal" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
       <div class="upload-preview-sheet">

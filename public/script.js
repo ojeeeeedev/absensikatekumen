@@ -587,7 +587,6 @@ class ScanQueue {
     if (!pendingItem) {
       this.isProcessing = false;
       this.updateBanner();
-      resetStatus(); // Revert status bar back to idle when sync queue is empty
       return;
     }
 
@@ -615,7 +614,6 @@ class ScanQueue {
           sessionStorage.removeItem('authToken');
           // Clear the auth_token cookie
           document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-          showStatus("Sesi Habis", "error", "Silakan login kembali.");
           if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           triggerVisualFlash('error');
           if (typeof setAppState === 'function') setAppState(0);
@@ -636,13 +634,11 @@ class ScanQueue {
           pendingItem.status = 'error';
           pendingItem.errorMsg = `HTTP ${response.status}`;
           
-          showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
+          showToast(pendingItem.errorMsg || 'Gagal sinkronisasi', 'error', {
+            badge: `Gagal · Topik ${pendingItem.week}`
+          });
 
           triggerVisualFlash('error');
-          const container = document.getElementById('app-container');
-          if (!container || !container.classList.contains('state-scanning')) {
-            showStatus("Gagal", "error", pendingItem.errorMsg);
-          }
         }
       } else {
         const data = await response.json();
@@ -653,44 +649,42 @@ class ScanQueue {
           const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
           pendingItem.image = data.image || (localMatch ? localMatch.image : '');
           
-          showToast(`Berhasil: ${data.name} hadir!`, 'success');
+          showToast(data.name || 'Katekumen', 'success', {
+            badge: `Hadir · Topik ${pendingItem.week}`
+          });
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('success');
-            if (navigator.vibrate) navigator.vibrate(200);
-          } else {
-            showStatus(data.name, "success", `Hadir - Topik ${pendingItem.week}`);
-            if (navigator.vibrate) navigator.vibrate(200);
           }
+          if (navigator.vibrate) navigator.vibrate(200);
         } else if (data.status === "duplicate") {
           pendingItem.status = 'duplicate';
           pendingItem.name = data.name || 'Presensi Sudah Tercatat';
           const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
           pendingItem.image = data.image || (localMatch ? localMatch.image : '');
           
-          showToast(`Sudah Hadir - Topik ${pendingItem.week} - ${data.name || 'Katekumen'}`, 'info');
+          showToast(data.name || 'Katekumen', 'duplicate', {
+            badge: `Duplikat · Topik ${pendingItem.week}`
+          });
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('duplicate');
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-          } else {
-            showStatus("Sudah Hadir", "error", data.message);
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           }
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         } else {
           pendingItem.status = 'error';
           pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
           
-          showToast(`Gagal: ${pendingItem.errorMsg || 'Gagal sinkronisasi'}`, 'error');
+          showToast(pendingItem.errorMsg || 'Gagal sinkronisasi', 'error', {
+            badge: `Gagal · Topik ${pendingItem.week}`
+          });
 
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('error');
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-          } else {
-            showStatus("Gagal", "error", pendingItem.errorMsg);
           }
         }
       }
@@ -714,7 +708,7 @@ class ScanQueue {
 
   updateBanner() {
     const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-    const syncSpinner = document.getElementById('history-sync-spinner');
+    const progressBar = document.querySelector('.segmented-progress-bar');
     
     if (pendingCount === 0) {
       this.totalInBatch = 0;
@@ -722,8 +716,10 @@ class ScanQueue {
       this.totalInBatch = pendingCount;
     }
 
-    if (syncSpinner) {
-      syncSpinner.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    if (progressBar) {
+      const isLoading = pendingCount > 0;
+      progressBar.classList.toggle('is-loading', isLoading);
+      progressBar.setAttribute('aria-busy', String(isLoading));
     }
   }
 
@@ -854,12 +850,13 @@ class ScanQueue {
       row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}, ${statusTextMap[item.status] || item.status}`);
       
       row.onclick = () => {
+        row.blur();
         showStudentModal(item);
       };
       row.onkeydown = (event) => {
         if (event.key === ' ' || event.key === 'Enter') {
           event.preventDefault();
-          showStudentModal(item);
+          showStudentModal(item, row);
         }
       };
 
@@ -1033,57 +1030,6 @@ class ScanQueue {
 // Instantiate globally
 window.scanQueue = new ScanQueue();
 
-// --- STATUS HANDLER ---
-function showStatus(mainText, type, subText = "") {
-  const el = document.getElementById("status");
-  if (!el) return;
-  
-  let iconName = "qr";
-  if (type === 'success') iconName = "check-circle";
-  else if (type === 'error') iconName = "close-circle2";
-  else if (type === 'processing') iconName = "timer-alt";
-
-  el.innerHTML = "";
-
-  const iconSpan = window.createAppIcon(iconName);
-  iconSpan.style.fontSize = "1.25rem";
-  el.appendChild(iconSpan);
-
-  if (subText) {
-    const textContainer = document.createElement("div");
-    textContainer.className = "status-text-container";
-
-    const mainDiv = document.createElement("div");
-    mainDiv.className = "main-text";
-    mainDiv.textContent = mainText;
-
-    const subDiv = document.createElement("div");
-    subDiv.className = "sub-text";
-    subDiv.textContent = subText;
-
-    textContainer.appendChild(mainDiv);
-    textContainer.appendChild(subDiv);
-    el.appendChild(textContainer);
-  } else {
-    const mainDiv = document.createElement("div");
-    mainDiv.className = "main-text";
-    mainDiv.textContent = mainText;
-    el.appendChild(mainDiv);
-  }
-  el.className = type;
-}
-
-function resetStatus() { 
-  if (typeof scanQueue !== 'undefined') {
-    const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-    if (pendingCount > 0) {
-      showStatus("Sinkronisasi sedang berjalan...", "processing", `${pendingCount} item tersisa di antrean.`);
-      return;
-    }
-  }
-  showStatus("Silakan pindai kode QR berikutnya", "idle");
-}
-
 function safeAtob(str) {
   let cleaned = str.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
   const pad = cleaned.length % 4;
@@ -1122,7 +1068,6 @@ function dimViewfinder() {
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
   if (!selectedWeek) {
-    showStatus("Pilih topik terlebih dahulu!", "error");
     openTopicSelector();
     return;
   }
@@ -1131,10 +1076,8 @@ async function handleScan(decodedText) {
   try {
     originalStudentId = safeAtob(decodedText);
   } catch (e) {
-    showStatus("Kode QR Tidak Valid", "error", "Format kode tidak dikenali.");
     if (navigator.vibrate) navigator.vibrate([100, 50]);
     triggerVisualFlash('error');
-    setTimeout(() => resetStatus(), 3000); // Revert back to idle/processing status
     return;
   }
 
@@ -1172,7 +1115,6 @@ async function startScanner() {
     scannerStartPromise = null;
     const loader = document.getElementById("camera-loader");
     if (loader) loader.style.display = "none";
-    resetStatus();
   }).catch(err => {
     scannerStartPromise = null;
     console.error("Camera start failed:", err);
@@ -1304,7 +1246,13 @@ window.onload = async () => {
   }
 }
 
-window.showStudentModal = function(item) {
+let studentModalReturnFocus = null;
+let studentModalCloseTimer = null;
+const STUDENT_DRAWER_CLOSE_MS = 280;
+const STUDENT_DRAWER_DISMISS_DISTANCE = 96;
+const STUDENT_DRAWER_DISMISS_VELOCITY = 0.5;
+
+window.showStudentModal = function(item, trigger) {
   const modal = document.getElementById('student-detail-modal');
   const photoEl = document.getElementById('modal-student-photo');
   const nameEl = document.getElementById('modal-student-name');
@@ -1338,16 +1286,97 @@ window.showStudentModal = function(item) {
   if (item.status === 'processing') statusText = 'SYNCING...';
   statusEl.textContent = statusText;
 
-  modal.style.display = 'flex';
-  setTimeout(() => modal.querySelector('[role="button"], button')?.focus(), 0);
+  if (!modal.open) {
+    studentModalReturnFocus = trigger || null;
+    clearTimeout(studentModalCloseTimer);
+    modal.classList.remove('is-open', 'is-closing', 'is-dragging');
+    modal.querySelector('.student-modal-content')?.style.removeProperty('--drawer-offset');
+    modal.showModal();
+    modal.getBoundingClientRect();
+    requestAnimationFrame(() => {
+      if (!modal.open) return;
+      modal.classList.add('is-open');
+      modal.focus({ preventScroll: true });
+    });
+  }
 };
 
 window.closeStudentModal = function(event) {
   const modal = document.getElementById('student-detail-modal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
+  if (event) event.stopPropagation();
+  if (!modal?.open || modal.classList.contains('is-closing')) return;
+
+  clearTimeout(studentModalCloseTimer);
+  modal.classList.remove('is-open', 'is-dragging');
+  modal.classList.add('is-closing');
+  modal.querySelector('.student-modal-content')?.style.removeProperty('--drawer-offset');
+
+  const finishClose = () => {
+    if (!modal.open) return;
+    modal.close();
+    modal.classList.remove('is-closing');
+    studentModalReturnFocus?.isConnected && studentModalReturnFocus.focus({ preventScroll: true });
+    studentModalReturnFocus = null;
+  };
+  const delay = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : STUDENT_DRAWER_CLOSE_MS;
+  studentModalCloseTimer = setTimeout(finishClose, delay);
 };
+
+function bindStudentDrawer() {
+  const modal = document.getElementById('student-detail-modal');
+  const sheet = modal?.querySelector('.student-modal-content');
+  const handle = modal?.querySelector('[data-drawer-handle]');
+  if (!modal || !sheet || !handle) return;
+
+  let pointerId = null;
+  let startY = 0;
+  let startTime = 0;
+  let distance = 0;
+
+  const snapBack = () => {
+    pointerId = null;
+    modal.classList.remove('is-dragging');
+    sheet.style.removeProperty('--drawer-offset');
+  };
+
+  handle.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || !modal.open) return;
+    pointerId = event.pointerId;
+    startY = event.clientY;
+    startTime = performance.now();
+    distance = 0;
+    modal.classList.add('is-dragging');
+    handle.setPointerCapture(pointerId);
+  });
+
+  handle.addEventListener('pointermove', event => {
+    if (event.pointerId !== pointerId) return;
+    distance = Math.max(0, event.clientY - startY);
+    sheet.style.setProperty('--drawer-offset', `${distance}px`);
+  });
+
+  handle.addEventListener('pointerup', event => {
+    if (event.pointerId !== pointerId) return;
+    const velocity = distance / Math.max(performance.now() - startTime, 1);
+    pointerId = null;
+    if (distance >= STUDENT_DRAWER_DISMISS_DISTANCE || (distance >= 24 && velocity >= STUDENT_DRAWER_DISMISS_VELOCITY)) {
+      window.closeStudentModal(event);
+    } else {
+      snapBack();
+    }
+  });
+  handle.addEventListener('pointercancel', snapBack);
+
+  modal.addEventListener('click', event => {
+    if (event.target === modal) window.closeStudentModal(event);
+  });
+  modal.addEventListener('cancel', event => {
+    event.preventDefault();
+    window.closeStudentModal(event);
+  });
+}
+
+bindStudentDrawer();
 
 let historyDeleteReturnFocus = null;
 
@@ -1433,9 +1462,5 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  const studentModal = document.getElementById('student-detail-modal');
-  if (studentModal && studentModal.style.display === 'flex') {
-    window.closeStudentModal(event);
-  }
   window.closeDeleteConfirm(event);
 });
