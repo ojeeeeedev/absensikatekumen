@@ -302,6 +302,18 @@ try {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
+  const focusedProfile = page.locator('.student-accordion-item').nth(20);
+  await focusedProfile.locator('.student-accordion-header').click();
+  await page.waitForFunction(() => {
+    const item = document.querySelectorAll('.student-accordion-item')[20];
+    const header = item.querySelector('.student-accordion-header');
+    const controls = document.querySelector('#profile-view .profile-selector-container');
+    const expectedTop = controls.getBoundingClientRect().bottom + parseFloat(getComputedStyle(controls).marginBottom);
+    return header === document.activeElement
+      && header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+  });
+
   await page.locator('#class-combobox-trigger').click();
   const dropdownStack = await page.evaluate(() => {
     const search = document.getElementById('class-combobox-search');

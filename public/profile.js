@@ -263,6 +263,20 @@ function renderStudents(students) {
         body.classList.add('expanded');
         header.classList.add('active');
         header.setAttribute('aria-expanded', 'true');
+        header.focus({ preventScroll: true });
+        requestAnimationFrame(() => {
+          Promise.allSettled(body.getAnimations().map(animation => animation.finished)).then(() => {
+            if (!body.classList.contains('expanded')) return;
+            const profile = document.getElementById('profile-view');
+            const controls = profile?.querySelector('.profile-selector-container');
+            if (!profile || !controls) return;
+            const gap = parseFloat(getComputedStyle(controls).marginBottom) || 0;
+            profile.scrollBy({
+              top: item.getBoundingClientRect().top - controls.getBoundingClientRect().bottom - gap,
+              behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+            });
+          });
+        });
       }
     };
 

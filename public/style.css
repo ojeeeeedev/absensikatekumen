@@ -1032,10 +1032,8 @@ a:focus-visible,
 }
 
 .toast-badge {
-  max-width: 45%;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   padding: 2px 6px;
-  overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--toast-accent) 72%, transparent);
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--toast-accent) 10%, transparent);
@@ -1044,7 +1042,6 @@ a:focus-visible,
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .toast-separator {

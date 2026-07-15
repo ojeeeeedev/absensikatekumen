@@ -864,7 +864,8 @@ class ScanQueue {
       row.setAttribute('aria-label', `Detail pemindaian ${item.name || 'Katekumen'}, ${statusTextMap[item.status] || item.status}`);
       
       row.onclick = () => {
-        showStudentModal(item, row);
+        row.blur();
+        showStudentModal(item);
       };
       row.onkeydown = (event) => {
         if (event.key === ' ' || event.key === 'Enter') {
@@ -1355,7 +1356,7 @@ window.showStudentModal = function(item, trigger) {
   statusEl.textContent = statusText;
 
   if (!modal.open) {
-    studentModalReturnFocus = trigger || document.activeElement;
+    studentModalReturnFocus = trigger || null;
     clearTimeout(studentModalCloseTimer);
     modal.classList.remove('is-open', 'is-closing', 'is-dragging');
     modal.querySelector('.student-modal-content')?.style.removeProperty('--drawer-offset');
