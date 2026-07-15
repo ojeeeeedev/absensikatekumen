@@ -20,6 +20,11 @@
       badgeElement.className = 'toast-badge';
       badgeElement.textContent = badge;
       content.appendChild(badgeElement);
+      const separator = document.createElement('span');
+      separator.className = 'toast-separator';
+      separator.setAttribute('aria-hidden', 'true');
+      separator.textContent = '•';
+      content.appendChild(separator);
     }
     const text = document.createElement('span');
     text.className = 'toast-message';
