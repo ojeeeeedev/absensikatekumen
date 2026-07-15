@@ -59,6 +59,17 @@
       toast.appendChild(action);
     }
 
+    const dismissButton = document.createElement('button');
+    dismissButton.type = 'button';
+    dismissButton.className = 'toast-dismiss';
+    dismissButton.setAttribute('aria-label', 'Tutup notifikasi');
+    dismissButton.innerHTML = '<span aria-hidden="true">&times;</span>';
+    dismissButton.addEventListener('click', event => {
+      event.stopPropagation();
+      dismiss();
+    });
+    toast.appendChild(dismissButton);
+
     toast.addEventListener('mouseenter', pause);
     toast.addEventListener('mouseleave', resume);
     toast.addEventListener('focusin', pause);
@@ -66,9 +77,9 @@
       if (!toast.contains(event.relatedTarget)) resume();
     });
 
-    container.prepend(toast);
+    container.appendChild(toast);
     while (container.children.length > MAX_VISIBLE_TOASTS) {
-      container.lastElementChild.remove();
+      container.firstElementChild.remove();
     }
     requestAnimationFrame(() => toast.classList.add('show'));
     resume();

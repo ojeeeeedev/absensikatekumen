@@ -135,7 +135,8 @@ Dialogs/drawers/dropdowns/popovers/tooltips:
 - Dialogs should close with Escape where JS supports it and return focus where feasible.
 
 Toasts:
-- Use the shared top-center toast controller on scanner and profile surfaces; newest notifications appear first and no more than four remain visible.
+- Use the shared bottom-center toast controller on scanner and profile surfaces; the newest notification sits in front, up to three older notifications stack behind it, and the stack expands on hover or keyboard focus.
+- Every toast has a dismiss button, uses the frosted popover surface, pauses dismissal on hover/focus, and no more than four remain visible.
 - Destructive actions should be confirmed or reversible; use a toast action for lightweight Undo flows.
 
 Tables/lists:

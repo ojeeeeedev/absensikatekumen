@@ -246,18 +246,48 @@ try {
     localStorage.removeItem('last_qr_scan');
   });
 
+  await page.mouse.move(1, 1);
   await page.evaluate(() => {
+    document.activeElement?.blur();
     for (let index = 1; index <= 5; index += 1) showToast(`Toast ${index}`, 'info', { duration: 60000 });
   });
+  await page.waitForTimeout(350);
   const toastState = await page.locator('#toast-container').evaluate(container => ({
     count: container.children.length,
-    first: container.firstElementChild?.textContent,
-    top: getComputedStyle(container).top,
-    rectTop: container.getBoundingClientRect().top,
+    newest: container.lastElementChild?.textContent,
+    bottom: getComputedStyle(container).bottom,
+    bottomGap: innerHeight - container.getBoundingClientRect().bottom,
+    dismissButtons: container.querySelectorAll('.toast-dismiss[aria-label="Tutup notifikasi"]').length,
+    backdropFilter: getComputedStyle(container.lastElementChild).backdropFilter,
+    backgroundAlpha: (() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      const context = canvas.getContext('2d');
+      context.fillStyle = getComputedStyle(container.lastElementChild).backgroundColor;
+      context.fillRect(0, 0, 1, 1);
+      return context.getImageData(0, 0, 1, 1).data[3] / 255;
+    })(),
+    newestScale: new DOMMatrix(getComputedStyle(container.lastElementChild).transform).a,
+    previousScale: new DOMMatrix(getComputedStyle(container.children[container.children.length - 2]).transform).a,
+    collapsedOverlap: container.children[container.children.length - 2].getBoundingClientRect().bottom
+      > container.lastElementChild.getBoundingClientRect().top,
   }));
-  if (toastState.count !== 4 || !toastState.first.includes('Toast 5') || toastState.top === 'auto' || toastState.rectTop > 24) {
+  if (toastState.count !== 4 || !toastState.newest.includes('Toast 5') || toastState.bottom === 'auto' || toastState.bottomGap < 15 || toastState.bottomGap > 24 || toastState.dismissButtons !== 4 || toastState.backdropFilter === 'none' || toastState.backgroundAlpha < 0.65 || toastState.backgroundAlpha > 0.75 || Math.abs(toastState.newestScale - 1) > 0.01 || toastState.previousScale >= toastState.newestScale || !toastState.collapsedOverlap) {
     throw new Error(`Toast stack is incorrect: ${JSON.stringify(toastState)}`);
   }
+  await page.locator('.toast').last().locator('.toast-dismiss').focus();
+  await page.waitForTimeout(300);
+  const toastExpanded = await page.locator('#toast-container').evaluate(container => {
+    const newest = container.lastElementChild.getBoundingClientRect();
+    const previous = container.children[container.children.length - 2].getBoundingClientRect();
+    return previous.bottom < newest.top;
+  });
+  if (!toastExpanded) throw new Error('Toast stack did not expand on keyboard focus');
+  await page.locator('.toast').last().locator('.toast-dismiss').click();
+  await page.waitForTimeout(300);
+  if (await page.locator('.toast').count() !== 3) throw new Error('Toast dismiss button did not remove the notification');
+  await page.mouse.move(1, 1);
+  await page.waitForTimeout(300);
 
   const list = page.locator('#queue-list');
   await list.evaluate(element => element.scrollTo({ left: 0, behavior: 'instant' }));
@@ -342,8 +372,8 @@ try {
     if (radius !== '8px') throw new Error(`${selector} does not align with its card corners`);
   }
   await profilePage.evaluate(() => showToast('Profile toast', 'success', { duration: 60000 }));
-  const profileToastTop = await profilePage.locator('#toast-container').evaluate(container => getComputedStyle(container).top);
-  if (profileToastTop === 'auto') throw new Error('Profile did not use the shared top toast');
+  const profileToastBottom = await profilePage.locator('#toast-container').evaluate(container => getComputedStyle(container).bottom);
+  if (profileToastBottom === 'auto') throw new Error('Profile did not use the shared bottom toast');
 
   console.log('scan history ui smoke ok');
 } finally {
