@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
 
-export function getBearerToken(req) {
+function getBearerToken(req) {
   const header = req.headers.authorization || req.headers.Authorization || '';
   const [scheme, token] = header.split(' ');
   return scheme?.toLowerCase() === 'bearer' && token ? token : null;
 }
 
-export function getCookieToken(req) {
+function getCookieToken(req) {
   const cookieHeader = req.headers.cookie || '';
   const match = cookieHeader.match(/(?:^|;\s*)auth_token=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;

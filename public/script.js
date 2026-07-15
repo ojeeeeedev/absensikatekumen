@@ -587,7 +587,6 @@ class ScanQueue {
     if (!pendingItem) {
       this.isProcessing = false;
       this.updateBanner();
-      resetStatus(); // Revert status bar back to idle when sync queue is empty
       return;
     }
 
@@ -615,7 +614,6 @@ class ScanQueue {
           sessionStorage.removeItem('authToken');
           // Clear the auth_token cookie
           document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-          showStatus("Sesi Habis", "error", "Silakan login kembali.");
           if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           triggerVisualFlash('error');
           if (typeof setAppState === 'function') setAppState(0);
@@ -641,10 +639,6 @@ class ScanQueue {
           });
 
           triggerVisualFlash('error');
-          const container = document.getElementById('app-container');
-          if (!container || !container.classList.contains('state-scanning')) {
-            showStatus("Gagal", "error", pendingItem.errorMsg);
-          }
         }
       } else {
         const data = await response.json();
@@ -662,11 +656,8 @@ class ScanQueue {
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('success');
-            if (navigator.vibrate) navigator.vibrate(200);
-          } else {
-            showStatus(data.name, "success", `Hadir - Topik ${pendingItem.week}`);
-            if (navigator.vibrate) navigator.vibrate(200);
           }
+          if (navigator.vibrate) navigator.vibrate(200);
         } else if (data.status === "duplicate") {
           pendingItem.status = 'duplicate';
           pendingItem.name = data.name || 'Presensi Sudah Tercatat';
@@ -680,11 +671,8 @@ class ScanQueue {
           const container = document.getElementById('app-container');
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('duplicate');
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-          } else {
-            showStatus("Sudah Hadir", "error", data.message);
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           }
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         } else {
           pendingItem.status = 'error';
           pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
@@ -697,8 +685,6 @@ class ScanQueue {
           if (container && container.classList.contains('state-scanning')) {
             triggerVisualFlash('error');
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-          } else {
-            showStatus("Gagal", "error", pendingItem.errorMsg);
           }
         }
       }
@@ -1044,57 +1030,6 @@ class ScanQueue {
 // Instantiate globally
 window.scanQueue = new ScanQueue();
 
-// --- STATUS HANDLER ---
-function showStatus(mainText, type, subText = "") {
-  const el = document.getElementById("status");
-  if (!el) return;
-  
-  let iconName = "qr";
-  if (type === 'success') iconName = "check-circle";
-  else if (type === 'error') iconName = "close-circle2";
-  else if (type === 'processing') iconName = "timer-alt";
-
-  el.innerHTML = "";
-
-  const iconSpan = window.createAppIcon(iconName);
-  iconSpan.style.fontSize = "1.25rem";
-  el.appendChild(iconSpan);
-
-  if (subText) {
-    const textContainer = document.createElement("div");
-    textContainer.className = "status-text-container";
-
-    const mainDiv = document.createElement("div");
-    mainDiv.className = "main-text";
-    mainDiv.textContent = mainText;
-
-    const subDiv = document.createElement("div");
-    subDiv.className = "sub-text";
-    subDiv.textContent = subText;
-
-    textContainer.appendChild(mainDiv);
-    textContainer.appendChild(subDiv);
-    el.appendChild(textContainer);
-  } else {
-    const mainDiv = document.createElement("div");
-    mainDiv.className = "main-text";
-    mainDiv.textContent = mainText;
-    el.appendChild(mainDiv);
-  }
-  el.className = type;
-}
-
-function resetStatus() { 
-  if (typeof scanQueue !== 'undefined') {
-    const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-    if (pendingCount > 0) {
-      showStatus("Sinkronisasi sedang berjalan...", "processing", `${pendingCount} item tersisa di antrean.`);
-      return;
-    }
-  }
-  showStatus("Silakan pindai kode QR berikutnya", "idle");
-}
-
 function safeAtob(str) {
   let cleaned = str.replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/');
   const pad = cleaned.length % 4;
@@ -1133,7 +1068,6 @@ function dimViewfinder() {
 // --- SCANNER LOGIC ---
 async function handleScan(decodedText) {
   if (!selectedWeek) {
-    showStatus("Pilih topik terlebih dahulu!", "error");
     openTopicSelector();
     return;
   }
@@ -1142,10 +1076,8 @@ async function handleScan(decodedText) {
   try {
     originalStudentId = safeAtob(decodedText);
   } catch (e) {
-    showStatus("Kode QR Tidak Valid", "error", "Format kode tidak dikenali.");
     if (navigator.vibrate) navigator.vibrate([100, 50]);
     triggerVisualFlash('error');
-    setTimeout(() => resetStatus(), 3000); // Revert back to idle/processing status
     return;
   }
 
@@ -1183,7 +1115,6 @@ async function startScanner() {
     scannerStartPromise = null;
     const loader = document.getElementById("camera-loader");
     if (loader) loader.style.display = "none";
-    resetStatus();
   }).catch(err => {
     scannerStartPromise = null;
     console.error("Camera start failed:", err);

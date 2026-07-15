@@ -9,7 +9,7 @@ const ALLOWED_EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/web
 
 /**
  * Parses a multipart/form-data body from the raw buffer.
- * Returns { fields: { studentId }, fileBuffer, mimeType, originalFilename }
+ * Returns { fields: { studentId }, fileBuffer, mimeType }
  */
 export function parseMultipart(buffer, boundary) {
   const boundaryBuffer = Buffer.from(`--${boundary}`);
@@ -34,7 +34,7 @@ export function parseMultipart(buffer, boundary) {
     start = nextBoundary === -1 ? buffer.length : nextBoundary;
   }
 
-  const result = { fields: {}, fileBuffer: null, mimeType: null, originalFilename: null };
+  const result = { fields: {}, fileBuffer: null, mimeType: null };
 
   for (const part of parts) {
     const dispMatch = part.headers.match(/Content-Disposition: form-data; name="([^"]+)"(?:; filename="([^"]*)")?/i);
@@ -48,7 +48,6 @@ export function parseMultipart(buffer, boundary) {
       // This is the file field
       result.fileBuffer = part.body;
       result.mimeType = typeMatch ? typeMatch[1].trim() : 'application/octet-stream';
-      result.originalFilename = filename;
     } else {
       result.fields[fieldName] = part.body.toString('utf8');
     }
