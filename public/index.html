@@ -193,6 +193,9 @@
               <!-- Segmented Progress Bar Area -->
               <div id="history-progress-area" class="history-progress-container">
                 <div class="progress-bar-row">
+                  <button id="progress-info-trigger" class="progress-info-trigger" type="button" aria-label="Lihat rincian pemindaian" aria-expanded="false" aria-controls="progress-breakdown" disabled>
+                    <re-icon icon="info-circle" decorative></re-icon>
+                  </button>
                   <div class="segmented-progress-bar" role="progressbar" aria-label="Ringkasan sinkronisasi presensi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="segment-success" class="progress-segment success" style="width: 0%;"></div>
                     <div id="segment-duplicate" class="progress-segment duplicate" style="width: 0%;"></div>
@@ -201,19 +204,22 @@
                   </div>
                   <app-spinner id="history-sync-spinner" class="app-spinner spinner-small" aria-hidden="true" style="display: none; margin-right: 4px;"></app-spinner>
                 </div>
-                <div class="progress-legend">
-                  <span id="legend-success" class="legend-item success" style="display: none;">
-                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Hadir</span>
-                  </span>
-                  <span id="legend-duplicate" class="legend-item duplicate" style="display: none;">
-                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Duplikat</span>
-                  </span>
-                  <span id="legend-error" class="legend-item error" style="display: none;">
-                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Gagal</span>
-                  </span>
-                  <span id="legend-pending" class="legend-item pending" style="display: none;">
-                    <span class="dot" aria-hidden="true"></span> <span class="text">0 Memproses</span>
-                  </span>
+                <div id="progress-breakdown" class="progress-breakdown" role="region" aria-label="Rincian pemindaian" hidden>
+                  <strong>Rincian pemindaian</strong>
+                  <div class="progress-legend">
+                    <span id="legend-success" class="legend-item success" style="display: none;">
+                      <span class="dot" aria-hidden="true"></span> <span class="text">0 Hadir</span>
+                    </span>
+                    <span id="legend-duplicate" class="legend-item duplicate" style="display: none;">
+                      <span class="dot" aria-hidden="true"></span> <span class="text">0 Duplikat</span>
+                    </span>
+                    <span id="legend-error" class="legend-item error" style="display: none;">
+                      <span class="dot" aria-hidden="true"></span> <span class="text">0 Gagal</span>
+                    </span>
+                    <span id="legend-pending" class="legend-item pending" style="display: none;">
+                      <span class="dot" aria-hidden="true"></span> <span class="text">0 Memproses</span>
+                    </span>
+                  </div>
                 </div>
               </div>
 

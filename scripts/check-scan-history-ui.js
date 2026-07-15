@@ -87,6 +87,32 @@ try {
   if (spinnerStates.length !== 3 || spinnerStates.some(spinner => spinner.color !== spinner.stroke) || await page.locator('.grid-column-scan-loader').count()) {
     throw new Error(`Scan spinners were not replaced: ${JSON.stringify(spinnerStates)}`);
   }
+  const infoTrigger = page.locator('#progress-info-trigger');
+  const breakdown = page.locator('#progress-breakdown');
+  if (await page.locator('.progress-legend').isVisible() || await infoTrigger.isDisabled()) {
+    throw new Error('Progress breakdown is visible by default or its trigger is disabled');
+  }
+  await infoTrigger.click();
+  const breakdownState = await page.evaluate(() => {
+    const trigger = document.getElementById('progress-info-trigger').getBoundingClientRect();
+    const bar = document.querySelector('.segmented-progress-bar').getBoundingClientRect();
+    const visibleItems = Array.from(document.querySelectorAll('.progress-legend .legend-item'))
+      .filter(item => getComputedStyle(item).display !== 'none')
+      .map(item => item.textContent.replace(/\s+/g, ' ').trim());
+    return {
+      expanded: document.getElementById('progress-info-trigger').getAttribute('aria-expanded'),
+      triggerLeftOfBar: trigger.right <= bar.left,
+      direction: getComputedStyle(document.querySelector('.progress-legend')).flexDirection,
+      visibleItems,
+    };
+  });
+  if (breakdownState.expanded !== 'true' || !breakdownState.triggerLeftOfBar || breakdownState.direction !== 'column' || breakdownState.visibleItems.length !== 4) {
+    throw new Error(`Progress breakdown popover is incorrect: ${JSON.stringify(breakdownState)}`);
+  }
+  await page.keyboard.press('Escape');
+  if (await breakdown.isVisible() || await infoTrigger.getAttribute('aria-expanded') !== 'false' || !await infoTrigger.evaluate(trigger => trigger === document.activeElement)) {
+    throw new Error('Escape did not close the progress breakdown and restore focus');
+  }
   const cardBorders = await page.locator('.queue-row').evaluateAll(rows => rows.map(row => {
     const style = getComputedStyle(row);
     const canvas = document.createElement('canvas');
@@ -142,17 +168,17 @@ try {
     const second = dots[1].getBoundingClientRect();
     const carousel = document.querySelector('.carousel-container-outer').getBoundingClientRect();
     const footer = document.querySelector('.app-footer').getBoundingClientRect();
-    const bounds = container.getBoundingClientRect();
+    const dotCenter = first.top + first.height / 2;
     return {
       gap: style.gap,
-      marginTop: style.marginTop,
-      marginBottom: style.marginBottom,
+      trackHeight: container.getBoundingClientRect().height,
+      hitHeight: first.height,
       centerDistance: Math.round((second.left + second.width / 2) - (first.left + first.width / 2)),
-      historyGap: bounds.top - carousel.bottom,
-      footerGap: footer.top - bounds.bottom,
+      historyGap: dotCenter - 3 - carousel.bottom,
+      footerGap: footer.top - dotCenter - 3,
     };
   });
-  if (dotSpacing.gap !== '0px' || dotSpacing.centerDistance !== 20 || dotSpacing.footerGap > 13 || Math.abs(dotSpacing.historyGap - dotSpacing.footerGap) > 1) {
+  if (dotSpacing.gap !== '0px' || dotSpacing.trackHeight !== 6 || dotSpacing.hitHeight !== 44 || dotSpacing.centerDistance !== 20 || dotSpacing.footerGap > 13 || Math.abs(dotSpacing.historyGap - dotSpacing.footerGap) > 1) {
     throw new Error(`Carousel indicators are not compact: ${JSON.stringify(dotSpacing)}`);
   }
   await page.locator('.queue-row').filter({ hasText: 'Maria' }).locator('.history-dismiss-btn').click();
@@ -246,6 +272,7 @@ try {
     scanQueue.queue = [];
     scanQueue.render();
   });
+  if (!await infoTrigger.isDisabled() || await breakdown.isVisible()) throw new Error('Empty history left the progress breakdown available');
   const emptyHistory = await page.locator('.queue-empty-state').evaluate(emptyState => ({
     icon: emptyState.querySelector('re-icon')?.getAttribute('icon'),
     text: emptyState.textContent.replace(/\s+/g, ' ').trim(),
