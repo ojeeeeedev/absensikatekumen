@@ -105,8 +105,8 @@ try {
       };
     }),
     containerHeight: document.getElementById('app-container').getBoundingClientRect().height,
-    emptyBottomGap: document.getElementById('app-container').getBoundingClientRect().bottom
-      - document.querySelector('#profile-view .welcome-placeholder').getBoundingClientRect().bottom,
+    containerBottomGap: innerHeight - document.getElementById('app-container').getBoundingClientRect().bottom,
+    bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
     profileActive: !document.getElementById('profile-view').hidden,
     scanHidden: document.getElementById('main-app-section').hidden,
     activeNav: document.querySelector('[aria-current="page"]')?.dataset.appView
@@ -120,10 +120,12 @@ try {
   if (!initialShell.profileActive || !initialShell.scanHidden || initialShell.activeNav !== 'profile' || initialShell.tabTrackRadius !== '16px' || initialShell.tabPillRadius !== '12px' || initialShell.tabPillOffset <= 0 || initialShell.headerGroupCenterOffset >= 1 || initialShell.headerVerticalGapDelta >= 1 || !tabsAligned || !tabBoundsAligned || initialShell.supportingText.join('|') !== 'Katekumen Dewasa - Paroki St. Petrus|Keuskupan Bandung' || new Set(initialShell.supportingFontSizes).size !== 1 || initialShell.supportingLineHeight > 16) {
     throw new Error(`Direct profile route did not activate the profile view: ${JSON.stringify(initialShell)}`);
   }
-  if (initialShell.emptyBottomGap > 22) {
-    throw new Error(`Compact profile left excess space below its empty state: ${JSON.stringify(initialShell)}`);
+  if (Math.abs(initialShell.containerBottomGap - initialShell.bodyPaddingBottom) >= 1) {
+    throw new Error(`Profile shell does not fill the visible viewport: ${JSON.stringify(initialShell)}`);
   }
   const compactResize = await page.evaluate(async () => {
+    const container = document.getElementById('app-container');
+    const fromHeight = container.getBoundingClientRect().height;
     const navigation = window.navigateToAppView('scan');
     const opacitySamples = [];
     for (let index = 0; index < 8; index += 1) {
@@ -131,17 +133,14 @@ try {
       opacitySamples.push(Number(getComputedStyle(document.getElementById('main-app-section')).opacity));
     }
     await navigation;
-    const animation = document.getElementById('app-container').getAnimations().find(candidate =>
+    const animation = container.getAnimations().find(candidate =>
       candidate.effect.getKeyframes().some(frame => frame.height)
     );
-    if (!animation) return null;
-    const [from, to] = animation.effect.getKeyframes();
-    await animation.finished;
-    return { from: parseFloat(from.height), to: parseFloat(to.height), opacitySamples };
+    return { from: fromHeight, to: container.getBoundingClientRect().height, heightAnimation: Boolean(animation), opacitySamples };
   });
-  const opacityRestarted = compactResize?.opacitySamples.some((opacity, index, samples) => index > 0 && opacity + 0.01 < samples[index - 1]);
-  if (!compactResize || compactResize.to <= compactResize.from || opacityRestarted) {
-    throw new Error(`Main container did not animate from compact Profile to Scan: ${JSON.stringify(compactResize)}`);
+  const opacityRestarted = compactResize.opacitySamples.some((opacity, index, samples) => index > 0 && opacity + 0.01 < samples[index - 1]);
+  if (Math.abs(compactResize.to - compactResize.from) >= 1 || compactResize.heightAnimation || opacityRestarted) {
+    throw new Error(`Full-height shell shifted while navigating from Profile to Scan: ${JSON.stringify(compactResize)}`);
   }
   await page.evaluate(async () => {
     await window.navigateToAppView('profile');
@@ -204,8 +203,8 @@ try {
       scrollable: profile.scrollHeight > profile.clientHeight
     };
   });
-  if (!expandedShell.expanded || !expandedShell.scrollable || expandedShell.containerHeight <= initialShell.containerHeight || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1) {
-    throw new Error(`Profile shell did not grow below the anchored navbar: ${JSON.stringify({ initialShell, expandedShell })}`);
+  if (!expandedShell.expanded || !expandedShell.scrollable || Math.abs(expandedShell.containerHeight - initialShell.containerHeight) >= 1 || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1) {
+    throw new Error(`Profile shell did not preserve the full-height viewport layout: ${JSON.stringify({ initialShell, expandedShell })}`);
   }
 
   const stickyProfileHeader = await page.evaluate(async () => {
@@ -464,6 +463,76 @@ try {
   const selectedTopic = scanPage.locator('#topic-combobox-popover [role="option"][aria-selected="true"]');
   if (!await selectedTopic.textContent().then(text => text.includes('Pentakosta'))) throw new Error('Selected topic was not marked');
   if (await selectedTopic.evaluate(option => getComputedStyle(option).backgroundColor) !== classSelectedBackground) throw new Error('Topic selected container does not match the class picker');
+  await scanPage.keyboard.press('Escape');
+
+  const viewportSizes = [
+    { width: 320, height: 568 },
+    { width: 390, height: 664 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 1280, height: 844 },
+    { width: 390, height: 664 },
+    { width: 390, height: 844 },
+  ];
+  if (!await scanPage.locator('meta[name="viewport"]').getAttribute('content').then(content => content.includes('viewport-fit=cover'))) {
+    throw new Error('Viewport metadata does not enable safe-area coverage');
+  }
+  for (const viewport of viewportSizes) {
+    await Promise.all([page.setViewportSize(viewport), scanPage.setViewportSize(viewport)]);
+    await scanPage.evaluate(() => window.setAppState(2));
+    const scanViewport = await scanPage.evaluate(() => {
+      const container = document.getElementById('app-container').getBoundingClientRect();
+      const reader = document.getElementById('reader-container').getBoundingClientRect();
+      const history = document.getElementById('queue-history-panel').getBoundingClientRect();
+      const main = document.getElementById('main-app-section');
+      return {
+        bottomGap: innerHeight - container.bottom,
+        bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
+        cameraWidth: reader.width,
+        cameraHeight: reader.height,
+        historyHeight: history.height,
+        mainOverflowY: getComputedStyle(main).overflowY,
+        mainScrollable: main.scrollHeight > main.clientHeight,
+        horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+      };
+    });
+    if (Math.abs(scanViewport.bottomGap - scanViewport.bodyPaddingBottom) >= 1
+      || scanViewport.horizontalOverflow
+      || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
+      || scanViewport.cameraWidth < 179
+      || scanViewport.cameraWidth > 301
+      || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 124))) {
+      throw new Error(`Scan viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(scanViewport)}`);
+    }
+    if (scanViewport.mainScrollable) {
+      const footerVisibleAtEnd = await scanPage.evaluate(() => {
+        const main = document.getElementById('main-app-section');
+        main.scrollTop = main.scrollHeight;
+        return document.querySelector('.app-footer').getBoundingClientRect().bottom
+          <= document.getElementById('app-container').getBoundingClientRect().bottom + 1;
+      });
+      if (!footerVisibleAtEnd) throw new Error(`Scan footer is unreachable at ${viewport.width}x${viewport.height}`);
+    }
+    await scanPage.evaluate(() => window.setAppState(1));
+    const selectionBottomGap = await scanPage.evaluate(() => innerHeight - document.getElementById('app-container').getBoundingClientRect().bottom);
+    if (Math.abs(selectionBottomGap - scanViewport.bodyPaddingBottom) >= 1) {
+      throw new Error(`Topic selection does not fill the viewport at ${viewport.width}x${viewport.height}`);
+    }
+    await scanPage.evaluate(() => window.setAppState(2));
+
+    const profileViewport = await page.evaluate(() => {
+      const container = document.getElementById('app-container').getBoundingClientRect();
+      return {
+        bottomGap: innerHeight - container.bottom,
+        bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
+        horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+      };
+    });
+    if (Math.abs(profileViewport.bottomGap - profileViewport.bodyPaddingBottom) >= 1 || profileViewport.horizontalOverflow) {
+      throw new Error(`Profile viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(profileViewport)}`);
+    }
+  }
   await Promise.all([
     page.setViewportSize({ width: 1280, height: 844 }),
     scanPage.setViewportSize({ width: 1280, height: 844 }),
