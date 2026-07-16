@@ -15,7 +15,10 @@ let allStudents = [];
 const PhotoUploader = createProfilePhotoUploader({
   getToken: getProfileToken,
   findStudent: studentId => allStudents.find(student => student.studentId === studentId),
-  onUploaded: filterStudents,
+  onUploaded: () => {
+    renderStudents(allStudents);
+    filterStudents();
+  },
 });
 
 // ============================================================
@@ -70,6 +73,7 @@ async function loadStudents(classCode) {
     const data = await res.json();
     if (data.status === 'ok') {
       allStudents = data.students;
+      renderStudents(allStudents);
       filterStudents();
     } else {
       showToast(data.message || "Gagal memuat data", "error");
@@ -92,6 +96,13 @@ function escapeHTML(str) {
     .replace(/'/g, '&#039;');
 }
 
+function isInactive(student) {
+  if (!student) return false;
+  const ki = String(student.kelasKi || '').trim().toLowerCase();
+  const kk = String(student.katekisKk || '').trim().toLowerCase();
+  return ki === 'inactive' || kk === 'inactive';
+}
+
 function renderStudents(students) {
   const listContainer = document.getElementById('students-list');
   const summaryContainer = document.getElementById('students-summary');
@@ -103,18 +114,9 @@ function renderStudents(students) {
   listContainer.style.removeProperty('--profile-scroll-slack');
   listContainer.innerHTML = '';
 
-  // Inactive helper
-  const isInactive = (student) => {
-    if (!student) return false;
-    const ki = String(student.kelasKi || '').trim().toLowerCase();
-    const kk = String(student.katekisKk || '').trim().toLowerCase();
-    return ki === 'inactive' || kk === 'inactive';
-  };
-
   // Group active and inactive students (inactive at the bottom)
   const activeList = students.filter(s => !isInactive(s));
   const inactiveList = students.filter(s => isInactive(s));
-  const processedStudents = [...activeList, ...inactiveList];
   
   // Update count summary badges
   if (summaryContainer && summaryActiveText && summaryInactiveText) {
@@ -140,16 +142,6 @@ function renderStudents(students) {
     }
   }
   
-  if (processedStudents.length === 0) {
-    listContainer.innerHTML = `
-      <div class="empty-state">
-        <re-icon icon="user-search" class="empty-icon" decorative></re-icon>
-        <p>Tidak ada data katekumen ditemukan.</p>
-      </div>
-    `;
-    return;
-  }
-
   const closeTimers = new WeakMap();
   const finishClose = (body) => {
     clearTimeout(closeTimers.get(body));
@@ -175,6 +167,10 @@ function renderStudents(students) {
     item.className = studentInactive
       ? 'student-accordion-item inactive'
       : 'student-accordion-item';
+    item.dataset.searchName = String(student.name || '').toLowerCase();
+    item.dataset.searchId = String(student.studentId || '').toLowerCase();
+    item.dataset.searchKi = String(student.kelasKi || '').toLowerCase();
+    item.dataset.searchKk = String(student.katekisKk || '').toLowerCase();
 
     const delay = Math.min((index + totalOffset) * 0.04, 0.8);
     item.style.animationDelay = `${delay}s`;
@@ -372,7 +368,7 @@ function renderStudents(students) {
     groupHeader.setAttribute('aria-expanded', 'false');
     groupHeader.innerHTML = `
       <re-icon icon="user-minus" decorative></re-icon>
-      <span>Nonaktif (${inactiveList.length})</span>
+      <span class="inactive-group-count">Nonaktif (${inactiveList.length})</span>
       <re-icon icon="chevron-down" class="inactive-group-arrow" decorative></re-icon>
     `;
 
@@ -414,29 +410,67 @@ function renderStudents(students) {
     listContainer.appendChild(groupWrapper);
   }
 
+  const emptyState = document.createElement('div');
+  emptyState.className = 'empty-state';
+  emptyState.hidden = students.length > 0;
+  emptyState.innerHTML = `
+    <re-icon icon="user-search" class="empty-icon" decorative></re-icon>
+    <p>Tidak ada data katekumen ditemukan.</p>
+  `;
+  listContainer.appendChild(emptyState);
 }
 
 function filterStudents() {
   const searchInput = document.getElementById('search-input');
-  if (!searchInput) return;
+  const listContainer = document.getElementById('students-list');
+  if (!searchInput || !listContainer) return;
+
   const query = searchInput.value.toLowerCase().trim();
   const scopedQuery = query.match(/^(ki|kk)\s*:(.*)$/);
-  if (scopedQuery) {
-    const [, scope, rawTerm] = scopedQuery;
-    const term = rawTerm.trim();
-    const field = scope === 'ki' ? 'kelasKi' : 'katekisKk';
-    renderStudents(allStudents.filter(student =>
-      (student[field] || '').toLowerCase().includes(term)
-    ));
-    return;
+  const scope = scopedQuery?.[1];
+  const term = scopedQuery ? scopedQuery[2].trim() : query;
+  let visibleCount = 0;
+  let visibleInactiveCount = 0;
+
+  listContainer.scrollTop = 0;
+  listContainer.style.removeProperty('--profile-scroll-slack');
+
+  listContainer.querySelectorAll('.student-accordion-item').forEach((item) => {
+    const matches = scope
+      ? item.dataset[scope === 'ki' ? 'searchKi' : 'searchKk'].includes(term)
+      : ['searchName', 'searchId', 'searchKi', 'searchKk']
+          .some(field => item.dataset[field].includes(term));
+
+    item.hidden = !matches;
+    if (matches) {
+      visibleCount += 1;
+      if (item.classList.contains('inactive')) visibleInactiveCount += 1;
+    }
+
+    const body = item.querySelector('.student-accordion-body');
+    const header = item.querySelector('.student-accordion-header');
+    if (body?.classList.contains('expanded') || body?.classList.contains('closing')) {
+      body.classList.remove('expanded', 'closing');
+      body.classList.add('collapsed');
+      header?.classList.remove('active', 'closing');
+      header?.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  const inactiveGroup = listContainer.querySelector('.inactive-group-wrapper');
+  if (inactiveGroup) {
+    inactiveGroup.hidden = visibleInactiveCount === 0;
+    const groupHeader = inactiveGroup.querySelector('.inactive-group-header');
+    const groupBody = inactiveGroup.querySelector('.inactive-group-body');
+    const groupCount = inactiveGroup.querySelector('.inactive-group-count');
+    groupHeader?.classList.remove('open');
+    groupBody?.classList.remove('open');
+    groupHeader?.setAttribute('aria-expanded', 'false');
+    if (groupCount) groupCount.textContent = `Nonaktif (${visibleInactiveCount})`;
   }
-  const filtered = allStudents.filter(s => 
-    (s.name || '').toLowerCase().includes(query) || 
-    (s.studentId || '').toLowerCase().includes(query) ||
-    (s.kelasKi || '').toLowerCase().includes(query) ||
-    (s.katekisKk || '').toLowerCase().includes(query)
-  );
-  renderStudents(filtered);
+
+  const emptyState = listContainer.querySelector('.empty-state');
+  if (emptyState) emptyState.hidden = visibleCount > 0;
 }
 
 let profileInitialized = false;

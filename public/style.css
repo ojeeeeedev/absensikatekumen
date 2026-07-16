@@ -2211,6 +2211,12 @@ a:focus-visible,
   padding-top: 8px;
 }
 
+.student-accordion-item[hidden],
+.inactive-group-wrapper[hidden],
+#students-list > .empty-state[hidden] {
+  display: none;
+}
+
 .inactive-badge {
   font-size: 0.62rem;
   font-weight: 700;

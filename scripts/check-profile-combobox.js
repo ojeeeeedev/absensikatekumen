@@ -41,8 +41,10 @@ try {
   });
   const page = await context.newPage();
   let releaseProfilePhoto;
+  let profilePhotoRequests = 0;
   const profilePhotoGate = new Promise(resolve => { releaseProfilePhoto = resolve; });
   await page.route('**/api/photo?*', async route => {
+    profilePhotoRequests += 1;
     await profilePhotoGate;
     await route.fulfill({
       contentType: 'image/png',
@@ -241,10 +243,14 @@ try {
       && frame.querySelector('.student-thumb')?.classList.contains('loaded')
       && getComputedStyle(frame.querySelector('.profile-photo-spinner')).display === 'none';
   });
+  const loadedPhotoRequests = profilePhotoRequests;
+  await page.evaluate(() => {
+    window.__persistentProfilePhoto = document.querySelector('.student-thumb[data-student-id="2026/MAL/001"]');
+  });
   const assertProfileSearch = async (query, expectedIds) => {
     await page.locator('#search-input').fill(query);
     await page.waitForFunction(ids => {
-      const renderedIds = [...document.querySelectorAll('.student-id-text')]
+      const renderedIds = [...document.querySelectorAll('.student-accordion-item:not([hidden]) .student-id-text')]
         .map(element => element.textContent.trim());
       return JSON.stringify(renderedIds) === JSON.stringify(ids);
     }, expectedIds);
@@ -253,9 +259,34 @@ try {
   await assertProfileSearch('ki:Katekis Induk Khusus', ['2026/MAL/001']);
   await assertProfileSearch('Katekis Kecil Khusus', ['2026/MAL/002', '2026/MAL/004']);
   await assertProfileSearch('kk:Katekis Kecil Khusus', ['2026/MAL/002']);
+  await assertProfileSearch('Katekumen 32', ['2026/MAL/032']);
+  const filteredInactiveGroup = await page.locator('.inactive-group-wrapper').evaluate(group => ({
+    hidden: group.hidden,
+    label: group.querySelector('.inactive-group-count').textContent,
+  }));
+  if (filteredInactiveGroup.hidden || filteredInactiveGroup.label !== 'Nonaktif (1)') {
+    throw new Error(`Inactive search results were not preserved: ${JSON.stringify(filteredInactiveGroup)}`);
+  }
+  await assertProfileSearch('Tidak Ada Katekumen', []);
+  const emptySearchState = await page.evaluate(() => ({
+    emptyVisible: !document.querySelector('#students-list > .empty-state').hidden,
+    inactiveGroupHidden: document.querySelector('.inactive-group-wrapper').hidden,
+  }));
+  if (!emptySearchState.emptyVisible || !emptySearchState.inactiveGroupHidden) {
+    throw new Error(`Empty profile search state is incorrect: ${JSON.stringify(emptySearchState)}`);
+  }
   await assertProfileSearch('', Array.from({ length: 35 }, (_, index) =>
     `2026/MAL/${String(index + 1).padStart(3, '0')}`
   ));
+  const persistentPhotoState = await page.evaluate(() => ({
+    sameNode: document.querySelector('.student-thumb[data-student-id="2026/MAL/001"]') === window.__persistentProfilePhoto,
+    complete: window.__persistentProfilePhoto?.complete,
+    naturalWidth: window.__persistentProfilePhoto?.naturalWidth,
+    inactiveLabel: document.querySelector('.inactive-group-count').textContent,
+  }));
+  if (!persistentPhotoState.sameNode || !persistentPhotoState.complete || persistentPhotoState.naturalWidth === 0 || persistentPhotoState.inactiveLabel !== 'Nonaktif (4)' || profilePhotoRequests !== loadedPhotoRequests) {
+    throw new Error(`Profile photos did not persist through search: ${JSON.stringify({ ...persistentPhotoState, loadedPhotoRequests, profilePhotoRequests })}`);
+  }
   const expandedShell = await page.evaluate(() => {
     const nav = document.getElementById('app-nav').getBoundingClientRect();
     const container = document.getElementById('app-container').getBoundingClientRect();
