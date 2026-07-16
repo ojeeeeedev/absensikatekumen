@@ -1892,6 +1892,8 @@ a:focus-visible,
   max-height: min(240px, 40vh);
   margin-top: 6px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   overscroll-behavior: contain;
 }
 
