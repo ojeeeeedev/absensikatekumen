@@ -408,7 +408,7 @@ body {
   font-family: var(--font-sans);
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
   padding: max(var(--space-4), env(safe-area-inset-top)) 0 max(var(--space-4), env(safe-area-inset-bottom));
   overflow: hidden;
