@@ -119,8 +119,32 @@ try {
       alpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
     };
   }));
-  if (cardBorders.some(border => border.widths.some(width => width !== '1px') || border.alpha < 0.7 || border.alpha > 0.74) || new Set(cardBorders.map(border => border.color)).size !== cardBorders.length) {
+  if (cardBorders.some(border => border.widths.some(width => width !== '1px') || border.alpha !== 1) || new Set(cardBorders.map(border => border.color)).size !== cardBorders.length) {
     throw new Error(`History cards do not have subtle 1px semantic borders: ${JSON.stringify(cardBorders)}`);
+  }
+  const semanticHistoryColors = await page.evaluate(() => {
+    const resolve = value => {
+      const probe = document.createElement('span');
+      probe.style.color = value;
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+    const expected = {
+      success: resolve('var(--green-7)'),
+      duplicate: resolve('var(--amber-7)'),
+      error: resolve('var(--red-7)'),
+      processing: resolve('var(--marian-7)'),
+    };
+    const actual = Object.fromEntries([...document.querySelectorAll('.queue-row')].map(row => [
+      [...row.classList].find(name => Object.hasOwn(expected, name)),
+      getComputedStyle(row).borderTopColor,
+    ]));
+    return { expected, actual };
+  });
+  if (Object.entries(semanticHistoryColors.expected).some(([status, color]) => semanticHistoryColors.actual[status] !== color)) {
+    throw new Error(`History borders do not use exact semantic steps: ${JSON.stringify(semanticHistoryColors)}`);
   }
   if (await page.locator('.history-dismiss-btn').count() !== 3) throw new Error('Pending history received a dismiss button');
 
@@ -432,9 +456,33 @@ try {
   await confirmationCancel.hover();
   await page.mouse.down();
   await page.waitForTimeout(80);
-  const disabledTransform = await confirmationCancel.evaluate(button => getComputedStyle(button).transform);
+  const disabledState = await confirmationCancel.evaluate(button => {
+    const style = getComputedStyle(button);
+    const resolve = value => {
+      const probe = document.createElement('span');
+      probe.style.color = value;
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+    return {
+      transform: style.transform,
+      background: style.backgroundColor,
+      border: style.borderTopColor,
+      text: style.color,
+      opacity: style.opacity,
+      expected: {
+        background: resolve('var(--slate-3)'),
+        border: resolve('var(--slate-6)'),
+        text: resolve('var(--slate-9)'),
+      },
+    };
+  });
   await page.mouse.up();
-  if (disabledTransform !== 'none' && Number(disabledTransform.match(/^matrix\(([^,]+)/)?.[1] ?? 1) < 1) throw new Error(`Disabled confirmation still transforms: ${disabledTransform}`);
+  if (disabledState.transform !== 'none' || disabledState.background !== disabledState.expected.background || disabledState.border !== disabledState.expected.border || disabledState.text !== disabledState.expected.text || disabledState.opacity !== '1') {
+    throw new Error(`Disabled confirmation colors are incorrect: ${JSON.stringify(disabledState)}`);
+  }
   await confirmationCancel.evaluate(button => { button.disabled = false; });
   await confirmationCancel.hover();
   await page.mouse.down();

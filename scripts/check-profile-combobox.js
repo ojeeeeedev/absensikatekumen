@@ -1,5 +1,21 @@
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
+
+const colorSource = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
+const requiredColorDeclarations = [
+  '--slate-1: #fcfcfd;',
+  '--slate-12: #1c2024;',
+  '--slate-1: #111113;',
+  '--slate-12: #edeef0;',
+  '--marian-9: #1d3f8f;',
+  '--marian-9: #70a2ff;',
+  '--chart-5: var(--teal-9);',
+  '--popover: var(--slate-2);',
+];
+if (requiredColorDeclarations.some(declaration => !colorSource.includes(declaration))) {
+  throw new Error('Radix color source declarations are incomplete');
+}
 
 const port = 5600 + process.pid % 1000;
 const baseUrl = `http://127.0.0.1:${port}`;
@@ -78,6 +94,85 @@ try {
   }));
 
   await page.goto(`${baseUrl}/profile`, { waitUntil: 'networkidle' });
+  const colorAudit = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    const rgb = color => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = '#000';
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    };
+    const luminance = color => rgb(color).map(value => {
+      const channel = value / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+    const contrast = (foreground, background) => {
+      const [light, dark] = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+      return (light + 0.05) / (dark + 0.05);
+    };
+    const resolve = value => {
+      const probe = document.createElement('span');
+      probe.style.color = value;
+      document.body.append(probe);
+      const resolved = getComputedStyle(probe).color;
+      probe.remove();
+      return resolved;
+    };
+    const results = [];
+    for (const theme of ['light', 'dark']) {
+      document.documentElement.setAttribute('data-theme', theme);
+      const values = Object.fromEntries([
+        'slate-1', 'slate-2', 'slate-3', 'slate-6', 'slate-9', 'slate-11', 'slate-12',
+        'marian-1', 'marian-3', 'marian-7', 'marian-9', 'marian-11', 'marian-12',
+        'green-3', 'green-11', 'green-12', 'amber-3', 'amber-11', 'amber-12', 'red-3', 'red-11', 'purple-3', 'purple-11'
+      ].map(name => [name, resolve(`var(--${name})`)]));
+      const disabled = document.createElement('button');
+      disabled.disabled = true;
+      document.body.append(disabled);
+      const disabledStyle = getComputedStyle(disabled);
+      results.push({
+        theme,
+        roles: {
+          background: resolve('var(--background)'),
+          popover: resolve('var(--popover)'),
+          primary: resolve('var(--primary)'),
+        },
+        values,
+        contrast: {
+          primaryText: contrast(values['slate-12'], values['slate-1']),
+          secondaryText: contrast(values['slate-11'], values['slate-1']),
+          primaryButton: contrast(theme === 'light' ? '#fff' : values['marian-1'], values['marian-9']),
+          successBadge: contrast(values['green-12'], values['green-3']),
+          warningBadge: contrast(values['amber-12'], values['amber-3']),
+          errorBadge: contrast(values['red-11'], values['red-3']),
+          specialTopic: contrast(values['purple-11'], values['purple-3']),
+        },
+        disabled: {
+          background: disabledStyle.backgroundColor,
+          border: disabledStyle.borderTopColor,
+          text: disabledStyle.color,
+          opacity: disabledStyle.opacity,
+        },
+      });
+      disabled.remove();
+    }
+    document.documentElement.setAttribute('data-theme', 'light');
+    return results;
+  });
+  for (const audit of colorAudit) {
+    if (audit.roles.background !== audit.values['slate-1'] || audit.roles.popover !== audit.values['slate-2'] || audit.roles.primary !== audit.values['marian-9']) {
+      throw new Error(`Semantic color aliases are incorrect in ${audit.theme}: ${JSON.stringify(audit)}`);
+    }
+    if (Object.values(audit.contrast).some(ratio => ratio < 4.5)) {
+      throw new Error(`Text contrast is below WCAG AA in ${audit.theme}: ${JSON.stringify(audit.contrast)}`);
+    }
+    if (audit.disabled.background !== audit.values['slate-3'] || audit.disabled.border !== audit.values['slate-6'] || audit.disabled.text !== audit.values['slate-9'] || audit.disabled.opacity !== '1') {
+      throw new Error(`Disabled control colors are incorrect in ${audit.theme}: ${JSON.stringify(audit.disabled)}`);
+    }
+  }
   const navbarHandle = await page.locator('#app-nav').elementHandle();
   const headerHandle = await page.locator('#app-shell-header').elementHandle();
   const initialShell = await page.evaluate(() => ({
@@ -87,7 +182,11 @@ try {
     textLeft: document.querySelector('#app-shell-header .header-text').getBoundingClientRect().left,
     headerGroupCenterOffset: Math.abs(
       (document.querySelector('#app-shell-header .header-logo').getBoundingClientRect().left
-        + document.querySelector('#app-shell-header .header-text').getBoundingClientRect().right) / 2
+        + Math.max(...[...document.querySelectorAll('#app-shell-header .header-text > *')].map(element => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return range.getBoundingClientRect().right;
+        }))) / 2
       - (document.getElementById('app-shell-header').getBoundingClientRect().left
         + document.getElementById('app-shell-header').getBoundingClientRect().right) / 2
     ),
@@ -474,12 +573,14 @@ try {
       numberWidths: summaryBadges.map(element => element.querySelector('span').getBoundingClientRect().width),
       numberAlignments: summaryBadges.map(element => getComputedStyle(element.querySelector('span')).textAlign),
       summaryGeometry: summaryBadges.map(element => {
+        const badge = element.getBoundingClientRect();
         const children = [...element.children].map(child => child.getBoundingClientRect());
         return {
           columnGap: getComputedStyle(element).columnGap,
           iconWidths: children.slice(0, 2).map(rect => rect.width),
           gaps: [children[1].left - children[0].right, children[2].left - children[1].right],
           numberCenter: (children[2].left + children[2].right) / 2,
+          edgeClearance: [children[0].left - badge.left, badge.right - children[2].right],
         };
       }),
       totalRemoved: !document.querySelector('.summary-total, #summary-total-text'),
@@ -503,7 +604,8 @@ try {
   const profileStayedStill = stickyProfileHeader.samples.every(sample => sample.profileScrollTop === 0);
   const summaryColumnsAligned = Math.max(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) - Math.min(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) < 1;
   const summarySpacingUniform = stickyProfileHeader.summaryGeometry.every(row => row.columnGap === '3px' && row.iconWidths.every(width => width === 11) && row.gaps.every(gap => Math.abs(gap - 3) < 1));
-  if (!selectorTopStable || !triggerTopStable || !profileStayedStill || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'center') || !summaryColumnsAligned || !summarySpacingUniform || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter !== 'none' || stickyProfileHeader.selectorTransitionDuration !== '0.3s, 0.3s' || stickyProfileHeader.listTop < stickyProfileHeader.selectorBottom || stickyProfileHeader.listScrollbarColor === 'auto' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
+  const summaryContentClear = stickyProfileHeader.summaryGeometry.every(row => row.edgeClearance.every(clearance => clearance >= 10));
+  if (!selectorTopStable || !triggerTopStable || !profileStayedStill || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 68 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'center') || !summaryColumnsAligned || !summarySpacingUniform || !summaryContentClear || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter !== 'none' || stickyProfileHeader.selectorTransitionDuration !== '0.3s, 0.3s' || stickyProfileHeader.listTop < stickyProfileHeader.selectorBottom || stickyProfileHeader.listScrollbarColor === 'auto' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
@@ -843,7 +945,7 @@ try {
     const specialIdleBackground = await option.evaluate(item => getComputedStyle(item).backgroundColor);
     await option.hover();
     const specialHoverBackground = await option.evaluate(item => getComputedStyle(item).backgroundColor);
-    if (idleBorder === regularBorder || specialIdleBackground === idleBackground || borderStyle.width !== '1px' || borderStyle.alpha < 0.7 || borderStyle.alpha > 0.74) throw new Error(`${className} persistent style is missing`);
+    if (idleBorder === regularBorder || specialIdleBackground === idleBackground || borderStyle.width !== '1px' || borderStyle.alpha !== 1) throw new Error(`${className} persistent style is missing`);
     if (specialIdleBackground === specialHoverBackground) throw new Error(`${className} hover state is missing`);
     specialBorders.push(idleBorder);
   }
