@@ -1,6 +1,13 @@
 (function() {
   const COMBOBOX_MOTION_MS = 180;
   const COMBOBOX_REDUCED_MOTION_MS = 120;
+  const MOMENTUM_FRAME_MS = 1000 / 60;
+  const MOMENTUM_DECAY_PER_FRAME = 0.95;
+  const MOMENTUM_MIN_VELOCITY = 0.02; // px/ms
+  const MOMENTUM_MAX_VELOCITY = 2.5;  // px/ms
+  const MOMENTUM_MAX_DURATION_MS = 900;
+  const VELOCITY_SAMPLE_WEIGHT = 0.25;
+  // ponytail: tuned for short dropdowns; return to native inertia when fixed-layer mobile scrolling is reliable.
   let closeActiveCombobox = null;
 
   window.createSearchCombobox = function({
@@ -32,6 +39,9 @@
     let closeTimer = null;
     let openFrame = null;
     let touchY = null;
+    let touchTime = null;
+    let touchVelocity = 0;
+    let momentumFrame = null;
 
     popover.dataset.state = 'closed';
     popover.inert = true;
@@ -47,6 +57,34 @@
       closeTimer = null;
       if (openFrame !== null) cancelAnimationFrame(openFrame);
       openFrame = null;
+      cancelMomentum();
+    }
+
+    function cancelMomentum() {
+      if (momentumFrame !== null) cancelAnimationFrame(momentumFrame);
+      momentumFrame = null;
+    }
+
+    function startMomentum() {
+      if (Math.abs(touchVelocity) < MOMENTUM_MIN_VELOCITY
+        || list.scrollHeight <= list.clientHeight
+        || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      let velocity = Math.max(-MOMENTUM_MAX_VELOCITY, Math.min(MOMENTUM_MAX_VELOCITY, touchVelocity));
+      const startedAt = performance.now();
+      let previousTime = startedAt;
+      const step = now => {
+        momentumFrame = null;
+        if (popover.hidden || trigger.getAttribute('aria-expanded') !== 'true') return;
+        const elapsed = Math.min(Math.max(now - previousTime, 0), 32);
+        previousTime = now;
+        const previousScrollTop = list.scrollTop;
+        list.scrollTop += velocity * elapsed;
+        if (list.scrollTop === previousScrollTop) return;
+        velocity *= Math.pow(MOMENTUM_DECAY_PER_FRAME, elapsed / MOMENTUM_FRAME_MS);
+        if (Math.abs(velocity) < MOMENTUM_MIN_VELOCITY || now - startedAt >= MOMENTUM_MAX_DURATION_MS) return;
+        momentumFrame = requestAnimationFrame(step);
+      };
+      momentumFrame = requestAnimationFrame(step);
     }
 
     function positionPopover() {
@@ -118,6 +156,7 @@
     function render(query = '') {
       const term = query.trim().toLocaleLowerCase('id');
       const filtered = items.filter(item => !term || getSearchText(item).toLocaleLowerCase('id').includes(term));
+      cancelMomentum();
       list.replaceChildren(...filtered.map(item => {
         const option = document.createElement('button');
         const selected = getValue(item) === select.value;
@@ -198,20 +237,39 @@
       }
     });
     list.addEventListener('touchstart', event => {
+      cancelMomentum();
+      touchY = null;
+      touchTime = null;
+      touchVelocity = 0;
       if (event.touches.length === 1 && list.scrollHeight > list.clientHeight) {
         touchY = event.touches[0].clientY;
+        touchTime = event.timeStamp;
       }
     }, { passive: true });
     list.addEventListener('touchmove', event => {
-      if (touchY === null || event.touches.length !== 1) return;
+      if (touchY === null || touchTime === null || event.touches.length !== 1) return;
       const nextY = event.touches[0].clientY;
+      const instantaneousVelocity = (touchY - nextY) / Math.max(event.timeStamp - touchTime, 1);
+      touchVelocity = touchVelocity * (1 - VELOCITY_SAMPLE_WEIGHT)
+        + instantaneousVelocity * VELOCITY_SAMPLE_WEIGHT;
       const previousScrollTop = list.scrollTop;
       list.scrollTop += touchY - nextY;
       touchY = nextY;
+      touchTime = event.timeStamp;
       if (list.scrollTop !== previousScrollTop) event.preventDefault();
     }, { passive: false });
-    list.addEventListener('touchend', () => { touchY = null; });
-    list.addEventListener('touchcancel', () => { touchY = null; });
+    list.addEventListener('touchend', () => {
+      startMomentum();
+      touchY = null;
+      touchTime = null;
+      touchVelocity = 0;
+    });
+    list.addEventListener('touchcancel', () => {
+      cancelMomentum();
+      touchY = null;
+      touchTime = null;
+      touchVelocity = 0;
+    });
     document.addEventListener('pointerdown', event => {
       if (!root.contains(event.target) && !popover.contains(event.target)) close();
     });
