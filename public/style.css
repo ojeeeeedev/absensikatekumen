@@ -26,6 +26,7 @@
   --duration-fast: 120ms;
   --duration-normal: 180ms;
   --duration-slow: 280ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
   --background: #f7f6f1;
@@ -365,6 +366,9 @@ button:disabled,
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   margin-bottom: 1rem;
   box-shadow: 0 0 12px var(--accent-glow);
+  transition: background-color var(--duration-normal) var(--ease-standard),
+              opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
 }
 #login-btn re-icon {
   position: absolute;
@@ -376,6 +380,7 @@ button:disabled,
 #login-btn:hover {
   background: var(--accent-hover);
 }
+#login-btn:active:not(:disabled) { transform: scale(0.98); }
 
 #login-footer {
   text-align: center; font-size: 0.85rem; margin-top: 0.5rem;
@@ -1441,7 +1446,11 @@ a:focus-visible,
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--duration-normal) var(--ease-standard),
+              border-color var(--duration-normal) var(--ease-standard),
+              color var(--duration-normal) var(--ease-standard),
+              opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
   border: 1px solid transparent;
 }
 
@@ -1468,6 +1477,8 @@ a:focus-visible,
   background: var(--bg-hover);
 }
 
+.confirm-btn:active:not(:disabled) { transform: scale(0.98); }
+
 
 /* --- PROFILE ACCORDION STYLES --- */
 .profile-selector-container {
@@ -1483,10 +1494,9 @@ a:focus-visible,
   position: sticky;
   top: 0;
   z-index: 10;
-  background: linear-gradient(var(--popover), var(--popover)), var(--background);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: var(--background);
   border-bottom: 1px solid var(--border-glass);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
   padding-top: 5px;
   padding-bottom: 5px;
   margin-top: -5px;
@@ -1606,6 +1616,17 @@ a:focus-visible,
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: top center;
+  transition: opacity var(--duration-normal) var(--ease-out),
+              transform var(--duration-normal) var(--ease-out);
+}
+
+.search-combobox-popover[data-state="closed"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px) scale(0.98);
 }
 
 .search-combobox-popover[hidden] {
@@ -1893,6 +1914,7 @@ a:focus-visible,
 .student-photo-frame :is(.student-thumb, .student-photo-large) {
   position: relative;
   opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .student-photo-frame :is(.student-thumb, .student-photo-large).loaded {
@@ -2612,11 +2634,15 @@ body[data-active-view="profile"] .nav-tabs::before {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-out);
 }
 
 .upload-preview-modal.open {
   display: flex;
 }
+
+.upload-preview-modal.is-visible { opacity: 1; }
 
 .upload-preview-sheet {
   width: 100%;
@@ -2629,18 +2655,15 @@ body[data-active-view="profile"] .nav-tabs::before {
   border-top: 1px solid var(--border-glass);
   box-shadow: var(--shadow-lg);
   padding: 1.25rem 1.5rem 2rem;
-  animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity var(--duration-slow) var(--ease-out),
+              transform var(--duration-slow) var(--ease-out);
 }
 
-@keyframes slideUpSheet {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.upload-preview-modal.is-visible .upload-preview-sheet {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .upload-preview-handle {
@@ -2798,7 +2821,10 @@ body[data-active-view="profile"] .nav-tabs::before {
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color var(--duration-normal) var(--ease-standard),
+              color var(--duration-normal) var(--ease-standard),
+              opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
 }
 
 .upload-cancel-btn:hover {
@@ -2817,7 +2843,10 @@ body[data-active-view="profile"] .nav-tabs::before {
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--duration-normal) var(--ease-standard),
+              box-shadow var(--duration-normal) var(--ease-standard),
+              opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2829,6 +2858,11 @@ body[data-active-view="profile"] .nav-tabs::before {
   background: var(--accent-hover);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px var(--accent-glow);
+}
+
+.upload-cancel-btn:active:not(:disabled),
+.upload-confirm-btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .upload-confirm-btn:disabled {
@@ -2904,5 +2938,32 @@ body[data-active-view="profile"] .nav-tabs::before {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .upload-preview-modal,
+  .upload-preview-sheet,
+  .search-combobox-popover,
+  .student-photo-frame :is(.student-thumb, .student-photo-large),
+  #login-btn,
+  .confirm-btn,
+  .upload-cancel-btn,
+  .upload-confirm-btn {
+    transition: opacity var(--duration-fast) var(--ease-out) !important;
+  }
+
+  .upload-preview-sheet,
+  .search-combobox-popover,
+  #login-btn:active:not(:disabled),
+  .confirm-btn:active:not(:disabled),
+  .upload-cancel-btn:active:not(:disabled),
+  .upload-confirm-btn:active:not(:disabled) {
+    transform: none !important;
+  }
+
+  #login-btn:active:not(:disabled),
+  .confirm-btn:active:not(:disabled),
+  .upload-cancel-btn:active:not(:disabled),
+  .upload-confirm-btn:active:not(:disabled) {
+    opacity: 0.92;
   }
 }

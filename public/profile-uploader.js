@@ -6,10 +6,16 @@
 window.createProfilePhotoUploader = function createProfilePhotoUploader({ getToken, findStudent, onUploaded }) {
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+  const SHEET_MOTION_MS = 280;
+  const SHEET_REDUCED_MOTION_MS = 120;
 
   let currentStudentId = null;
   let currentStudentName = null;
   let selectedFile = null;
+  let closeTimer = null;
+  let focusTimer = null;
+  let openFrame = null;
+  let returnFocus = null;
 
   // DOM refs (resolved lazily after DOMContentLoaded)
   let modal, dropzone, fileInput, previewImg, studentLabel,
@@ -70,6 +76,14 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
   }
 
   function open(studentId, studentName) {
+    clearTimeout(closeTimer);
+    clearTimeout(focusTimer);
+    if (openFrame !== null) cancelAnimationFrame(openFrame);
+    closeTimer = null;
+    focusTimer = null;
+    openFrame = null;
+    if (!modal.classList.contains('open')) returnFocus = document.activeElement;
+
     currentStudentId = studentId;
     currentStudentName = studentName;
     selectedFile = null;
@@ -81,26 +95,62 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
     progressWrap.setAttribute('aria-valuenow', '0');
     confirmBtn.disabled = true;
     confirmBtn.classList.remove('uploading');
+    cancelBtn.disabled = false;
+    closeBtn.disabled = false;
     fileInput.value = '';
 
     // Set student label
     studentLabel.textContent = `${studentName} · ${studentId}`;
 
     // Show modal
+    modal.classList.remove('is-visible', 'is-closing');
     modal.classList.add('open');
+    modal.inert = false;
+    modal.removeAttribute('aria-hidden');
     document.body.style.overflow = 'hidden';
+    modal.getBoundingClientRect();
+    openFrame = requestAnimationFrame(() => {
+      openFrame = null;
+      if (modal.classList.contains('open')) modal.classList.add('is-visible');
+    });
 
     // Focus close button for accessibility
-    setTimeout(() => closeBtn.focus(), 50);
+    focusTimer = setTimeout(() => {
+      focusTimer = null;
+      if (modal.classList.contains('is-visible')) closeBtn.focus();
+    }, 50);
   }
 
-  function close() {
-    modal.classList.remove('open');
-    document.body.style.overflow = '';
-    selectedFile = null;
-    currentStudentId = null;
-    currentStudentName = null;
-    fileInput.value = '';
+  function close(options = {}) {
+    if (!modal?.classList.contains('open') || modal.classList.contains('is-closing')) return;
+    const onClosed = typeof options.onClosed === 'function' ? options.onClosed : null;
+    clearTimeout(focusTimer);
+    focusTimer = null;
+    if (openFrame !== null) cancelAnimationFrame(openFrame);
+    openFrame = null;
+
+    modal.classList.remove('is-visible');
+    modal.classList.add('is-closing');
+    if (modal.contains(document.activeElement)) returnFocus?.focus?.({ preventScroll: true });
+    modal.inert = true;
+    modal.setAttribute('aria-hidden', 'true');
+
+    const duration = matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? SHEET_REDUCED_MOTION_MS
+      : SHEET_MOTION_MS;
+    closeTimer = setTimeout(() => {
+      modal.classList.remove('open', 'is-closing');
+      modal.inert = false;
+      modal.removeAttribute('aria-hidden');
+      document.body.style.overflow = '';
+      selectedFile = null;
+      currentStudentId = null;
+      currentStudentName = null;
+      fileInput.value = '';
+      closeTimer = null;
+      returnFocus = null;
+      onClosed?.();
+    }, duration);
   }
 
   function resetDropzone() {
@@ -187,8 +237,7 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
 
         // Close modal and re-render the current student list to show new photo
         setTimeout(() => {
-          close();
-          onUploaded();
+          close({ onClosed: onUploaded });
         }, 600);
       } else {
         throw new Error(data.message || 'Gagal mengunggah foto');
