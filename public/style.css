@@ -1802,7 +1802,8 @@ a:focus-visible,
   z-index: 0;
   border-radius: inherit;
   pointer-events: none;
-  will-change: box-shadow;
+  box-shadow: 0 0 0 6px var(--accent-glow);
+  will-change: opacity, transform;
   animation: pulse-border 2s infinite;
 }
 
@@ -1840,10 +1841,9 @@ a:focus-visible,
 }
 
 .search-combobox-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
+  position: fixed;
+  display: flex;
+  flex-direction: column;
   z-index: 200;
   padding: 8px;
   background: var(--popover);
@@ -1891,6 +1891,7 @@ a:focus-visible,
   gap: 2px;
   max-height: min(240px, 40vh);
   margin-top: 6px;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
@@ -2750,9 +2751,8 @@ body[data-active-view="profile"] .nav-tabs::before {
 }
 
 @keyframes pulse-border {
-  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
-  70% { box-shadow: 0 0 0 8px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  70% { opacity: 0; transform: scale(1.035); }
 }
 
 /* =========================================

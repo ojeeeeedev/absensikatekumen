@@ -71,7 +71,8 @@ try {
     contentType: 'application/json',
     body: JSON.stringify({ status: 'ok', classes: [
       { code: 'SAB', name: 'Sabtu Pagi' },
-      { code: 'MAL', name: 'Malam' }
+      { code: 'MAL', name: 'Malam' },
+      ...Array.from({ length: 28 }, (_, index) => ({ code: `K${index + 1}`, name: `Kelas ${index + 1}` }))
     ] })
   }));
   await page.route('**/api/students?*', route => route.fulfill({
@@ -342,6 +343,21 @@ try {
   if (!classPopoverMotion.origin.endsWith(' 0px') || !classPopoverMotion.properties.includes('opacity') || !classPopoverMotion.properties.includes('transform') || classPopoverMotion.durations.some(duration => Math.abs(duration - 0.18) > 0.001) || !classPopoverMotion.easing.includes('cubic-bezier(0.23, 1, 0.32, 1)')) {
     throw new Error(`Class popover entrance motion is incorrect: ${JSON.stringify(classPopoverMotion)}`);
   }
+  await page.setViewportSize({ width: 320, height: 360 });
+  await page.waitForFunction(() => {
+    const popover = document.getElementById('class-combobox-popover').getBoundingClientRect();
+    return popover.top >= 8 && popover.bottom <= visualViewport.height - 8;
+  });
+  const classListEnd = await page.locator('#class-combobox-options').evaluate(list => {
+    list.scrollTop = list.scrollHeight;
+    const last = list.lastElementChild.getBoundingClientRect();
+    const bounds = list.getBoundingClientRect();
+    return { lastBottom: last.bottom, visibleBottom: Math.min(bounds.bottom, visualViewport.height) };
+  });
+  if (classListEnd.lastBottom > classListEnd.visibleBottom + 1) {
+    throw new Error(`Class list end is clipped by the mobile keyboard viewport: ${JSON.stringify(classListEnd)}`);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('#class-combobox-search').fill('mal');
   const options = await page.locator('#class-combobox-options [role="option"]').allTextContents();
   if (options.length !== 1 || !options[0].includes('Malam')) throw new Error('Class filtering failed');
@@ -1004,6 +1020,21 @@ try {
   if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !scannerIsCentered || !footerIsCompactAndCentered || topicLayout.scannerSize < 287 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
     throw new Error(`Topic combobox layout does not match the profile selector: ${JSON.stringify(topicLayout)}`);
   }
+  await scanPage.setViewportSize({ width: 320, height: 568 });
+  await scanPage.waitForFunction(() => {
+    const popover = document.getElementById('topic-combobox-popover').getBoundingClientRect();
+    return popover.top >= 8 && popover.bottom <= visualViewport.height - 8;
+  });
+  const topicListEnd = await topicPopover.locator('.search-combobox-options').evaluate(list => {
+    list.scrollTop = list.scrollHeight;
+    const last = list.lastElementChild.getBoundingClientRect();
+    const bounds = list.getBoundingClientRect();
+    return { lastBottom: last.bottom, visibleBottom: Math.min(bounds.bottom, visualViewport.height) };
+  });
+  if (topicListEnd.lastBottom > topicListEnd.visibleBottom + 1) {
+    throw new Error(`Topic list end is clipped on mobile: ${JSON.stringify(topicListEnd)}`);
+  }
+  await scanPage.setViewportSize({ width: 390, height: 844 });
   await topicPopover.locator('.search-combobox-search').fill('Pentakosta');
   const topics = await topicPopover.locator('[role="option"]').allTextContents();
   if (topics.length !== 1 || !topics[0].includes('Pentakosta')) throw new Error('Topic filtering failed');
