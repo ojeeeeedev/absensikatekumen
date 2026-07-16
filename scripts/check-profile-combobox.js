@@ -72,6 +72,10 @@ try {
       katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
     })) })
   }));
+  await page.route('**/api/upload-photo', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ status: 'ok', image: '/api/photo?studentId=2026%2FMAL%2F001&uploaded=1' })
+  }));
 
   await page.goto(`${baseUrl}/profile`, { waitUntil: 'networkidle' });
   const navbarHandle = await page.locator('#app-nav').elementHandle();
@@ -145,6 +149,23 @@ try {
   if (Math.abs(initialShell.containerBottomGap - initialShell.bodyPaddingBottom) >= 1) {
     throw new Error(`Profile shell does not fill the visible viewport: ${JSON.stringify(initialShell)}`);
   }
+  const profileThemeTransition = await page.evaluate(async () => {
+    const panel = document.querySelector('#profile-view .profile-selector-container');
+    const fromTheme = document.documentElement.getAttribute('data-theme');
+    const samples = [];
+    window.toggleTheme();
+    for (let index = 0; index < 8; index += 1) {
+      await new Promise(resolve => setTimeout(resolve, 40));
+      const style = getComputedStyle(panel);
+      samples.push({ background: style.backgroundColor, image: style.backgroundImage, backdrop: style.backdropFilter });
+    }
+    window.toggleTheme();
+    await new Promise(resolve => setTimeout(resolve, 320));
+    return { fromTheme, samples };
+  });
+  if (profileThemeTransition.samples.some(sample => sample.background === 'rgb(0, 0, 0)' || sample.background === 'rgba(0, 0, 0, 0)' || sample.image !== 'none' || sample.backdrop !== 'none')) {
+    throw new Error(`Profile controls flashed an incorrect theme surface: ${JSON.stringify(profileThemeTransition)}`);
+  }
   const compactResize = await page.evaluate(async () => {
     const container = document.getElementById('app-container');
     const fromHeight = container.getBoundingClientRect().height;
@@ -209,11 +230,33 @@ try {
     throw new Error(`Profile empty state is not centered and unboxed: ${JSON.stringify(profileSpacing)}`);
   }
   await page.locator('#class-combobox-trigger').click();
+  await page.waitForFunction(() => document.getElementById('class-combobox-popover')?.dataset.state === 'open');
+  const classPopoverMotion = await page.locator('#class-combobox-popover').evaluate(popover => {
+    const style = getComputedStyle(popover);
+    return {
+      origin: style.transformOrigin,
+      properties: style.transitionProperty.split(',').map(value => value.trim()),
+      durations: style.transitionDuration.split(',').map(value => parseFloat(value)),
+      easing: style.transitionTimingFunction,
+    };
+  });
+  if (!classPopoverMotion.origin.endsWith(' 0px') || !classPopoverMotion.properties.includes('opacity') || !classPopoverMotion.properties.includes('transform') || classPopoverMotion.durations.some(duration => Math.abs(duration - 0.18) > 0.001) || !classPopoverMotion.easing.includes('cubic-bezier(0.23, 1, 0.32, 1)')) {
+    throw new Error(`Class popover entrance motion is incorrect: ${JSON.stringify(classPopoverMotion)}`);
+  }
   await page.locator('#class-combobox-search').fill('mal');
   const options = await page.locator('#class-combobox-options [role="option"]').allTextContents();
   if (options.length !== 1 || !options[0].includes('Malam')) throw new Error('Class filtering failed');
   await page.locator('#class-combobox-search').press('ArrowDown');
   await page.keyboard.press('Enter');
+  const classExitState = await page.locator('#class-combobox-popover').evaluate(popover => ({
+    hidden: popover.hidden,
+    inert: popover.inert,
+    state: popover.dataset.state,
+  }));
+  if (classExitState.hidden || !classExitState.inert || classExitState.state !== 'closed') {
+    throw new Error(`Class popover did not become inert during exit: ${JSON.stringify(classExitState)}`);
+  }
+  await page.locator('#class-combobox-popover').waitFor({ state: 'hidden' });
   const selectedClass = await page.locator('#class-selector').inputValue();
   if (selectedClass !== 'MAL') {
     const activeElement = await page.evaluate(() => ({ id: document.activeElement?.id, text: document.activeElement?.textContent }));
@@ -243,6 +286,76 @@ try {
       && frame.querySelector('.student-thumb')?.classList.contains('loaded')
       && getComputedStyle(frame.querySelector('.profile-photo-spinner')).display === 'none';
   });
+  const photoMotion = await page.locator('.student-thumb').first().evaluate(image => {
+    const style = getComputedStyle(image);
+    return { property: style.transitionProperty, duration: parseFloat(style.transitionDuration), easing: style.transitionTimingFunction };
+  });
+  if (photoMotion.property !== 'opacity' || Math.abs(photoMotion.duration - 0.12) > 0.001 || !photoMotion.easing.includes('cubic-bezier(0.23, 1, 0.32, 1)')) {
+    throw new Error(`Profile photo fade is incorrect: ${JSON.stringify(photoMotion)}`);
+  }
+
+  const uploadProfile = page.locator('.student-accordion-item').first();
+  await uploadProfile.locator('.student-accordion-header').click();
+  const uploadButton = uploadProfile.locator('.upload-photo-btn');
+  const modal = page.locator('#upload-preview-modal');
+  const waitForUploadOpen = async () => {
+    await uploadButton.click();
+    await page.waitForFunction(() => document.getElementById('upload-preview-modal')?.classList.contains('is-visible'));
+  };
+  const waitForUploadClosed = async () => {
+    await modal.waitFor({ state: 'hidden' });
+    const state = await modal.evaluate(element => ({ open: element.classList.contains('open'), overflow: document.body.style.overflow }));
+    if (state.open || state.overflow) throw new Error(`Upload sheet cleanup failed: ${JSON.stringify(state)}`);
+  };
+  await waitForUploadOpen();
+  const uploadMotion = await modal.evaluate(element => {
+    const overlay = getComputedStyle(element);
+    const sheet = getComputedStyle(element.querySelector('.upload-preview-sheet'));
+    return {
+      overlay: { property: overlay.transitionProperty, duration: parseFloat(overlay.transitionDuration) },
+      sheet: { properties: sheet.transitionProperty.split(',').map(value => value.trim()), durations: sheet.transitionDuration.split(',').map(value => parseFloat(value)), easing: sheet.transitionTimingFunction },
+      overflow: document.body.style.overflow,
+    };
+  });
+  if (uploadMotion.overlay.property !== 'opacity' || Math.abs(uploadMotion.overlay.duration - 0.28) > 0.001 || !uploadMotion.sheet.properties.includes('opacity') || !uploadMotion.sheet.properties.includes('transform') || uploadMotion.sheet.durations.some(duration => Math.abs(duration - 0.28) > 0.001) || !uploadMotion.sheet.easing.includes('cubic-bezier(0.23, 1, 0.32, 1)') || uploadMotion.overflow !== 'hidden') {
+    throw new Error(`Upload sheet entrance motion is incorrect: ${JSON.stringify(uploadMotion)}`);
+  }
+  const cancelButton = page.locator('#upload-cancel-btn');
+  await cancelButton.hover();
+  await page.mouse.down();
+  await page.waitForTimeout(80);
+  const cancelPressed = await cancelButton.evaluate(button => getComputedStyle(button).transform);
+  const uploadSheetBox = await page.locator('.upload-preview-sheet').boundingBox();
+  await page.mouse.move(uploadSheetBox.x + 10, uploadSheetBox.y + 10);
+  await page.mouse.up();
+  if (Number(cancelPressed.match(/^matrix\(([^,]+)/)?.[1] ?? 1) >= 1) throw new Error(`Upload cancel press feedback is incorrect: ${cancelPressed}`);
+  await page.locator('#upload-close-btn').click();
+  const closingUpload = await modal.evaluate(element => ({ open: element.classList.contains('open'), closing: element.classList.contains('is-closing'), inert: element.inert, visible: element.classList.contains('is-visible'), overflow: document.body.style.overflow }));
+  if (!closingUpload.open || !closingUpload.closing || !closingUpload.inert || closingUpload.visible || closingUpload.overflow !== 'hidden') {
+    throw new Error(`Upload sheet exit state is incorrect: ${JSON.stringify(closingUpload)}`);
+  }
+  await waitForUploadClosed();
+  await waitForUploadOpen();
+  await page.locator('#upload-cancel-btn').click();
+  await waitForUploadClosed();
+  await waitForUploadOpen();
+  await page.keyboard.press('Escape');
+  await waitForUploadClosed();
+  await waitForUploadOpen();
+  await modal.click({ position: { x: 5, y: 5 } });
+  await waitForUploadClosed();
+  await waitForUploadOpen();
+  await page.locator('#upload-file-input').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') });
+  const confirmButton = page.locator('#upload-confirm-btn');
+  await confirmButton.hover();
+  await page.mouse.down();
+  await page.waitForTimeout(80);
+  const confirmPressed = await confirmButton.evaluate(button => getComputedStyle(button).transform);
+  await page.mouse.move(uploadSheetBox.x + 10, uploadSheetBox.y + 10);
+  await page.mouse.up();
+  if (Number(confirmPressed.match(/^matrix\(([^,]+)/)?.[1] ?? 1) >= 1) throw new Error(`Upload confirm press feedback is incorrect: ${confirmPressed}`);
+  await confirmButton.click();
+  await waitForUploadClosed();
   const loadedPhotoRequests = profilePhotoRequests;
   await page.evaluate(() => {
     window.__persistentProfilePhoto = document.querySelector('.student-thumb[data-student-id="2026/MAL/001"]');
@@ -390,7 +503,7 @@ try {
   const profileStayedStill = stickyProfileHeader.samples.every(sample => sample.profileScrollTop === 0);
   const summaryColumnsAligned = Math.max(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) - Math.min(...stickyProfileHeader.summaryGeometry.map(row => row.numberCenter)) < 1;
   const summarySpacingUniform = stickyProfileHeader.summaryGeometry.every(row => row.columnGap === '3px' && row.iconWidths.every(width => width === 11) && row.gaps.every(gap => Math.abs(gap - 3) < 1));
-  if (!selectorTopStable || !triggerTopStable || !profileStayedStill || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'center') || !summaryColumnsAligned || !summarySpacingUniform || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter === 'none' || stickyProfileHeader.selectorTransitionDuration !== '0s' || stickyProfileHeader.listTop < stickyProfileHeader.selectorBottom || stickyProfileHeader.listScrollbarColor === 'auto' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
+  if (!selectorTopStable || !triggerTopStable || !profileStayedStill || Math.abs(stickyProfileHeader.selectorTop - profileSpacing.selectorTop) >= 1 || !selectorHeightStable || Math.abs(stickyProfileHeader.scrolledHeight - stickyProfileHeader.restingHeight) >= 1 || stickyProfileHeader.controlGap !== 12 || stickyProfileHeader.rowGap !== 4 || stickyProfileHeader.badgeGap !== 0 || stickyProfileHeader.summaryHeight !== stickyProfileHeader.searchHeight || stickyProfileHeader.summaryHeight !== 44 || stickyProfileHeader.summaryWidth < 64 || !stickyProfileHeader.searchIconInside || stickyProfileHeader.summaryCount !== 2 || stickyProfileHeader.summaryIcons.some(count => count !== 2) || stickyProfileHeader.summaryValues.join('|') !== '31|4' || stickyProfileHeader.summaryLabels.join('|') !== '31 katekumen aktif|4 katekumen nonaktif' || stickyProfileHeader.numberWidths.some(width => width < 12) || stickyProfileHeader.numberAlignments.some(alignment => alignment !== 'center') || !summaryColumnsAligned || !summarySpacingUniform || !stickyProfileHeader.totalRemoved || stickyProfileHeader.profileScrollListeners !== 0 || stickyProfileHeader.backgroundAlpha < 0.99 || stickyProfileHeader.backdropFilter !== 'none' || stickyProfileHeader.selectorTransitionDuration !== '0.3s, 0.3s' || stickyProfileHeader.listTop < stickyProfileHeader.selectorBottom || stickyProfileHeader.listScrollbarColor === 'auto' || !stickyProfileHeader.gapOccluded || !stickyProfileHeader.cardBehindControls) {
     throw new Error(`Sticky profile controls are not compact and collision-free: ${JSON.stringify(stickyProfileHeader)}`);
   }
 
@@ -594,6 +707,7 @@ try {
   });
 
   await page.locator('#class-combobox-trigger').click();
+  await page.waitForFunction(() => document.getElementById('class-combobox-popover')?.dataset.state === 'open');
   const dropdownStack = await page.evaluate(() => {
     const search = document.getElementById('class-combobox-search');
     const option = document.querySelector('#class-combobox-options [role="option"]');
@@ -608,6 +722,7 @@ try {
     throw new Error(`Profile controls painted over the class dropdown: ${JSON.stringify(dropdownStack)}`);
   }
   await page.keyboard.press('Escape');
+  await page.locator('#class-combobox-popover').waitFor({ state: 'hidden' });
 
   await page.locator('[data-app-view="scan"]').click();
   await page.waitForURL(`${baseUrl}/`);
@@ -689,6 +804,7 @@ try {
   }
   const classTriggerHeight = await page.locator('#class-combobox-trigger').evaluate(trigger => trigger.getBoundingClientRect().height);
   await page.locator('#class-combobox-trigger').click();
+  await page.waitForFunction(() => document.getElementById('class-combobox-popover')?.dataset.state === 'open');
   const classSelectedBackground = await page.locator('#class-combobox-popover [aria-selected="true"]').evaluate(option => getComputedStyle(option).backgroundColor);
   await page.locator('#class-combobox-search').press('Escape');
 
@@ -696,12 +812,14 @@ try {
   await scanPage.goto(baseUrl, { waitUntil: 'networkidle' });
   await scanPage.evaluate(() => window.setAppState(1));
   await scanPage.locator('#topic-trigger-large').click();
+  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-large-popover')?.dataset.state === 'open');
   const largeTopicPopover = scanPage.locator('#topic-combobox-large-popover');
   await largeTopicPopover.locator('.search-combobox-search').fill('Perkenalan');
   if (await largeTopicPopover.locator('[role="option"]').count() !== 1) throw new Error('Large topic combobox filtering failed');
   await largeTopicPopover.locator('.search-combobox-search').press('Escape');
   await scanPage.evaluate(() => window.setAppState(2));
   await scanPage.locator('#topic-combobox-trigger').click();
+  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-popover')?.dataset.state === 'open');
   const topicPopover = scanPage.locator('#topic-combobox-popover');
   const firstTopic = topicPopover.locator('[role="option"]').first();
   const idleBackground = await firstTopic.evaluate(option => getComputedStyle(option).backgroundColor);
@@ -735,6 +853,7 @@ try {
   await pOption.click();
   if (await scanPage.locator('#topic-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected topic trigger is still glowing');
   await scanPage.locator('#topic-combobox-trigger').click();
+  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-popover')?.dataset.state === 'open');
   const selectedP = topicPopover.locator('.topic-option-p[aria-selected="true"]');
   if (await selectedP.evaluate(option => getComputedStyle(option).backgroundColor) === pIdleBackground) throw new Error('Selected P topic fill is missing');
   const topicLayout = await scanPage.evaluate(() => {
@@ -907,6 +1026,58 @@ try {
   if (JSON.stringify(classSize) !== JSON.stringify(topicSize) || classSize.width !== 378 || classSize.height !== 44 || progressWidth !== 378) {
     throw new Error(`Desktop picker geometry mismatch: ${JSON.stringify({ classSize, topicSize, progressWidth })}`);
   }
+
+  await scanPage.locator('#topic-combobox-trigger').click();
+  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-popover')?.dataset.state === 'open');
+  await scanPage.locator('#topic-combobox-trigger').click();
+  const interruptedClose = await scanPage.locator('#topic-combobox-popover').evaluate(popover => ({ hidden: popover.hidden, inert: popover.inert, state: popover.dataset.state }));
+  if (interruptedClose.hidden || !interruptedClose.inert || interruptedClose.state !== 'closed') throw new Error(`Topic exit did not begin safely: ${JSON.stringify(interruptedClose)}`);
+  await scanPage.locator('#topic-combobox-trigger').click();
+  await scanPage.waitForFunction(() => {
+    const popover = document.getElementById('topic-combobox-popover');
+    return popover?.dataset.state === 'open' && !popover.hidden && !popover.inert;
+  });
+  await scanPage.emulateMedia({ reducedMotion: 'reduce' });
+  await scanPage.locator('#topic-combobox-search').press('Escape');
+  await scanPage.locator('#topic-combobox-popover').waitFor({ state: 'hidden' });
+  await scanPage.locator('#topic-combobox-trigger').click();
+  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-popover')?.dataset.state === 'open');
+  const reducedPopoverMotion = await scanPage.locator('#topic-combobox-popover').evaluate(popover => {
+    const style = getComputedStyle(popover);
+    return { property: style.transitionProperty, duration: parseFloat(style.transitionDuration), transform: style.transform };
+  });
+  if (reducedPopoverMotion.property !== 'opacity' || Math.abs(reducedPopoverMotion.duration - 0.12) > 0.001 || reducedPopoverMotion.transform !== 'none') {
+    throw new Error(`Reduced-motion popover is incorrect: ${JSON.stringify(reducedPopoverMotion)}`);
+  }
+  await scanPage.locator('#topic-combobox-search').press('Escape');
+
+  const unauthenticatedContext = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
+  const loginPage = await unauthenticatedContext.newPage();
+  await loginPage.goto(baseUrl, { waitUntil: 'domcontentloaded' });
+  const loginButton = loginPage.locator('#login-btn');
+  await loginButton.waitFor({ state: 'visible' });
+  const loginTransition = await loginButton.evaluate(button => {
+    const style = getComputedStyle(button);
+    return { properties: style.transitionProperty.split(',').map(value => value.trim()), duration: style.transitionDuration };
+  });
+  if (!loginTransition.properties.includes('transform') || loginTransition.properties.includes('all') || !loginTransition.duration.includes('0.12s')) throw new Error(`Login press transition is incorrect: ${JSON.stringify(loginTransition)}`);
+  const loginBox = await loginButton.boundingBox();
+  await loginPage.mouse.move(loginBox.x + loginBox.width / 2, loginBox.y + loginBox.height / 2);
+  await loginPage.mouse.down();
+  await loginPage.waitForTimeout(80);
+  const loginPressed = await loginButton.evaluate(button => ({ active: button.matches(':active'), transform: getComputedStyle(button).transform }));
+  await loginPage.mouse.move(1, 1);
+  await loginPage.mouse.up();
+  if (!loginPressed.active || Number(loginPressed.transform.match(/^matrix\(([^,]+)/)?.[1] ?? 1) >= 1) throw new Error(`Login press feedback is missing: ${JSON.stringify(loginPressed)}`);
+  await loginPage.emulateMedia({ reducedMotion: 'reduce' });
+  await loginButton.hover();
+  await loginPage.mouse.down();
+  await loginPage.waitForTimeout(80);
+  const reducedLogin = await loginButton.evaluate(button => ({ transform: getComputedStyle(button).transform, opacity: parseFloat(getComputedStyle(button).opacity) }));
+  await loginPage.mouse.move(1, 1);
+  await loginPage.mouse.up();
+  if (reducedLogin.transform !== 'none' || reducedLogin.opacity >= 1) throw new Error(`Reduced-motion login feedback is incorrect: ${JSON.stringify(reducedLogin)}`);
+  await unauthenticatedContext.close();
   console.log('search combobox smoke ok');
 } finally {
   await browser?.close();

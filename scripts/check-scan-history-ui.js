@@ -420,7 +420,28 @@ try {
   if (!confirmationText.includes('Hapus riwayat pemindaian? Semua QR code yang berhasil dipindai tidak akan terpengaruh oleh aksi ini')) {
     throw new Error('Bulk-delete confirmation copy is incorrect');
   }
-  await page.getByRole('button', { name: 'Batal' }).click();
+  const confirmationCancel = page.getByRole('button', { name: 'Batal' });
+  const confirmationMotion = await confirmationCancel.evaluate(button => {
+    const style = getComputedStyle(button);
+    return { properties: style.transitionProperty.split(',').map(value => value.trim()), duration: style.transitionDuration };
+  });
+  if (!confirmationMotion.properties.includes('transform') || confirmationMotion.properties.includes('all') || !confirmationMotion.duration.includes('0.12s')) {
+    throw new Error(`Confirmation press transition is incorrect: ${JSON.stringify(confirmationMotion)}`);
+  }
+  await confirmationCancel.evaluate(button => { button.disabled = true; });
+  await confirmationCancel.hover();
+  await page.mouse.down();
+  await page.waitForTimeout(80);
+  const disabledTransform = await confirmationCancel.evaluate(button => getComputedStyle(button).transform);
+  await page.mouse.up();
+  if (disabledTransform !== 'none' && Number(disabledTransform.match(/^matrix\(([^,]+)/)?.[1] ?? 1) < 1) throw new Error(`Disabled confirmation still transforms: ${disabledTransform}`);
+  await confirmationCancel.evaluate(button => { button.disabled = false; });
+  await confirmationCancel.hover();
+  await page.mouse.down();
+  await page.waitForTimeout(80);
+  const confirmationPressed = await confirmationCancel.evaluate(button => getComputedStyle(button).transform);
+  await page.mouse.up();
+  if (Number(confirmationPressed.match(/^matrix\(([^,]+)/)?.[1] ?? 1) >= 1) throw new Error(`Confirmation press feedback is missing: ${confirmationPressed}`);
   await page.waitForTimeout(300);
   if (await page.evaluate(() => document.activeElement?.id) !== 'bulk-delete-start') throw new Error('Confirmation focus was not restored');
   await page.keyboard.press('Enter');
