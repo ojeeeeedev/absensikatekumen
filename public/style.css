@@ -278,7 +278,7 @@ button:disabled,
 #app-container:is(.state-selection, .state-scanning, .state-profile) {
   flex: 1 1 0;
   min-height: 0;
-  max-height: none;
+  max-height: 768px;
 }
 
 #app-container.state-auth {
@@ -303,7 +303,7 @@ button:disabled,
 
 .glass-container.state-scanning #main-app-section { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .glass-container.state-scanning #selection-panel { display: none; }
-.glass-container.state-scanning #scanning-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: visible; }
+.glass-container.state-scanning #scanning-panel { display: flex; flex-direction: column; flex: 1; gap: var(--space-4); min-height: 0; overflow: visible; }
 .glass-container.state-scanning { padding: var(--space-4) 0 var(--space-3); }
 
 .glass-container.state-profile {
@@ -529,7 +529,7 @@ button:disabled,
   border-radius: var(--radius-xl);
   overflow: hidden; position: relative; border: 1px solid var(--border-glass);
   background: var(--camera-surface); box-shadow: inset 0 4px 12px rgba(0,0,0,0.2);
-  margin: 0 auto 1rem auto;
+  margin: auto;
   pointer-events: none;
   flex-shrink: 0;
   min-width: 180px;
@@ -574,7 +574,7 @@ button:disabled,
    ========================================= */
 #queue-history-panel {
   position: relative;
-  flex: 1 1 auto; display: flex; flex-direction: column;
+  flex: 0 0 auto; display: flex; flex-direction: column;
   width: calc(100% - 2.5rem);
   min-height: 112px;
   overflow: visible; margin: 0 auto 0.25rem;
@@ -1313,7 +1313,7 @@ a:focus-visible,
 .history-progress-container {
   position: relative;
   width: 100%;
-  margin: auto auto 6px;
+  margin: 0 auto 6px;
 }
 .progress-bar-row {
   display: flex;
@@ -1569,7 +1569,7 @@ a:focus-visible,
 #topic-combobox-active {
   width: calc(100% - 2.5rem);
   margin-inline: auto;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 
 .search-combobox-arrow {

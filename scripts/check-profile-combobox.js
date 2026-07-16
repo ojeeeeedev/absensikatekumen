@@ -738,7 +738,6 @@ try {
   const selectedP = topicPopover.locator('.topic-option-p[aria-selected="true"]');
   if (await selectedP.evaluate(option => getComputedStyle(option).backgroundColor) === pIdleBackground) throw new Error('Selected P topic fill is missing');
   const topicLayout = await scanPage.evaluate(() => {
-    const header = document.getElementById('app-shell-header').getBoundingClientRect();
     const root = document.getElementById('topic-combobox-active').getBoundingClientRect();
     const panel = document.getElementById('scanning-panel').getBoundingClientRect();
     const triggerElement = document.getElementById('topic-combobox-trigger');
@@ -760,7 +759,6 @@ try {
       pickerWidth: root.width,
       sideClearance: root.left - panel.left,
       centered: Math.abs((root.left + root.right) / 2 - (panel.left + panel.right) / 2) < 1,
-      above: trigger.top - header.bottom,
       below: reader.top - trigger.bottom,
       scannerBottomGap: progress.top - reader.bottom,
       scannerSize: reader.width,
@@ -779,10 +777,10 @@ try {
   const matchesProgressWidth = Math.abs(topicLayout.progressWidth - topicLayout.pickerWidth) < 1;
   const matchesProfileClearance = Math.abs(topicLayout.sideClearance - profileSpacing.sideClearance) < 1;
   const selectedTopicIsStatic = topicLayout.animationName === 'none';
-  const hasUniformSpacing = Math.abs(topicLayout.above - topicLayout.below) < 1;
-  const hasHistorySeparation = topicLayout.scannerBottomGap >= topicLayout.below;
+  const scannerIsCentered = Math.abs(topicLayout.below - topicLayout.scannerBottomGap) < 1
+    && topicLayout.below >= 16;
   const footerIsCompactAndCentered = topicLayout.footerHeight <= 40 && Math.abs(topicLayout.footerTopGap - topicLayout.footerBottomGap) < 1;
-  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !hasUniformSpacing || !hasHistorySeparation || !footerIsCompactAndCentered || topicLayout.scannerSize < 287 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
+  if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !scannerIsCentered || !footerIsCompactAndCentered || topicLayout.scannerSize < 287 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
     throw new Error(`Topic combobox layout does not match the profile selector: ${JSON.stringify(topicLayout)}`);
   }
   await topicPopover.locator('.search-combobox-search').fill('Pentakosta');
@@ -804,6 +802,7 @@ try {
     { width: 320, height: 568 },
     { width: 390, height: 664 },
     { width: 390, height: 844 },
+    { width: 519, height: 837 },
     { width: 430, height: 932 },
     { width: 768, height: 1024 },
     { width: 1280, height: 844 },
@@ -820,12 +819,17 @@ try {
       const container = document.getElementById('app-container').getBoundingClientRect();
       const reader = document.getElementById('reader-container').getBoundingClientRect();
       const history = document.getElementById('queue-history-panel').getBoundingClientRect();
+      const trigger = document.getElementById('topic-combobox-trigger').getBoundingClientRect();
+      const progress = document.querySelector('.segmented-progress-bar').getBoundingClientRect();
       const main = document.getElementById('main-app-section');
+      const bodyPaddingBottom = parseFloat(getComputedStyle(document.body).paddingBottom);
       return {
-        bottomGap: innerHeight - container.bottom,
-        bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
+        containerHeight: container.height,
+        expectedContainerHeight: Math.min(innerHeight - container.top - bodyPaddingBottom, 768),
         cameraWidth: reader.width,
         cameraHeight: reader.height,
+        scannerTopGap: reader.top - trigger.bottom,
+        scannerBottomGap: progress.top - reader.bottom,
         historyHeight: history.height,
         mainOverflowY: getComputedStyle(main).overflowY,
         mainClientHeight: main.clientHeight,
@@ -834,12 +838,13 @@ try {
         horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
       };
     });
-    if (Math.abs(scanViewport.bottomGap - scanViewport.bodyPaddingBottom) >= 1
+    if (Math.abs(scanViewport.containerHeight - scanViewport.expectedContainerHeight) >= 1
       || scanViewport.horizontalOverflow
       || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
       || scanViewport.cameraWidth < 179
       || scanViewport.cameraWidth > 341
-      || (viewport.width === 390 && viewport.height === 664 && scanViewport.mainScrollable)
+      || Math.abs(scanViewport.scannerTopGap - scanViewport.scannerBottomGap) >= 1
+      || scanViewport.scannerTopGap < 16
       || (viewport.width === 390 && viewport.height === 844 && (Math.abs(scanViewport.cameraWidth - 340) >= 1 || scanViewport.mainScrollable))
       || (viewport.height <= 700 && (scanViewport.mainOverflowY !== 'auto' || scanViewport.historyHeight < 111))) {
       throw new Error(`Scan viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(scanViewport)}`);
@@ -854,9 +859,16 @@ try {
       if (!footerVisibleAtEnd) throw new Error(`Scan footer is unreachable at ${viewport.width}x${viewport.height}`);
     }
     await scanPage.evaluate(() => window.setAppState(1));
-    const selectionBottomGap = await scanPage.evaluate(() => innerHeight - document.getElementById('app-container').getBoundingClientRect().bottom);
-    if (Math.abs(selectionBottomGap - scanViewport.bodyPaddingBottom) >= 1) {
-      throw new Error(`Topic selection does not fill the viewport at ${viewport.width}x${viewport.height}`);
+    const selectionViewport = await scanPage.evaluate(() => {
+      const container = document.getElementById('app-container').getBoundingClientRect();
+      const bodyPaddingBottom = parseFloat(getComputedStyle(document.body).paddingBottom);
+      return {
+        height: container.height,
+        expectedHeight: Math.min(innerHeight - container.top - bodyPaddingBottom, 768),
+      };
+    });
+    if (Math.abs(selectionViewport.height - selectionViewport.expectedHeight) >= 1) {
+      throw new Error(`Topic selection does not respect the app height cap at ${viewport.width}x${viewport.height}`);
     }
     await scanPage.evaluate(() => window.setAppState(2));
 
@@ -865,15 +877,16 @@ try {
       const infoBar = document.getElementById('profile-info-bar').getBoundingClientRect();
       const search = document.querySelector('.profile-search-field').getBoundingClientRect();
       const summary = document.getElementById('students-summary').getBoundingClientRect();
+      const bodyPaddingBottom = parseFloat(getComputedStyle(document.body).paddingBottom);
       return {
-        bottomGap: innerHeight - container.bottom,
-        bodyPaddingBottom: parseFloat(getComputedStyle(document.body).paddingBottom),
+        containerHeight: container.height,
+        expectedContainerHeight: Math.min(innerHeight - container.top - bodyPaddingBottom, 768),
         horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
         controlsShareRow: Math.abs((search.top + search.bottom) / 2 - (summary.top + summary.bottom) / 2) < 1,
         controlsContained: search.left >= infoBar.left && summary.right <= infoBar.right,
       };
     });
-    if (Math.abs(profileViewport.bottomGap - profileViewport.bodyPaddingBottom) >= 1 || profileViewport.horizontalOverflow || !profileViewport.controlsShareRow || !profileViewport.controlsContained) {
+    if (Math.abs(profileViewport.containerHeight - profileViewport.expectedContainerHeight) >= 1 || profileViewport.horizontalOverflow || !profileViewport.controlsShareRow || !profileViewport.controlsContained) {
       throw new Error(`Profile viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(profileViewport)}`);
     }
   }
