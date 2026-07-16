@@ -418,10 +418,42 @@ try {
 
   const uploadProfile = page.locator('.student-accordion-item').first();
   await uploadProfile.locator('.student-accordion-header').click();
-  const uploadButton = uploadProfile.locator('.upload-photo-btn');
+  const replacementFrame = uploadProfile.locator('.student-photo-large-frame');
+  const replacementInput = replacementFrame.locator('.photo-replace-input');
+  await replacementFrame.locator('re-icon[icon="gallery-add"] svg').first().waitFor({ state: 'attached' });
+  if (await replacementFrame.locator('.photo-replace-menu span').textContent() !== 'Ubah Foto') {
+    throw new Error('Inline photo replacement helper text is missing');
+  }
+  const replacementFile = { name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') };
+  const detailLayout = await uploadProfile.locator('.detail-info-grid').evaluate(grid => {
+    const labels = [...grid.querySelectorAll('.detail-label')];
+    const colons = [...grid.querySelectorAll('.detail-colon')].map(colon => colon.getBoundingClientRect().left);
+    const iconSize = parseFloat(getComputedStyle(labels[0].querySelector('re-icon')).fontSize);
+    const values = [...grid.querySelectorAll('.detail-value')];
+    const idValue = grid.querySelector('.detail-id-value');
+    return {
+      rowCount: labels.length,
+      colonSpread: Math.max(...colons) - Math.min(...colons),
+      labelSize: parseFloat(getComputedStyle(labels[0]).fontSize),
+      iconSize,
+      opacity: parseFloat(getComputedStyle(labels[0]).opacity),
+      idIconWeight: grid.querySelector('re-icon[icon="user-id"]')?.getAttribute('weight'),
+      idLabel: labels.at(-1)?.textContent.replace(/\s+/g, ''),
+      idValue: idValue?.textContent,
+      idColor: idValue ? getComputedStyle(idValue).color : '',
+      detailColor: getComputedStyle(values[0]).color,
+      idFont: idValue ? getComputedStyle(idValue).fontFamily : '',
+      duplicateName: !!grid.closest('.student-detail-card').querySelector('.detail-name'),
+    };
+  });
+  if (detailLayout.rowCount !== 4 || detailLayout.colonSpread > 1 || detailLayout.labelSize < 12 || detailLayout.iconSize < 16 || detailLayout.opacity < 1 || detailLayout.idIconWeight !== 'filled' || detailLayout.idLabel !== 'ID:' || detailLayout.idValue !== '2026/MAL/001' || detailLayout.idColor !== detailLayout.detailColor || !detailLayout.idFont.toLowerCase().includes('mono') || detailLayout.duplicateName) {
+    throw new Error(`Profile detail labels are not aligned or legible: ${JSON.stringify(detailLayout)}`);
+  }
   const modal = page.locator('#upload-preview-modal');
   const waitForUploadOpen = async () => {
-    await uploadButton.click();
+    await replacementFrame.hover();
+    await replacementInput.setInputFiles([]);
+    await replacementInput.setInputFiles(replacementFile);
     await page.waitForFunction(() => document.getElementById('upload-preview-modal')?.classList.contains('is-visible'));
   };
   const waitForUploadClosed = async () => {
@@ -429,6 +461,13 @@ try {
     const state = await modal.evaluate(element => ({ open: element.classList.contains('open'), overflow: document.body.style.overflow }));
     if (state.open || state.overflow) throw new Error(`Upload sheet cleanup failed: ${JSON.stringify(state)}`);
   };
+  await replacementFrame.hover();
+  if (!await replacementFrame.evaluate(frame => frame.classList.contains('is-replace-open'))) throw new Error('Inline photo replacement menu did not open on hover');
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(220);
+  if (await replacementFrame.evaluate(frame => frame.classList.contains('is-replace-open') || getComputedStyle(frame.querySelector('.photo-replace-menu')).opacity !== '0')) {
+    throw new Error('Inline photo replacement menu did not fade out after hover ended');
+  }
   await waitForUploadOpen();
   const uploadMotion = await modal.evaluate(element => {
     const overlay = getComputedStyle(element);
@@ -442,23 +481,28 @@ try {
   if (uploadMotion.overlay.property !== 'opacity' || Math.abs(uploadMotion.overlay.duration - 0.28) > 0.001 || !uploadMotion.sheet.properties.includes('opacity') || !uploadMotion.sheet.properties.includes('transform') || uploadMotion.sheet.durations.some(duration => Math.abs(duration - 0.28) > 0.001) || !uploadMotion.sheet.easing.includes('cubic-bezier(0.23, 1, 0.32, 1)') || uploadMotion.overflow !== 'hidden') {
     throw new Error(`Upload sheet entrance motion is incorrect: ${JSON.stringify(uploadMotion)}`);
   }
-  const cancelButton = page.locator('#upload-cancel-btn');
-  await cancelButton.hover();
-  await page.mouse.down();
-  await page.waitForTimeout(80);
-  const cancelPressed = await cancelButton.evaluate(button => getComputedStyle(button).transform);
   const uploadSheetBox = await page.locator('.upload-preview-sheet').boundingBox();
-  await page.mouse.move(uploadSheetBox.x + 10, uploadSheetBox.y + 10);
-  await page.mouse.up();
-  if (Number(cancelPressed.match(/^matrix\(([^,]+)/)?.[1] ?? 1) >= 1) throw new Error(`Upload cancel press feedback is incorrect: ${cancelPressed}`);
-  await page.locator('#upload-close-btn').click();
+  const closeButton = page.locator('#upload-close-btn');
+  const closeStyle = await closeButton.evaluate(button => {
+    const style = getComputedStyle(button);
+    const title = button.parentElement.querySelector('.upload-preview-title').getBoundingClientRect();
+    const sheet = button.closest('.upload-preview-sheet').getBoundingClientRect();
+    return {
+      width: parseFloat(style.width),
+      height: parseFloat(style.height),
+      radius: style.borderRadius,
+      color: style.color,
+      titleOffset: Math.abs((title.left + title.width / 2) - (sheet.left + sheet.width / 2)),
+    };
+  });
+  if (closeStyle.width !== closeStyle.height || closeStyle.radius !== '50%' || closeStyle.titleOffset > 1) {
+    throw new Error(`Upload header layout is incorrect: ${JSON.stringify(closeStyle)}`);
+  }
+  await closeButton.click();
   const closingUpload = await modal.evaluate(element => ({ open: element.classList.contains('open'), closing: element.classList.contains('is-closing'), inert: element.inert, visible: element.classList.contains('is-visible'), overflow: document.body.style.overflow }));
   if (!closingUpload.open || !closingUpload.closing || !closingUpload.inert || closingUpload.visible || closingUpload.overflow !== 'hidden') {
     throw new Error(`Upload sheet exit state is incorrect: ${JSON.stringify(closingUpload)}`);
   }
-  await waitForUploadClosed();
-  await waitForUploadOpen();
-  await page.locator('#upload-cancel-btn').click();
   await waitForUploadClosed();
   await waitForUploadOpen();
   await page.keyboard.press('Escape');
@@ -467,7 +511,7 @@ try {
   await modal.click({ position: { x: 5, y: 5 } });
   await waitForUploadClosed();
   await waitForUploadOpen();
-  await page.locator('#upload-file-input').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') });
+  await page.locator('#upload-file-input').setInputFiles(replacementFile);
   const confirmButton = page.locator('#upload-confirm-btn');
   await confirmButton.hover();
   await page.mouse.down();
@@ -697,6 +741,10 @@ try {
       itemWidth: itemRect.width,
       position: getComputedStyle(header).position,
       identityDisplay: getComputedStyle(header.querySelector('.header-left')).display,
+      name: header.querySelector('.student-name-text').textContent,
+      nameDisplay: getComputedStyle(header.querySelector('.student-name-text')).display,
+      thumbDisplay: getComputedStyle(header.querySelector('.student-photo-frame, .student-thumb-placeholder')).display,
+      idDisplay: getComputedStyle(header.querySelector('.student-id-text')).display,
       arrowDisplay: getComputedStyle(arrow).display,
       arrowWidth: arrowRect.width,
       arrowHeight: arrowRect.height,
@@ -711,7 +759,7 @@ try {
       bottomLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 42))
     };
   });
-  if (!compactExpandedHeader.label?.includes('Katekumen 21, 2026/MAL/021') || compactExpandedHeader.height !== 44 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '40px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
+  if (!compactExpandedHeader.label?.includes('Katekumen 21, 2026/MAL/021') || compactExpandedHeader.height !== 44 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay === 'none' || compactExpandedHeader.name !== 'Katekumen 21' || compactExpandedHeader.nameDisplay === 'none' || compactExpandedHeader.thumbDisplay !== 'none' || compactExpandedHeader.idDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '40px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
     throw new Error(`Expanded profile header is not a full-width accessible collapse control: ${JSON.stringify(compactExpandedHeader)}`);
   }
   await focusedProfile.locator('.student-accordion-header').click();
@@ -726,7 +774,7 @@ try {
       easing: animation.effect.getTiming().easing
     }))
   }));
-  if (!pointerCloseMotion.closing || pointerCloseMotion.animations.length !== 3 || pointerCloseMotion.animations.some(animation => !['opacity', 'transform'].includes(animation.property) || animation.duration !== 150 || animation.easing !== 'cubic-bezier(0.23, 1, 0.32, 1)')) {
+  if (!pointerCloseMotion.closing || pointerCloseMotion.animations.length !== 3 || pointerCloseMotion.animations.some(animation => !['opacity', 'transform'].includes(animation.property) || Math.abs(animation.duration - 220) > 0.1 || animation.easing !== 'cubic-bezier(0.4, 0, 0.2, 1)')) {
     throw new Error(`Profile accordion closing motion is not composited and aligned: ${JSON.stringify(pointerCloseMotion)}`);
   }
   await page.waitForTimeout(50);
@@ -760,7 +808,7 @@ try {
             .map(element => `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${[...element.classList].map(name => `.${name}`).join('')}`)
         };
       }, theme);
-      if (responsiveState.overflow > 1 || responsiveState.identityDisplay !== 'none' || responsiveState.arrowWidth === 0 || responsiveState.arrowHeight === 0) {
+      if (responsiveState.overflow > 1 || responsiveState.identityDisplay === 'none' || responsiveState.arrowWidth === 0 || responsiveState.arrowHeight === 0) {
         throw new Error(`Expanded profile header failed at ${width}px in ${theme} theme: ${JSON.stringify(responsiveState)}`);
       }
     }
@@ -849,6 +897,16 @@ try {
   await page.locator('#class-combobox-search').press('Escape');
   await page.locator('#class-combobox-popover').waitFor({ state: 'hidden' });
 
+  await page.evaluate(() => {
+    const animate = Element.prototype.animate;
+    window.__headingAnimationTimings = [];
+    Element.prototype.animate = function(keyframes, options) {
+      if (this.id === 'app-view-title') {
+        window.__headingAnimationTimings.push({ duration: options.duration, easing: options.easing });
+      }
+      return animate.call(this, keyframes, options);
+    };
+  });
   await page.locator('[data-app-view="scan"]').click();
   await page.waitForURL(`${baseUrl}/`);
   await page.locator('[data-app-view="profile"]').click();
@@ -870,9 +928,12 @@ try {
     titleOutline: getComputedStyle(document.getElementById('app-view-title')).outlineStyle,
     logoLeft: header.querySelector('.header-logo').getBoundingClientRect().left,
     textLeft: header.querySelector('.header-text').getBoundingClientRect().left,
-    animated: document.getElementById('profile-view').getAnimations().length > 0
+    headingAnimationTimings: window.__headingAnimationTimings
   }), initialShell.header);
-  if (!persistentHeader.sameNode || persistentHeader.heading !== 'Profil Katekumen' || persistentHeader.titleOutline !== 'none' || !persistentHeader.animated || Math.abs(persistentHeader.rect.x - initialShell.header.x) >= 1 || Math.abs(persistentHeader.rect.width - initialShell.header.width) >= 1 || Math.abs(persistentHeader.rect.height - initialShell.header.height) >= 1 || Math.abs(persistentHeader.logoLeft - initialShell.logoLeft) >= 1 || Math.abs(persistentHeader.textLeft - initialShell.textLeft) >= 1) {
+  const expectedHeadingTimings = [100, 160, 100, 160];
+  const headingMotionMatches = persistentHeader.headingAnimationTimings.length === expectedHeadingTimings.length
+    && persistentHeader.headingAnimationTimings.every((timing, index) => timing.duration === expectedHeadingTimings[index] && timing.easing === 'cubic-bezier(0.23, 1, 0.32, 1)');
+  if (!persistentHeader.sameNode || persistentHeader.heading !== 'Profil Katekumen' || persistentHeader.titleOutline !== 'none' || !headingMotionMatches || Math.abs(persistentHeader.rect.x - initialShell.header.x) >= 1 || Math.abs(persistentHeader.rect.width - initialShell.header.width) >= 1 || Math.abs(persistentHeader.rect.height - initialShell.header.height) >= 1 || Math.abs(persistentHeader.logoLeft - initialShell.logoLeft) >= 1 || Math.abs(persistentHeader.textLeft - initialShell.textLeft) >= 1) {
     throw new Error(`Shared header shifted or failed to animate: ${JSON.stringify({ initial: initialShell.header, current: persistentHeader })}`);
   }
 
@@ -1067,6 +1128,7 @@ try {
   }
   for (const viewport of viewportSizes) {
     await Promise.all([page.setViewportSize(viewport), scanPage.setViewportSize(viewport)]);
+    await Promise.all([page, scanPage].map(currentPage => currentPage.waitForFunction(() => Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) * 100 - visualViewport.height) < 1)));
     await scanPage.evaluate(() => window.setAppState(2));
     const scanViewport = await scanPage.evaluate(() => {
       const nav = document.getElementById('app-nav').getBoundingClientRect();
@@ -1185,6 +1247,25 @@ try {
   await loginPage.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   const loginButton = loginPage.locator('#login-btn');
   await loginButton.waitFor({ state: 'visible' });
+  await loginPage.locator('#login-input').focus();
+  await loginPage.setViewportSize({ width: 390, height: 420 });
+  await loginPage.waitForFunction(() => Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) * 100 - visualViewport.height) < 1);
+  const keyboardLayout = await loginPage.evaluate(() => {
+    const input = document.getElementById('login-input').getBoundingClientRect();
+    const body = document.body.getBoundingClientRect();
+    return {
+      inputTop: input.top,
+      inputBottom: input.bottom,
+      viewportTop: visualViewport.offsetTop,
+      viewportBottom: visualViewport.offsetTop + visualViewport.height,
+      bodyTop: body.top,
+      bodyHeight: body.height,
+    };
+  });
+  if (keyboardLayout.inputTop < keyboardLayout.viewportTop || keyboardLayout.inputBottom > keyboardLayout.viewportBottom || Math.abs(keyboardLayout.bodyTop - keyboardLayout.viewportTop) > 1 || Math.abs(keyboardLayout.bodyHeight - (keyboardLayout.viewportBottom - keyboardLayout.viewportTop)) > 1) {
+    throw new Error(`Login field is clipped by the mobile keyboard viewport: ${JSON.stringify(keyboardLayout)}`);
+  }
+  await loginPage.setViewportSize({ width: 390, height: 844 });
   const loginTransition = await loginButton.evaluate(button => {
     const style = getComputedStyle(button);
     return { properties: style.transitionProperty.split(',').map(value => value.trim()), duration: style.transitionDuration };

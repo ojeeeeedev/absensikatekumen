@@ -46,7 +46,7 @@
                     <re-icon icon="bolt" decorative></re-icon>
                     <span>Scan QR Berturut-turut</span>
                   </div>
-                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
+                  <re-icon icon="chevron-down" class="chevron" decorative weight="filled"></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-scan-content">
                   <div class="row-accordion-body">
@@ -62,7 +62,7 @@
                     <re-icon icon="wifi-off" decorative></re-icon>
                     <span>Simpan Offline Otomatis</span>
                   </div>
-                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
+                  <re-icon icon="chevron-down" class="chevron" decorative weight="filled"></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-offline-content">
                   <div class="row-accordion-body">
@@ -75,10 +75,10 @@
               <div class="row-accordion" id="row-profile">
                 <button class="row-accordion-header" type="button" aria-expanded="false" aria-controls="row-profile-content">
                   <div class="row-accordion-title">
-                    <re-icon icon="user-id" decorative></re-icon>
+                    <re-icon icon="user-id" decorative weight="filled"></re-icon>
                     <span>Daftar & Profil Katekumen</span>
                   </div>
-                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
+                  <re-icon icon="chevron-down" class="chevron" decorative weight="filled"></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-profile-content">
                   <div class="row-accordion-body">
@@ -94,7 +94,7 @@
                     <re-icon icon="layers" decorative></re-icon>
                     <span>Tampilan Informasi Rapi</span>
                   </div>
-                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
+                  <re-icon icon="chevron-down" class="chevron" decorative weight="filled"></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-detail-content">
                   <div class="row-accordion-body">
@@ -119,7 +119,7 @@
                     <re-icon icon="speedometer" decorative></re-icon>
                     <span>Buka Scanner Lebih Cepat</span>
                   </div>
-                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
+                  <re-icon icon="chevron-down" class="chevron" decorative weight="filled"></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-speed-content">
                   <div class="row-accordion-body">
@@ -135,7 +135,7 @@
                     <re-icon icon="streets-nav" decorative></re-icon>
                     <span>Navigasi Menu Simpel</span>
                   </div>
-                  <re-icon icon="chevron-down" class="chevron" decorative></re-icon>
+                  <re-icon icon="chevron-down" class="chevron" decorative weight="filled"></re-icon>
                 </button>
                 <div class="row-accordion-content" id="row-nav-content">
                   <div class="row-accordion-body">

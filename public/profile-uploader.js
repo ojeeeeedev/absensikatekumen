@@ -21,7 +21,7 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
   let modal, dropzone, fileInput, previewImg, studentLabel,
       dropzoneIcon, dropzoneText, dropzoneSubtext,
       progressWrap, progressBar,
-      confirmBtn, cancelBtn, closeBtn;
+      confirmBtn, closeBtn;
 
   function init() {
     modal        = document.getElementById('upload-preview-modal');
@@ -35,14 +35,12 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
     progressWrap = document.getElementById('upload-progress-wrap');
     progressBar  = document.getElementById('upload-progress-bar');
     confirmBtn   = document.getElementById('upload-confirm-btn');
-    cancelBtn    = document.getElementById('upload-cancel-btn');
     closeBtn     = document.getElementById('upload-close-btn');
 
     if (!modal) return; // not on profile page
 
     // Close actions
     closeBtn.addEventListener('click', close);
-    cancelBtn.addEventListener('click', close);
     modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
     // Keyboard close
@@ -75,7 +73,7 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
     confirmBtn.addEventListener('click', doUpload);
   }
 
-  function open(studentId, studentName) {
+  function open(studentId, studentName, initialFile) {
     clearTimeout(closeTimer);
     clearTimeout(focusTimer);
     if (openFrame !== null) cancelAnimationFrame(openFrame);
@@ -95,7 +93,6 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
     progressWrap.setAttribute('aria-valuenow', '0');
     confirmBtn.disabled = true;
     confirmBtn.classList.remove('uploading');
-    cancelBtn.disabled = false;
     closeBtn.disabled = false;
     fileInput.value = '';
 
@@ -113,6 +110,7 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
       openFrame = null;
       if (modal.classList.contains('open')) modal.classList.add('is-visible');
     });
+    if (initialFile) handleFileSelect(initialFile);
 
     // Focus close button for accessibility
     focusTimer = setTimeout(() => {
@@ -195,7 +193,6 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
     // Set uploading state
     confirmBtn.classList.add('uploading');
     confirmBtn.disabled = true;
-    cancelBtn.disabled = true;
     closeBtn.disabled = true;
     progressWrap.classList.add('visible');
     progressBar.style.width = '30%';
@@ -249,7 +246,6 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
       // Reset state
       confirmBtn.classList.remove('uploading');
       confirmBtn.disabled = false;
-      cancelBtn.disabled = false;
       closeBtn.disabled = false;
       progressWrap.classList.remove('visible');
       progressBar.style.width = '0%';

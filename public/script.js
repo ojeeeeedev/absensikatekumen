@@ -251,16 +251,16 @@ async function replaceViewHeading(view, animate) {
     return;
   }
   const fadeOut = title.animate([{ opacity: 1 }, { opacity: 0 }], {
-    duration: 60,
-    easing: 'ease-out',
+    duration: 100,
+    easing: 'cubic-bezier(0.23, 1, 0.32, 1)',
     fill: 'forwards'
   });
   await fadeOut.finished;
   fadeOut.cancel();
   title.textContent = nextHeading;
   title.animate([{ opacity: 0 }, { opacity: 1 }], {
-    duration: 70,
-    easing: 'ease-out'
+    duration: 160,
+    easing: 'cubic-bezier(0.23, 1, 0.32, 1)'
   });
 }
 
@@ -354,11 +354,15 @@ window.addEventListener('popstate', () => {
 
 // --- SAFARI VIEWPORT FIX ---
 function setViewportHeight() {
-  let vh = window.innerHeight * 0.01;
-  document.documentElement.style.setProperty('--vh', `${vh}px`);
+  const viewport = window.visualViewport;
+  const height = viewport?.height || window.innerHeight;
+  document.documentElement.style.setProperty('--vh', `${height * 0.01}px`);
+  document.documentElement.style.setProperty('--viewport-offset', `${viewport?.offsetTop || 0}px`);
 }
 setViewportHeight();
 window.addEventListener('resize', setViewportHeight);
+window.visualViewport?.addEventListener('resize', setViewportHeight);
+window.visualViewport?.addEventListener('scroll', setViewportHeight);
 
 window.selectTopic = function(week, name) {
   selectedWeek = week;
@@ -378,12 +382,12 @@ window.togglePasswordVisibility = function() {
   const icon = document.getElementById('password-toggle');
   if (input.type === 'password') {
     input.type = 'text';
-    icon.setAttribute('icon', 'eye-open');
+    icon.setAttribute('icon', 'eye');
     icon.setAttribute('aria-pressed', 'true');
     icon.setAttribute('aria-label', 'Sembunyikan password');
   } else {
     input.type = 'password';
-    icon.setAttribute('icon', 'eye-off');
+    icon.setAttribute('icon', 'eye-off2');
     icon.setAttribute('aria-pressed', 'false');
     icon.setAttribute('aria-label', 'Tampilkan password');
   }
@@ -768,10 +772,10 @@ class ScanQueue {
       listContainer.innerHTML = `
         <div class="queue-empty-state" role="status">
           <span class="queue-empty-icon" aria-hidden="true">
-            <re-icon icon="qr" decorative></re-icon>
+            <re-icon icon="scanner" decorative></re-icon>
           </span>
           <strong>Belum ada riwayat pemindaian</strong>
-          <span>Pemindaian terbaru akan muncul di sini.</span>
+          <span>Pemindaian terbaru akan tampil di sini.</span>
         </div>
       `;
       return;
@@ -920,9 +924,9 @@ class ScanQueue {
       
       const statusIconByStatus = {
         success: 'check',
-        error: 'close-circle2',
+        error: 'x-circle',
         duplicate: 'refresh',
-        pending: 'timer-alt'
+        pending: 'timer'
       };
       const icon = item.status === 'processing'
         ? Object.assign(document.createElement('app-spinner'), { className: 'app-spinner status-spinner' })

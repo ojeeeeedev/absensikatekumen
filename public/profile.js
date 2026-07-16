@@ -189,9 +189,9 @@ function renderStudents(students) {
       ? `<div class="student-photo-frame student-thumb-frame" aria-busy="true">
            <app-spinner class="app-spinner profile-photo-spinner" aria-hidden="true"></app-spinner>
            <img class="student-thumb" src="${escapeHTML(displayImgUrl)}" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'; this.parentElement.setAttribute('aria-busy', 'false');" onerror="this.style.display='none'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex'; this.parentElement.setAttribute('aria-busy', 'false');">
-           <div class="student-thumb-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>
+           <div class="student-thumb-placeholder" style="display: none;"><re-icon icon="user" decorative weight="filled"></re-icon></div>
          </div>`
-      : `<div class="student-thumb-placeholder"><re-icon icon="user" decorative></re-icon></div>`;
+      : `<div class="student-thumb-placeholder"><re-icon icon="user" decorative weight="filled"></re-icon></div>`;
 
     const inactiveBadge = studentInactive
       ? `<span class="inactive-badge">Nonaktif</span>`
@@ -209,20 +209,32 @@ function renderStudents(students) {
       </div>
       <div class="header-right">
         ${inactiveBadge}
-        <re-icon icon="chevron-down" class="expand-arrow" decorative></re-icon>
+        <re-icon icon="chevron-down" class="expand-arrow" decorative weight="filled"></re-icon>
       </div>
     `;
 
     const body = document.createElement('div');
     body.className = 'student-accordion-body collapsed';
 
+    const photoReplaceControl = `
+      <div class="photo-replace-menu" aria-hidden="true">
+        <re-icon icon="gallery-add" weight="filled" decorative></re-icon>
+        <span>Ubah Foto</span>
+      </div>
+      <input class="photo-replace-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+    `;
+
     const largePhotoHtml = hasPhoto
-      ? `<div class="student-photo-frame student-photo-large-frame" aria-busy="true">
+      ? `<div class="student-photo-frame student-photo-large-frame" aria-busy="true" role="button" tabindex="0" aria-label="Ganti foto ${escapeHTML(student.name)}" aria-expanded="false">
            <app-spinner class="app-spinner profile-photo-spinner" aria-hidden="true"></app-spinner>
            <img class="student-photo-large" src="${escapeHTML(displayImgUrl)}" alt="Foto ${escapeHTML(student.name)}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'; this.parentElement.setAttribute('aria-busy', 'false');" onerror="this.style.display='none'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex'; this.parentElement.setAttribute('aria-busy', 'false');">
-           <div class="student-photo-placeholder" style="display: none;"><re-icon icon="user" decorative></re-icon></div>
+           <div class="student-photo-placeholder" style="display: none;"><re-icon icon="user" decorative weight="filled"></re-icon></div>
+           ${photoReplaceControl}
          </div>`
-      : `<div class="student-photo-placeholder"><re-icon icon="user" decorative></re-icon></div>`;
+      : `<div class="student-photo-frame student-photo-large-frame" role="button" tabindex="0" aria-label="Tambah foto ${escapeHTML(student.name)}" aria-expanded="false">
+           <div class="student-photo-placeholder"><re-icon icon="user" decorative weight="filled"></re-icon></div>
+           ${photoReplaceControl}
+         </div>`;
 
     const katekisKiVal = student.kelasKi ? escapeHTML(student.kelasKi) : `<span class="text-na">N/A</span>`;
     const katekisKkVal = student.katekisKk ? escapeHTML(student.katekisKk) : `<span class="text-na">N/A</span>`;
@@ -231,43 +243,101 @@ function renderStudents(students) {
       <div class="student-accordion-inner">
         <div class="student-detail-card">
           ${largePhotoHtml}
-          <h3 class="detail-name">${escapeHTML(student.name)}</h3>
-          <p class="detail-id">ID: ${escapeHTML(student.studentId)}</p>
           <div class="detail-info-grid">
             <div class="detail-item">
               <span class="detail-label">
-                <re-icon icon="cake2" class="detail-icon-inline" decorative></re-icon>TTL:
+                <re-icon icon="calendar-mark" class="detail-icon-inline" decorative weight="filled"></re-icon><span>TTL</span><span class="detail-colon">:</span>
               </span>
               <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
-                <re-icon icon="home-user" class="detail-icon-inline" decorative></re-icon>KI:
+                <re-icon icon="users2" class="detail-icon-inline" decorative weight="filled"></re-icon><span>KI</span><span class="detail-colon">:</span>
               </span>
               <span class="detail-value">${katekisKiVal}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
-                <re-icon icon="user" class="detail-icon-inline" decorative></re-icon>KK:
+                <re-icon icon="user" class="detail-icon-inline" decorative weight="filled"></re-icon><span>KK</span><span class="detail-colon">:</span>
               </span>
               <span class="detail-value">${katekisKkVal}</span>
             </div>
+            <div class="detail-item">
+              <span class="detail-label">
+                <re-icon icon="user-id" class="detail-icon-inline" decorative weight="filled"></re-icon><span>ID</span><span class="detail-colon">:</span>
+              </span>
+              <span class="detail-value detail-id-value">${escapeHTML(student.studentId)}</span>
+            </div>
           </div>
-          <button class="upload-photo-btn" data-student-id="${escapeHTML(student.studentId)}" data-student-name="${escapeHTML(student.name)}" type="button" aria-label="Ganti foto ${escapeHTML(student.name)}">
-            <re-icon icon="camera" decorative></re-icon>
-            Ganti Foto
-          </button>
         </div>
       </div>
     `;
 
-    const uploadBtn = body.querySelector('.upload-photo-btn');
-    if (uploadBtn) {
-      uploadBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        PhotoUploader.open(uploadBtn.dataset.studentId, uploadBtn.dataset.studentName);
-      });
-    }
+    const photoFrame = body.querySelector('.student-photo-large-frame');
+    const photoMenu = photoFrame?.querySelector('.photo-replace-menu');
+    const photoInput = photoFrame?.querySelector('.photo-replace-input');
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
+    let photoMenuTimer;
+
+    const closePhotoMenu = () => {
+      clearTimeout(photoMenuTimer);
+      photoFrame?.classList.remove('is-replace-open', 'is-dragover');
+      photoFrame?.setAttribute('aria-expanded', 'false');
+      photoMenu?.setAttribute('aria-hidden', 'true');
+    };
+    const armPhotoMenuTimeout = () => {
+      clearTimeout(photoMenuTimer);
+      photoMenuTimer = setTimeout(closePhotoMenu, 5000);
+    };
+    const openPhotoMenu = () => {
+      photoFrame.classList.add('is-replace-open');
+      photoFrame.setAttribute('aria-expanded', 'true');
+      photoMenu.setAttribute('aria-hidden', 'false');
+      armPhotoMenuTimeout();
+    };
+    const choosePhoto = (file) => {
+      if (!file) return;
+      closePhotoMenu();
+      PhotoUploader.open(student.studentId, student.name, file);
+    };
+
+    const handlePhotoFrameAction = (event) => {
+      if (event.target === photoInput) return;
+      event.stopPropagation();
+      if (photoFrame.classList.contains('is-replace-open')) {
+        armPhotoMenuTimeout();
+        photoInput.click();
+      } else {
+        openPhotoMenu();
+      }
+    };
+    photoFrame?.addEventListener('click', handlePhotoFrameAction);
+    photoFrame?.addEventListener('pointerenter', () => {
+      if (canHover.matches) openPhotoMenu();
+    });
+    photoFrame?.addEventListener('pointerleave', () => {
+      if (canHover.matches) closePhotoMenu();
+    });
+    photoFrame?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      handlePhotoFrameAction(event);
+    });
+    photoInput?.addEventListener('change', () => choosePhoto(photoInput.files?.[0]));
+    photoFrame?.addEventListener('dragenter', (event) => {
+      event.preventDefault();
+      openPhotoMenu();
+      photoFrame.classList.add('is-dragover');
+    });
+    photoFrame?.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      armPhotoMenuTimeout();
+    });
+    photoFrame?.addEventListener('dragleave', () => photoFrame.classList.remove('is-dragover'));
+    photoFrame?.addEventListener('drop', (event) => {
+      event.preventDefault();
+      choosePhoto(event.dataTransfer?.files?.[0]);
+    });
 
     const toggle = (animate = true) => {
       const shouldAnimate = animate && !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -285,7 +355,7 @@ function renderStudents(students) {
         header.classList.remove('active');
         header.classList.add('closing');
         header.setAttribute('aria-expanded', 'false');
-        closeTimers.set(body, setTimeout(() => finishClose(body), 150));
+        closeTimers.set(body, setTimeout(() => finishClose(body), 220));
       };
 
       const openCurrent = () => {
@@ -367,9 +437,9 @@ function renderStudents(students) {
     groupHeader.setAttribute('tabindex', '0');
     groupHeader.setAttribute('aria-expanded', 'false');
     groupHeader.innerHTML = `
-      <re-icon icon="user-minus" decorative></re-icon>
+      <re-icon icon="user-off" decorative weight="filled"></re-icon>
       <span class="inactive-group-count">Nonaktif (${inactiveList.length})</span>
-      <re-icon icon="chevron-down" class="inactive-group-arrow" decorative></re-icon>
+      <re-icon icon="chevron-down" class="inactive-group-arrow" decorative weight="filled"></re-icon>
     `;
 
     const groupBody = document.createElement('div');
@@ -414,7 +484,7 @@ function renderStudents(students) {
   emptyState.className = 'empty-state';
   emptyState.hidden = students.length > 0;
   emptyState.innerHTML = `
-    <re-icon icon="user-search" class="empty-icon" decorative></re-icon>
+    <re-icon icon="incognito" class="empty-icon" decorative></re-icon>
     <p>Tidak ada data katekumen ditemukan.</p>
   `;
   listContainer.appendChild(emptyState);
