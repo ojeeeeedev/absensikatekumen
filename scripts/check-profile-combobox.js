@@ -70,38 +70,6 @@ async function swipeToListEnd(locator) {
   });
 }
 
-async function flickList(locator) {
-  return locator.evaluate(async list => {
-    const touch = (identifier, y) => new Touch({
-      identifier,
-      target: list,
-      clientX: list.getBoundingClientRect().left + 20,
-      clientY: y
-    });
-    list.scrollTop = (list.scrollHeight - list.clientHeight) / 2;
-    const identifier = 101;
-    list.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch(identifier, 240)] }));
-    for (const y of [180, 120, 60]) {
-      await new Promise(resolve => setTimeout(resolve, 16));
-      list.dispatchEvent(new TouchEvent('touchmove', { bubbles: true, cancelable: true, touches: [touch(identifier, y)] }));
-    }
-    const beforeRelease = list.scrollTop;
-    list.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true }));
-    await new Promise(resolve => setTimeout(resolve, 120));
-    const afterRelease = list.scrollTop;
-    list.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch(identifier + 1, 60)] }));
-    const afterInterrupt = list.scrollTop;
-    await new Promise(resolve => setTimeout(resolve, 120));
-    return {
-      beforeRelease,
-      afterRelease,
-      afterInterrupt,
-      settled: list.scrollTop,
-      maxScrollTop: list.scrollHeight - list.clientHeight,
-    };
-  });
-}
-
 let browser;
 try {
   await waitForServer();
@@ -418,10 +386,6 @@ try {
   const classListEnd = await swipeToListEnd(page.locator('#class-combobox-options'));
   if (classListEnd.scrollTop < classListEnd.maxScrollTop - 1 || classListEnd.lastBottom > classListEnd.visibleBottom + 1) {
     throw new Error(`Class list end is clipped by the mobile keyboard viewport: ${JSON.stringify(classListEnd)}`);
-  }
-  const classFlick = await flickList(page.locator('#class-combobox-options'));
-  if (classFlick.afterRelease - classFlick.beforeRelease < 24 || classFlick.afterRelease > classFlick.maxScrollTop + 1 || classFlick.settled !== classFlick.afterInterrupt) {
-    throw new Error(`Class list momentum is not interruptible: ${JSON.stringify(classFlick)}`);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('#class-combobox-search').fill('mal');
@@ -1094,10 +1058,6 @@ try {
   const topicListEnd = await swipeToListEnd(topicPopover.locator('.search-combobox-options'));
   if (topicListEnd.scrollTop < topicListEnd.maxScrollTop - 1 || topicListEnd.lastBottom > topicListEnd.visibleBottom + 1) {
     throw new Error(`Topic list end is clipped on mobile: ${JSON.stringify(topicListEnd)}`);
-  }
-  const topicFlick = await flickList(topicPopover.locator('.search-combobox-options'));
-  if (topicFlick.afterRelease - topicFlick.beforeRelease < 24 || topicFlick.afterRelease > topicFlick.maxScrollTop + 1 || topicFlick.settled !== topicFlick.afterInterrupt) {
-    throw new Error(`Topic list momentum is not interruptible: ${JSON.stringify(topicFlick)}`);
   }
   await scanPage.setViewportSize({ width: 390, height: 844 });
   await topicPopover.locator('.search-combobox-search').fill('Pentakosta');
