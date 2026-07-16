@@ -274,10 +274,19 @@ function renderStudents(students) {
     `;
 
     const photoFrame = body.querySelector('.student-photo-large-frame');
+    const expandedName = header.querySelector('.student-name-text');
     const photoMenu = photoFrame?.querySelector('.photo-replace-menu');
     const photoInput = photoFrame?.querySelector('.photo-replace-input');
     const canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
     let photoMenuTimer;
+
+    const fitExpandedName = () => {
+      if (!header.classList.contains('active')) return;
+      expandedName.style.removeProperty('--expanded-name-size');
+      if (expandedName.scrollWidth <= expandedName.clientWidth) return;
+      const size = parseFloat(getComputedStyle(expandedName).fontSize);
+      expandedName.style.setProperty('--expanded-name-size', `${Math.max(12, size * expandedName.clientWidth / expandedName.scrollWidth)}px`);
+    };
 
     const closePhotoMenu = () => {
       clearTimeout(photoMenuTimer);
@@ -366,6 +375,8 @@ function renderStudents(students) {
         header.classList.remove('closing');
         header.classList.add('active');
         header.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(fitExpandedName);
+        document.fonts?.ready.then(fitExpandedName);
       };
 
       if (isExpanded) {

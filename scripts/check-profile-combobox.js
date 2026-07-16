@@ -97,7 +97,9 @@ try {
         ? 'Katekis Induk Khusus'
         : index === 3
           ? 'Katekis Kecil Khusus'
-          : `Katekumen ${index + 1}`,
+          : index === 20
+            ? 'Katekumen Dengan Nama Sangat Panjang'
+            : `Katekumen ${index + 1}`,
       image: index === 0 ? '/api/photo?studentId=2026%2FMAL%2F001' : '',
       kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
       katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
@@ -734,6 +736,9 @@ try {
     const bodyRect = body.getBoundingClientRect();
     const detailRect = body.querySelector('.student-detail-card').getBoundingClientRect();
     const dividerStyle = getComputedStyle(header, '::after');
+    const name = header.querySelector('.student-name-text');
+    const nameRect = name.getBoundingClientRect();
+    const nameStyle = getComputedStyle(name);
     return {
       label: header.getAttribute('aria-label'),
       height: headerRect.height,
@@ -743,6 +748,11 @@ try {
       identityDisplay: getComputedStyle(header.querySelector('.header-left')).display,
       name: header.querySelector('.student-name-text').textContent,
       nameDisplay: getComputedStyle(header.querySelector('.student-name-text')).display,
+      nameFont: nameStyle.fontFamily,
+      nameSize: parseFloat(nameStyle.fontSize),
+      nameFits: name.scrollWidth <= name.clientWidth + 1,
+      nameCenterOffset: Math.abs((nameRect.left + nameRect.right) / 2 - (headerRect.left + headerRect.right) / 2),
+      nameVerticalOffset: Math.abs((nameRect.top + nameRect.bottom) / 2 - (headerRect.top + headerRect.bottom) / 2),
       thumbDisplay: getComputedStyle(header.querySelector('.student-photo-frame, .student-thumb-placeholder')).display,
       idDisplay: getComputedStyle(header.querySelector('.student-id-text')).display,
       arrowDisplay: getComputedStyle(arrow).display,
@@ -756,10 +766,10 @@ try {
       bodyTopOffset: bodyRect.top - itemRect.top,
       detailTopGap: detailRect.top - headerRect.bottom,
       topLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 8)),
-      bottomLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 42))
+      bottomLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 62))
     };
   });
-  if (!compactExpandedHeader.label?.includes('Katekumen 21, 2026/MAL/021') || compactExpandedHeader.height !== 44 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay === 'none' || compactExpandedHeader.name !== 'Katekumen 21' || compactExpandedHeader.nameDisplay === 'none' || compactExpandedHeader.thumbDisplay !== 'none' || compactExpandedHeader.idDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '40px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
+  if (!compactExpandedHeader.label?.includes('Katekumen Dengan Nama Sangat Panjang, 2026/MAL/021') || compactExpandedHeader.height !== 64 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay === 'none' || compactExpandedHeader.name !== 'Katekumen Dengan Nama Sangat Panjang' || compactExpandedHeader.nameDisplay === 'none' || !compactExpandedHeader.nameFont.includes('DM Serif Display') || compactExpandedHeader.nameSize >= 20 || compactExpandedHeader.nameSize < 12 || !compactExpandedHeader.nameFits || compactExpandedHeader.nameCenterOffset >= 1 || compactExpandedHeader.nameVerticalOffset >= 1 || compactExpandedHeader.thumbDisplay !== 'none' || compactExpandedHeader.idDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '60px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
     throw new Error(`Expanded profile header is not a full-width accessible collapse control: ${JSON.stringify(compactExpandedHeader)}`);
   }
   await focusedProfile.locator('.student-accordion-header').click();
@@ -774,7 +784,12 @@ try {
       easing: animation.effect.getTiming().easing
     }))
   }));
-  if (!pointerCloseMotion.closing || pointerCloseMotion.animations.length !== 3 || pointerCloseMotion.animations.some(animation => !['opacity', 'transform'].includes(animation.property) || Math.abs(animation.duration - 220) > 0.1 || animation.easing !== 'cubic-bezier(0.4, 0, 0.2, 1)')) {
+  const closeMotionSignatures = pointerCloseMotion.animations.map(animation => `${animation.property}:${animation.duration}:${animation.easing}`).sort();
+  if (!pointerCloseMotion.closing || JSON.stringify(closeMotionSignatures) !== JSON.stringify([
+    'opacity:160:cubic-bezier(0.23, 1, 0.32, 1)',
+    'transform:220:cubic-bezier(0.23, 1, 0.32, 1)',
+    'transform:220:cubic-bezier(0.4, 0, 0.2, 1)',
+  ])) {
     throw new Error(`Profile accordion closing motion is not composited and aligned: ${JSON.stringify(pointerCloseMotion)}`);
   }
   await page.waitForTimeout(50);
