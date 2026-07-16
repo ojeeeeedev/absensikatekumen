@@ -167,10 +167,13 @@ Pagination/search/filter UI:
 - Native controls must use explicit background, text, border, and `color-scheme`.
 - Logos may swap through `theme.js`; colors still come from tokens.
 
-## 9. AI Skills for Design Engineers
-
-For designers and engineers to help them build better user interfaces.
-Use `$find-animation-opportunities` first for read-only discovery of motion that would genuinely help. Use `emil-design-eng` to build approved animations, `$review-animations` to review them, and `$improve-animations` to plan or implement fixes.
+## 9. UI Animations
+To help animate UI elements better, use this as a guideline:
+- Use `$find-animation-opportunities` first for read-only discovery of motion that would genuinely help.
+- Use `emil-design-eng` to build approved animations.
+- Use `$review-animations` to review them. As a rule of thumb, UI animations should generally stay under `300ms`.
+- Use `$improve-animations` to plan or implement fixes.
+You can use these tools in this exact order if an animation is requested or needs refactoring.
 
 ## 10. Accessibility Standards
 

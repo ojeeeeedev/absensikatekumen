@@ -1,0 +1,66 @@
+:root {
+  /* Light Theme (Default) */
+  --bg-body: #FAF9F5;
+  --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-card: rgba(255, 255, 255, 0.45);
+  --border-glass: rgba(0, 0, 0, 0.08);
+  --text-primary: #2B2D2F;
+  --text-secondary: #6E7175;
+  --accent: #1E3A8A;           /* Marian Blue */
+  --accent-hover: #152960;
+  --accent-on-click: ;
+  --accent-glow: rgba(30, 58, 138, 0.15);
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
+
+  /* Status Colors */
+  --status-success-bg: #e8f5e9;
+  --status-success-border: #a5d6a7;
+  --status-success-text: #2e7d32;
+
+  --status-duplicate-bg: #ffebee;
+  --status-duplicate-border: #ef9a9a;
+  --status-duplicate-text: #c62828;
+
+  --status-pending-bg: #fff8e1;
+  --status-pending-border: #ffe082;
+  --status-pending-text: #b78103;
+
+  --status-idle-bg: rgba(0, 0, 0, 0.03);
+  --status-idle-border: rgba(0, 0, 0, 0.08);
+  --status-idle-text: #6c757d;
+
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --vh: 1vh;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme */
+  --bg-body: #121212;
+  --bg-glass: rgba(30, 30, 30, 0.7);
+  --bg-card: rgba(30, 30, 30, 0.45);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --text-primary: #EDEDED;
+  --text-secondary: #B3B3B3;
+  --accent: #3B82F6;           /* Bright Marian Blue for Dark Mode */
+  --accent-hover: #2563EB;
+  --accent-on-click: ;
+  --accent-glow: rgba(59, 130, 246, 0.2);
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+
+  --status-success-bg: rgba(46, 125, 50, 0.2);
+  --status-success-border: #2e7d32;
+  --status-success-text: #81c784;
+
+  --status-duplicate-bg: rgba(198, 40, 40, 0.2);
+  --status-duplicate-border: #c62828;
+  --status-duplicate-text: #ef5350;
+
+  --status-pending-bg: rgba(255, 179, 0, 0.15);
+  --status-pending-border: #b78103;
+  --status-pending-text: #ffe082;
+
+  --status-idle-bg: rgba(255, 255, 255, 0.05);
+  --status-idle-border: rgba(255, 255, 255, 0.08);
+  --status-idle-text: #9a9da2;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+}
