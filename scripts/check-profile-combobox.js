@@ -35,6 +35,20 @@ async function waitForServer() {
   throw new Error('Local server did not start');
 }
 
+async function scrollToListEnd(locator) {
+  return locator.evaluate(list => {
+    list.scrollTop = list.scrollHeight;
+    const last = list.lastElementChild.getBoundingClientRect();
+    const bounds = list.getBoundingClientRect();
+    return {
+      scrollTop: list.scrollTop,
+      maxScrollTop: list.scrollHeight - list.clientHeight,
+      lastBottom: last.bottom,
+      visibleBottom: Math.min(bounds.bottom, visualViewport.height)
+    };
+  });
+}
+
 let browser;
 try {
   await waitForServer();
@@ -71,7 +85,8 @@ try {
     contentType: 'application/json',
     body: JSON.stringify({ status: 'ok', classes: [
       { code: 'SAB', name: 'Sabtu Pagi' },
-      { code: 'MAL', name: 'Malam' }
+      { code: 'MAL', name: 'Malam' },
+      ...Array.from({ length: 28 }, (_, index) => ({ code: `K${index + 1}`, name: `Kelas ${index + 1}` }))
     ] })
   }));
   await page.route('**/api/students?*', route => route.fulfill({
@@ -329,19 +344,28 @@ try {
     throw new Error(`Profile empty state is not centered and unboxed: ${JSON.stringify(profileSpacing)}`);
   }
   await page.locator('#class-combobox-trigger').click();
-  await page.waitForFunction(() => document.getElementById('class-combobox-popover')?.dataset.state === 'open');
-  const classPopoverMotion = await page.locator('#class-combobox-popover').evaluate(popover => {
-    const style = getComputedStyle(popover);
+  await page.locator('#class-combobox-popover').waitFor({ state: 'visible' });
+  const classNativeScroll = await page.locator('#class-combobox-options').evaluate(list => {
+    const popover = list.closest('.search-combobox-popover');
+    const popoverStyle = getComputedStyle(popover);
+    const listStyle = getComputedStyle(list);
     return {
-      origin: style.transformOrigin,
-      properties: style.transitionProperty.split(',').map(value => value.trim()),
-      durations: style.transitionDuration.split(',').map(value => parseFloat(value)),
-      easing: style.transitionTimingFunction,
+      parentId: popover.parentElement.id,
+      position: popoverStyle.position,
+      transitionDuration: popoverStyle.transitionDuration,
+      transform: popoverStyle.transform,
+      overflowY: listStyle.overflowY,
     };
   });
-  if (!classPopoverMotion.origin.endsWith(' 0px') || !classPopoverMotion.properties.includes('opacity') || !classPopoverMotion.properties.includes('transform') || classPopoverMotion.durations.some(duration => Math.abs(duration - 0.18) > 0.001) || !classPopoverMotion.easing.includes('cubic-bezier(0.23, 1, 0.32, 1)')) {
-    throw new Error(`Class popover entrance motion is incorrect: ${JSON.stringify(classPopoverMotion)}`);
+  if (classNativeScroll.parentId !== 'class-combobox' || classNativeScroll.position !== 'absolute' || classNativeScroll.transitionDuration !== '0s' || classNativeScroll.transform !== 'none' || classNativeScroll.overflowY !== 'auto') {
+    throw new Error(`Class popover does not use native in-place scrolling: ${JSON.stringify(classNativeScroll)}`);
   }
+  await page.setViewportSize({ width: 320, height: 568 });
+  const classListEnd = await scrollToListEnd(page.locator('#class-combobox-options'));
+  if (classListEnd.scrollTop < classListEnd.maxScrollTop - 1 || classListEnd.lastBottom > classListEnd.visibleBottom + 1) {
+    throw new Error(`Class list end is clipped by the mobile keyboard viewport: ${JSON.stringify(classListEnd)}`);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('#class-combobox-search').fill('mal');
   const options = await page.locator('#class-combobox-options [role="option"]').allTextContents();
   if (options.length !== 1 || !options[0].includes('Malam')) throw new Error('Class filtering failed');
@@ -350,10 +374,9 @@ try {
   const classExitState = await page.locator('#class-combobox-popover').evaluate(popover => ({
     hidden: popover.hidden,
     inert: popover.inert,
-    state: popover.dataset.state,
   }));
-  if (classExitState.hidden || !classExitState.inert || classExitState.state !== 'closed') {
-    throw new Error(`Class popover did not become inert during exit: ${JSON.stringify(classExitState)}`);
+  if (!classExitState.hidden || !classExitState.inert) {
+    throw new Error(`Class popover did not close immediately: ${JSON.stringify(classExitState)}`);
   }
   await page.locator('#class-combobox-popover').waitFor({ state: 'hidden' });
   const selectedClass = await page.locator('#class-selector').inputValue();
@@ -809,7 +832,7 @@ try {
   });
 
   await page.locator('#class-combobox-trigger').click();
-  await page.waitForFunction(() => document.getElementById('class-combobox-popover')?.dataset.state === 'open');
+  await page.locator('#class-combobox-popover').waitFor({ state: 'visible' });
   const dropdownStack = await page.evaluate(() => {
     const search = document.getElementById('class-combobox-search');
     const option = document.querySelector('#class-combobox-options [role="option"]');
@@ -823,7 +846,7 @@ try {
   if (!dropdownStack.searchOnTop || !dropdownStack.optionOnTop) {
     throw new Error(`Profile controls painted over the class dropdown: ${JSON.stringify(dropdownStack)}`);
   }
-  await page.keyboard.press('Escape');
+  await page.locator('#class-combobox-search').press('Escape');
   await page.locator('#class-combobox-popover').waitFor({ state: 'hidden' });
 
   await page.locator('[data-app-view="scan"]').click();
@@ -906,7 +929,7 @@ try {
   }
   const classTriggerHeight = await page.locator('#class-combobox-trigger').evaluate(trigger => trigger.getBoundingClientRect().height);
   await page.locator('#class-combobox-trigger').click();
-  await page.waitForFunction(() => document.getElementById('class-combobox-popover')?.dataset.state === 'open');
+  await page.locator('#class-combobox-popover').waitFor({ state: 'visible' });
   const classSelectedBackground = await page.locator('#class-combobox-popover [aria-selected="true"]').evaluate(option => getComputedStyle(option).backgroundColor);
   await page.locator('#class-combobox-search').press('Escape');
 
@@ -914,14 +937,14 @@ try {
   await scanPage.goto(baseUrl, { waitUntil: 'networkidle' });
   await scanPage.evaluate(() => window.setAppState(1));
   await scanPage.locator('#topic-trigger-large').click();
-  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-large-popover')?.dataset.state === 'open');
+  await scanPage.locator('#topic-combobox-large-popover').waitFor({ state: 'visible' });
   const largeTopicPopover = scanPage.locator('#topic-combobox-large-popover');
   await largeTopicPopover.locator('.search-combobox-search').fill('Perkenalan');
   if (await largeTopicPopover.locator('[role="option"]').count() !== 1) throw new Error('Large topic combobox filtering failed');
   await largeTopicPopover.locator('.search-combobox-search').press('Escape');
   await scanPage.evaluate(() => window.setAppState(2));
   await scanPage.locator('#topic-combobox-trigger').click();
-  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-popover')?.dataset.state === 'open');
+  await scanPage.locator('#topic-combobox-popover').waitFor({ state: 'visible' });
   const topicPopover = scanPage.locator('#topic-combobox-popover');
   const firstTopic = topicPopover.locator('[role="option"]').first();
   const idleBackground = await firstTopic.evaluate(option => getComputedStyle(option).backgroundColor);
@@ -955,7 +978,7 @@ try {
   await pOption.click();
   if (await scanPage.locator('#topic-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected topic trigger is still glowing');
   await scanPage.locator('#topic-combobox-trigger').click();
-  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-popover')?.dataset.state === 'open');
+  await scanPage.locator('#topic-combobox-popover').waitFor({ state: 'visible' });
   const selectedP = topicPopover.locator('.topic-option-p[aria-selected="true"]');
   if (await selectedP.evaluate(option => getComputedStyle(option).backgroundColor) === pIdleBackground) throw new Error('Selected P topic fill is missing');
   const topicLayout = await scanPage.evaluate(() => {
@@ -1003,6 +1026,15 @@ try {
   const footerIsCompactAndCentered = topicLayout.footerHeight <= 40 && Math.abs(topicLayout.footerTopGap - topicLayout.footerBottomGap) < 1;
   if (!topicLayout.contained || !topicLayout.centered || !matchesProfileHeight || !matchesProfileWidth || !matchesProgressWidth || !matchesProfileClearance || !selectedTopicIsStatic || !scannerIsCentered || !footerIsCompactAndCentered || topicLayout.scannerSize < 287 || topicLayout.topGlowClearance < 8 || topicLayout.optionsHeight < 330) {
     throw new Error(`Topic combobox layout does not match the profile selector: ${JSON.stringify(topicLayout)}`);
+  }
+  await scanPage.setViewportSize({ width: 390, height: 844 });
+  await scanPage.waitForFunction(() => {
+    const popover = document.getElementById('topic-combobox-popover').getBoundingClientRect();
+    return popover.top >= 8 && popover.bottom <= visualViewport.height - 8;
+  });
+  const topicListEnd = await scrollToListEnd(topicPopover.locator('.search-combobox-options'));
+  if (topicListEnd.scrollTop < topicListEnd.maxScrollTop - 1 || topicListEnd.lastBottom > topicListEnd.visibleBottom + 1) {
+    throw new Error(`Topic list end is clipped on mobile: ${JSON.stringify(topicListEnd)}`);
   }
   await topicPopover.locator('.search-combobox-search').fill('Pentakosta');
   const topics = await topicPopover.locator('[role="option"]').allTextContents();
@@ -1130,27 +1162,12 @@ try {
   }
 
   await scanPage.locator('#topic-combobox-trigger').click();
-  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-popover')?.dataset.state === 'open');
+  await scanPage.locator('#topic-combobox-popover').waitFor({ state: 'visible' });
   await scanPage.locator('#topic-combobox-trigger').click();
-  const interruptedClose = await scanPage.locator('#topic-combobox-popover').evaluate(popover => ({ hidden: popover.hidden, inert: popover.inert, state: popover.dataset.state }));
-  if (interruptedClose.hidden || !interruptedClose.inert || interruptedClose.state !== 'closed') throw new Error(`Topic exit did not begin safely: ${JSON.stringify(interruptedClose)}`);
+  const closedTopic = await scanPage.locator('#topic-combobox-popover').evaluate(popover => ({ hidden: popover.hidden, inert: popover.inert }));
+  if (!closedTopic.hidden || !closedTopic.inert) throw new Error(`Topic popover did not close immediately: ${JSON.stringify(closedTopic)}`);
   await scanPage.locator('#topic-combobox-trigger').click();
-  await scanPage.waitForFunction(() => {
-    const popover = document.getElementById('topic-combobox-popover');
-    return popover?.dataset.state === 'open' && !popover.hidden && !popover.inert;
-  });
-  await scanPage.emulateMedia({ reducedMotion: 'reduce' });
-  await scanPage.locator('#topic-combobox-search').press('Escape');
-  await scanPage.locator('#topic-combobox-popover').waitFor({ state: 'hidden' });
-  await scanPage.locator('#topic-combobox-trigger').click();
-  await scanPage.waitForFunction(() => document.getElementById('topic-combobox-popover')?.dataset.state === 'open');
-  const reducedPopoverMotion = await scanPage.locator('#topic-combobox-popover').evaluate(popover => {
-    const style = getComputedStyle(popover);
-    return { property: style.transitionProperty, duration: parseFloat(style.transitionDuration), transform: style.transform };
-  });
-  if (reducedPopoverMotion.property !== 'opacity' || Math.abs(reducedPopoverMotion.duration - 0.12) > 0.001 || reducedPopoverMotion.transform !== 'none') {
-    throw new Error(`Reduced-motion popover is incorrect: ${JSON.stringify(reducedPopoverMotion)}`);
-  }
+  await scanPage.locator('#topic-combobox-popover').waitFor({ state: 'visible' });
   await scanPage.locator('#topic-combobox-search').press('Escape');
 
   const unauthenticatedContext = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });

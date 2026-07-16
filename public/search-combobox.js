@@ -1,6 +1,4 @@
 (function() {
-  const COMBOBOX_MOTION_MS = 180;
-  const COMBOBOX_REDUCED_MOTION_MS = 120;
   let closeActiveCombobox = null;
 
   window.createSearchCombobox = function({
@@ -29,37 +27,15 @@
     if (!root || !trigger || !popover || !search || !list || !empty || !value || !select) return null;
 
     let items = [];
-    let closeTimer = null;
-    let openFrame = null;
-
-    popover.dataset.state = 'closed';
     popover.inert = true;
 
-    function motionDuration() {
-      return matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? COMBOBOX_REDUCED_MOTION_MS
-        : COMBOBOX_MOTION_MS;
-    }
-
-    function clearMotionTimers() {
-      clearTimeout(closeTimer);
-      closeTimer = null;
-      if (openFrame !== null) cancelAnimationFrame(openFrame);
-      openFrame = null;
-    }
-
     function close(restoreFocus = false) {
-      if (popover.hidden || trigger.getAttribute('aria-expanded') !== 'true') return;
-      clearMotionTimers();
-      popover.dataset.state = 'closed';
+      if (popover.hidden) return;
+      popover.hidden = true;
       popover.inert = true;
       trigger.setAttribute('aria-expanded', 'false');
       if (closeActiveCombobox === close) closeActiveCombobox = null;
       if (restoreFocus) trigger.focus();
-      closeTimer = setTimeout(() => {
-        if (popover.dataset.state === 'closed') popover.hidden = true;
-        closeTimer = null;
-      }, motionDuration());
     }
 
     function setValue(nextValue) {
@@ -112,20 +88,14 @@
     function open() {
       if (trigger.disabled) return;
       closeActiveCombobox?.();
-      clearMotionTimers();
       popover.hidden = false;
       popover.inert = false;
-      popover.dataset.state = 'closed';
-      popover.getBoundingClientRect();
       trigger.setAttribute('aria-expanded', 'true');
       search.value = '';
       render();
       closeActiveCombobox = close;
-      openFrame = requestAnimationFrame(() => {
-        openFrame = null;
-        if (popover.hidden) return;
-        popover.dataset.state = 'open';
-        if (!popover.contains(document.activeElement)) search.focus();
+      requestAnimationFrame(() => {
+        if (!popover.hidden && !popover.contains(document.activeElement)) search.focus();
       });
     }
 
@@ -139,10 +109,7 @@
       render();
     }
 
-    trigger.addEventListener('click', () => {
-      if (trigger.getAttribute('aria-expanded') === 'true') close();
-      else open();
-    });
+    trigger.addEventListener('click', () => popover.hidden ? open() : close());
     trigger.addEventListener('keydown', event => {
       if (event.key === 'ArrowDown') {
         event.preventDefault();

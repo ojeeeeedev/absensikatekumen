@@ -1802,7 +1802,8 @@ a:focus-visible,
   z-index: 0;
   border-radius: inherit;
   pointer-events: none;
-  will-change: box-shadow;
+  box-shadow: 0 0 0 6px var(--accent-glow);
+  will-change: opacity, transform;
   animation: pulse-border 2s infinite;
 }
 
@@ -1851,17 +1852,6 @@ a:focus-visible,
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  transform-origin: top center;
-  transition: opacity var(--duration-normal) var(--ease-out),
-              transform var(--duration-normal) var(--ease-out);
-}
-
-.search-combobox-popover[data-state="closed"] {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-4px) scale(0.98);
 }
 
 .search-combobox-popover[hidden] {
@@ -1891,6 +1881,7 @@ a:focus-visible,
   gap: 2px;
   max-height: min(240px, 40vh);
   margin-top: 6px;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -2748,9 +2739,8 @@ body[data-active-view="profile"] .nav-tabs::before {
 }
 
 @keyframes pulse-border {
-  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
-  70% { box-shadow: 0 0 0 8px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  70% { opacity: 0; transform: scale(1.035); }
 }
 
 /* =========================================
@@ -3189,7 +3179,6 @@ body[data-active-view="profile"] .nav-tabs::before {
 
   .upload-preview-modal,
   .upload-preview-sheet,
-  .search-combobox-popover,
   .student-photo-frame :is(.student-thumb, .student-photo-large),
   #login-btn,
   .confirm-btn,
@@ -3199,7 +3188,6 @@ body[data-active-view="profile"] .nav-tabs::before {
   }
 
   .upload-preview-sheet,
-  .search-combobox-popover,
   #login-btn:active:not(:disabled),
   .confirm-btn:active:not(:disabled),
   .upload-cancel-btn:active:not(:disabled),

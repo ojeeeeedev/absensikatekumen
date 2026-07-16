@@ -211,6 +211,7 @@ You can use these tools in this exact order if an animation is requested or need
 ## 13. AI Agent Instructions
 
 - Always read `DESIGN.md` before changing UI.
+- Delegate every UI color choices to `$radix-colors` skill by first asking for a theme/accent color first to the user.
 - Follow existing tokens and component patterns.
 - Do not invent new styles without updating the guideline.
 - Do not create one-off UI unless absolutely necessary.
