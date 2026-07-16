@@ -31,6 +31,7 @@
     let items = [];
     let closeTimer = null;
     let openFrame = null;
+    let touchY = null;
 
     popover.dataset.state = 'closed';
     popover.inert = true;
@@ -196,6 +197,21 @@
         close(true);
       }
     });
+    list.addEventListener('touchstart', event => {
+      if (event.touches.length === 1 && list.scrollHeight > list.clientHeight) {
+        touchY = event.touches[0].clientY;
+      }
+    }, { passive: true });
+    list.addEventListener('touchmove', event => {
+      if (touchY === null || event.touches.length !== 1) return;
+      const nextY = event.touches[0].clientY;
+      const previousScrollTop = list.scrollTop;
+      list.scrollTop += touchY - nextY;
+      touchY = nextY;
+      if (list.scrollTop !== previousScrollTop) event.preventDefault();
+    }, { passive: false });
+    list.addEventListener('touchend', () => { touchY = null; });
+    list.addEventListener('touchcancel', () => { touchY = null; });
     document.addEventListener('pointerdown', event => {
       if (!root.contains(event.target) && !popover.contains(event.target)) close();
     });

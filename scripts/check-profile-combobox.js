@@ -35,6 +35,41 @@ async function waitForServer() {
   throw new Error('Local server did not start');
 }
 
+async function swipeToListEnd(locator) {
+  return locator.evaluate(list => {
+    const touch = (identifier, y) => new Touch({
+      identifier,
+      target: list,
+      clientX: list.getBoundingClientRect().left + 20,
+      clientY: y
+    });
+    for (let swipe = 0; swipe < 10; swipe += 1) {
+      const identifier = swipe + 1;
+      list.dispatchEvent(new TouchEvent('touchstart', {
+        bubbles: true,
+        cancelable: true,
+        touches: [touch(identifier, 280)]
+      }));
+      for (const y of [220, 160, 100, 40]) {
+        list.dispatchEvent(new TouchEvent('touchmove', {
+          bubbles: true,
+          cancelable: true,
+          touches: [touch(identifier, y)]
+        }));
+      }
+      list.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true }));
+    }
+    const last = list.lastElementChild.getBoundingClientRect();
+    const bounds = list.getBoundingClientRect();
+    return {
+      scrollTop: list.scrollTop,
+      maxScrollTop: list.scrollHeight - list.clientHeight,
+      lastBottom: last.bottom,
+      visibleBottom: Math.min(bounds.bottom, visualViewport.height)
+    };
+  });
+}
+
 let browser;
 try {
   await waitForServer();
@@ -348,13 +383,8 @@ try {
     const popover = document.getElementById('class-combobox-popover').getBoundingClientRect();
     return popover.top >= 8 && popover.bottom <= visualViewport.height - 8;
   });
-  const classListEnd = await page.locator('#class-combobox-options').evaluate(list => {
-    list.scrollTop = list.scrollHeight;
-    const last = list.lastElementChild.getBoundingClientRect();
-    const bounds = list.getBoundingClientRect();
-    return { lastBottom: last.bottom, visibleBottom: Math.min(bounds.bottom, visualViewport.height) };
-  });
-  if (classListEnd.lastBottom > classListEnd.visibleBottom + 1) {
+  const classListEnd = await swipeToListEnd(page.locator('#class-combobox-options'));
+  if (classListEnd.scrollTop < classListEnd.maxScrollTop - 1 || classListEnd.lastBottom > classListEnd.visibleBottom + 1) {
     throw new Error(`Class list end is clipped by the mobile keyboard viewport: ${JSON.stringify(classListEnd)}`);
   }
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1025,13 +1055,8 @@ try {
     const popover = document.getElementById('topic-combobox-popover').getBoundingClientRect();
     return popover.top >= 8 && popover.bottom <= visualViewport.height - 8;
   });
-  const topicListEnd = await topicPopover.locator('.search-combobox-options').evaluate(list => {
-    list.scrollTop = list.scrollHeight;
-    const last = list.lastElementChild.getBoundingClientRect();
-    const bounds = list.getBoundingClientRect();
-    return { lastBottom: last.bottom, visibleBottom: Math.min(bounds.bottom, visualViewport.height) };
-  });
-  if (topicListEnd.lastBottom > topicListEnd.visibleBottom + 1) {
+  const topicListEnd = await swipeToListEnd(topicPopover.locator('.search-combobox-options'));
+  if (topicListEnd.scrollTop < topicListEnd.maxScrollTop - 1 || topicListEnd.lastBottom > topicListEnd.visibleBottom + 1) {
     throw new Error(`Topic list end is clipped on mobile: ${JSON.stringify(topicListEnd)}`);
   }
   await scanPage.setViewportSize({ width: 390, height: 844 });
