@@ -1069,16 +1069,19 @@ try {
     await Promise.all([page.setViewportSize(viewport), scanPage.setViewportSize(viewport)]);
     await scanPage.evaluate(() => window.setAppState(2));
     const scanViewport = await scanPage.evaluate(() => {
+      const nav = document.getElementById('app-nav').getBoundingClientRect();
       const container = document.getElementById('app-container').getBoundingClientRect();
       const reader = document.getElementById('reader-container').getBoundingClientRect();
       const history = document.getElementById('queue-history-panel').getBoundingClientRect();
       const trigger = document.getElementById('topic-combobox-trigger').getBoundingClientRect();
       const progress = document.querySelector('.segmented-progress-bar').getBoundingClientRect();
       const main = document.getElementById('main-app-section');
+      const bodyPaddingTop = parseFloat(getComputedStyle(document.body).paddingTop);
       const bodyPaddingBottom = parseFloat(getComputedStyle(document.body).paddingBottom);
       return {
         containerHeight: container.height,
         expectedContainerHeight: Math.min(innerHeight - container.top - bodyPaddingBottom, 768),
+        shellCenterOffset: Math.abs((nav.top + container.bottom) / 2 - (bodyPaddingTop + innerHeight - bodyPaddingBottom) / 2),
         cameraWidth: reader.width,
         cameraHeight: reader.height,
         scannerTopGap: reader.top - trigger.bottom,
@@ -1092,6 +1095,7 @@ try {
       };
     });
     if (Math.abs(scanViewport.containerHeight - scanViewport.expectedContainerHeight) >= 1
+      || scanViewport.shellCenterOffset >= 1
       || scanViewport.horizontalOverflow
       || Math.abs(scanViewport.cameraWidth - scanViewport.cameraHeight) >= 1
       || scanViewport.cameraWidth < 179
@@ -1113,33 +1117,39 @@ try {
     }
     await scanPage.evaluate(() => window.setAppState(1));
     const selectionViewport = await scanPage.evaluate(() => {
+      const nav = document.getElementById('app-nav').getBoundingClientRect();
       const container = document.getElementById('app-container').getBoundingClientRect();
+      const bodyPaddingTop = parseFloat(getComputedStyle(document.body).paddingTop);
       const bodyPaddingBottom = parseFloat(getComputedStyle(document.body).paddingBottom);
       return {
         height: container.height,
         expectedHeight: Math.min(innerHeight - container.top - bodyPaddingBottom, 768),
+        shellCenterOffset: Math.abs((nav.top + container.bottom) / 2 - (bodyPaddingTop + innerHeight - bodyPaddingBottom) / 2),
       };
     });
-    if (Math.abs(selectionViewport.height - selectionViewport.expectedHeight) >= 1) {
+    if (Math.abs(selectionViewport.height - selectionViewport.expectedHeight) >= 1 || selectionViewport.shellCenterOffset >= 1) {
       throw new Error(`Topic selection does not respect the app height cap at ${viewport.width}x${viewport.height}`);
     }
     await scanPage.evaluate(() => window.setAppState(2));
 
     const profileViewport = await page.evaluate(() => {
+      const nav = document.getElementById('app-nav').getBoundingClientRect();
       const container = document.getElementById('app-container').getBoundingClientRect();
       const infoBar = document.getElementById('profile-info-bar').getBoundingClientRect();
       const search = document.querySelector('.profile-search-field').getBoundingClientRect();
       const summary = document.getElementById('students-summary').getBoundingClientRect();
+      const bodyPaddingTop = parseFloat(getComputedStyle(document.body).paddingTop);
       const bodyPaddingBottom = parseFloat(getComputedStyle(document.body).paddingBottom);
       return {
         containerHeight: container.height,
         expectedContainerHeight: Math.min(innerHeight - container.top - bodyPaddingBottom, 768),
+        shellCenterOffset: Math.abs((nav.top + container.bottom) / 2 - (bodyPaddingTop + innerHeight - bodyPaddingBottom) / 2),
         horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
         controlsShareRow: Math.abs((search.top + search.bottom) / 2 - (summary.top + summary.bottom) / 2) < 1,
         controlsContained: search.left >= infoBar.left && summary.right <= infoBar.right,
       };
     });
-    if (Math.abs(profileViewport.containerHeight - profileViewport.expectedContainerHeight) >= 1 || profileViewport.horizontalOverflow || !profileViewport.controlsShareRow || !profileViewport.controlsContained) {
+    if (Math.abs(profileViewport.containerHeight - profileViewport.expectedContainerHeight) >= 1 || profileViewport.shellCenterOffset >= 1 || profileViewport.horizontalOverflow || !profileViewport.controlsShareRow || !profileViewport.controlsContained) {
       throw new Error(`Profile viewport layout failed at ${viewport.width}x${viewport.height}: ${JSON.stringify(profileViewport)}`);
     }
   }
