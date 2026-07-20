@@ -600,7 +600,7 @@ button:disabled,
   right: 0.85rem;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 1.45rem;
+  font-size: 1.5rem;
 }
 #login-btn:hover {
   background: var(--accent-hover);
