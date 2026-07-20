@@ -1,6 +1,36 @@
 (function() {
   let closeActiveCombobox = null;
 
+  window.bindScrollTail = function(element) {
+    if (!element) return () => {};
+
+    const host = element.parentElement;
+    if (!host) return () => {};
+
+    host.classList.add('scroll-tail-host');
+    element.classList.add('scroll-tail-viewport');
+
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const remaining = element.scrollHeight - element.scrollTop - element.clientHeight;
+        host.classList.toggle('has-scroll-tail', remaining > 1);
+        element.classList.toggle('has-scroll-tail', remaining > 1);
+      });
+    };
+
+    element.addEventListener('scroll', update, { passive: true });
+    new ResizeObserver(update).observe(element);
+    new MutationObserver(update).observe(element, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    update();
+    return update;
+  };
+
   window.createSearchCombobox = function({
     rootId,
     triggerId,
@@ -27,6 +57,7 @@
     if (!root || !trigger || !popover || !search || !list || !empty || !value || !select) return null;
 
     let items = [];
+    const updateScrollTail = window.bindScrollTail(list);
     popover.inert = true;
 
     function close(restoreFocus = false) {
@@ -83,6 +114,7 @@
         return option;
       }));
       empty.hidden = filtered.length > 0;
+      updateScrollTail();
     }
 
     function open() {

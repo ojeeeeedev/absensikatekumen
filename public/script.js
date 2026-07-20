@@ -53,108 +53,6 @@ function updateNavButtons(listContainer, renderItemsLength) {
   }
 }
 
-const BULK_DELETE_DEAD_ZONE = 8;
-const BULK_DELETE_MAX_REVEAL = 72;
-const BULK_DELETE_THRESHOLD = 56;
-
-function setBulkDeleteAvailability(available) {
-  document.querySelectorAll('.bulk-delete-action').forEach(action => {
-    action.hidden = !available;
-  });
-}
-
-function bindHistoryBulkDelete() {
-  const list = document.getElementById('queue-list');
-  const carousel = list?.closest('.carousel-container');
-  const startAction = document.getElementById('bulk-delete-start');
-  const endAction = document.getElementById('bulk-delete-end');
-  if (!list || !carousel || !startAction || !endAction || list.dataset.bulkDeleteBound === 'true') return;
-  list.dataset.bulkDeleteBound = 'true';
-
-  let startX = null;
-  let direction = null;
-  let reveal = 0;
-  let pointerId = null;
-  let suppressClick = false;
-
-  const reset = () => {
-    list.style.removeProperty('transform');
-    list.classList.remove('bulk-delete-dragging');
-    carousel.classList.remove('bulk-delete-revealing');
-    startAction.classList.remove('active');
-    endAction.classList.remove('active');
-    startX = null;
-    direction = null;
-    reveal = 0;
-    pointerId = null;
-  };
-
-  const begin = clientX => {
-    if (startAction.hidden || endAction.hidden) return;
-    startX = clientX;
-  };
-
-  const move = (clientX, event) => {
-    if (startX === null) return;
-    const delta = clientX - startX;
-    if (!direction) {
-      if (Math.abs(delta) <= BULK_DELETE_DEAD_ZONE) return;
-      const atStart = list.scrollLeft <= 5;
-      const atEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth - 5;
-      if (delta > 0 && atStart) direction = 'start';
-      else if (delta < 0 && atEnd) direction = 'end';
-      else return;
-    }
-
-    event.preventDefault();
-    suppressClick = true;
-    reveal = Math.min(BULK_DELETE_MAX_REVEAL, Math.max(0, Math.abs(delta)));
-    const offset = direction === 'start' ? reveal : -reveal;
-    list.style.transform = `translateX(${offset}px)`;
-    list.classList.add('bulk-delete-dragging');
-    carousel.classList.add('bulk-delete-revealing');
-    startAction.classList.toggle('active', direction === 'start');
-    endAction.classList.toggle('active', direction === 'end');
-  };
-
-  const finish = event => {
-    const shouldDelete = direction && reveal >= BULK_DELETE_THRESHOLD;
-    const trigger = direction === 'start' ? startAction : endAction;
-    reset();
-    if (shouldDelete) window.openDeleteConfirm(event, trigger);
-  };
-
-  list.addEventListener('touchstart', event => begin(event.touches[0].clientX), { passive: true });
-  list.addEventListener('touchmove', event => move(event.touches[0].clientX, event), { passive: false });
-  list.addEventListener('touchend', finish);
-  list.addEventListener('touchcancel', reset);
-
-  list.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'touch') return;
-    pointerId = event.pointerId;
-    begin(event.clientX);
-  });
-  list.addEventListener('pointermove', event => {
-    if (event.pointerId !== pointerId) return;
-    move(event.clientX, event);
-    if (direction && !list.hasPointerCapture(pointerId)) list.setPointerCapture(pointerId);
-  });
-  list.addEventListener('pointerup', event => {
-    if (event.pointerId === pointerId) finish(event);
-  });
-  list.addEventListener('pointercancel', reset);
-  list.addEventListener('click', event => {
-    if (!suppressClick) return;
-    suppressClick = false;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }, true);
-
-  startAction.addEventListener('click', event => window.openDeleteConfirm(event, startAction));
-  endAction.addEventListener('click', event => window.openDeleteConfirm(event, endAction));
-}
-
-
 // Note: handleLogout, updateActivity, and checkTopicExpiry are now centralized in session.js
 
 
@@ -299,7 +197,6 @@ async function applyAppView(view, { historyMode = 'push', focus = true } = {}) {
     topicComboboxLarge?.close();
     topicComboboxActive?.close();
     window.closeStudentModal?.();
-    window.closeDeleteConfirm?.();
     await stopScanner();
   } else {
     window.closeProfileViewUI?.();
@@ -526,14 +423,6 @@ class ScanQueue {
     return true;
   }
 
-  clearCompleted() {
-    const initialLength = this.queue.length;
-    this.queue = this.queue.filter(item => item.status === 'pending' || item.status === 'processing');
-    if (this.queue.length === initialLength) return 0;
-    this.save();
-    return initialLength - this.queue.length;
-  }
-
   add(studentId, week) {
     const timestamp = Date.now();
 
@@ -737,9 +626,6 @@ class ScanQueue {
     const dotsContainer = document.getElementById('carousel-dots');
     const prevBtn = document.getElementById('carousel-prev-btn');
     const nextBtn = document.getElementById('carousel-next-btn');
-    const hasDismissibleHistory = this.queue.some(item => item.status !== 'pending' && item.status !== 'processing');
-    setBulkDeleteAvailability(hasDismissibleHistory);
-
     // Ensure progress area is always visible (V3 Spec)
     if (progressArea) progressArea.style.display = 'block';
 
@@ -1213,7 +1099,6 @@ function initializeTopicComboboxes() {
 
 function initializeApp() {
   if (!topicComboboxActive) initializeTopicComboboxes();
-  bindHistoryBulkDelete();
   scanQueue.render();
   scanQueue.process(); // Process any leftover queue from last load
 }
@@ -1381,90 +1266,3 @@ function bindStudentDrawer() {
 }
 
 bindStudentDrawer();
-
-let historyDeleteReturnFocus = null;
-
-function setHistoryContentInert(inert) {
-  const panel = document.getElementById('queue-history-panel');
-  const overlay = document.getElementById('history-confirm-overlay');
-  if (!panel || !overlay) return;
-  [...panel.children].forEach(child => {
-    if (child !== overlay) child.inert = inert;
-  });
-}
-
-window.openDeleteConfirm = function(event, trigger) {
-  if (event) event.stopPropagation();
-
-  if (typeof scanQueue !== 'undefined') {
-    const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-    const completedCount = scanQueue.queue.length - pendingCount;
-    
-    if (completedCount === 0) {
-      showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
-      return;
-    }
-  }
-
-  const overlay = document.getElementById('history-confirm-overlay');
-  if (overlay) {
-    historyDeleteReturnFocus = trigger || event?.currentTarget || document.activeElement;
-    setHistoryContentInert(true);
-    overlay.style.display = 'flex';
-    // Force a reflow to trigger transition animation
-    overlay.offsetHeight;
-    overlay.classList.add('show');
-    document.getElementById('confirm-btn-yes')?.focus({ preventScroll: true });
-  }
-};
-
-window.closeDeleteConfirm = function(event) {
-  if (event) event.stopPropagation();
-  const overlay = document.getElementById('history-confirm-overlay');
-  if (overlay) {
-    overlay.classList.remove('show');
-    setHistoryContentInert(false);
-    setTimeout(() => {
-      if (!overlay.classList.contains('show')) {
-        overlay.style.display = 'none';
-        historyDeleteReturnFocus?.focus?.({ preventScroll: true });
-        historyDeleteReturnFocus = null;
-      }
-    }, 280);
-  }
-};
-
-window.confirmDeleteHistory = function(event) {
-  if (event) event.stopPropagation();
-  
-  if (typeof scanQueue !== 'undefined') {
-    const pendingCount = scanQueue.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-    const completedCount = scanQueue.queue.length - pendingCount;
-    
-    if (completedCount === 0) {
-      showToast("Belum ada riwayat pemindaian selesai untuk dihapus", "info");
-      window.closeDeleteConfirm();
-      return;
-    }
-    
-    scanQueue.clearCompleted();
-    showToast("Riwayat pemindaian berhasil dibersihkan", "info");
-  }
-  
-  window.closeDeleteConfirm();
-};
-
-// Document click listener to close delete confirmation overlay when clicking outside
-document.addEventListener('click', (event) => {
-  const overlay = document.getElementById('history-confirm-overlay');
-  if (overlay && overlay.classList.contains('show')) {
-    if (!overlay.contains(event.target)) {
-      window.closeDeleteConfirm();
-    }
-  }
-});
-
-document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') return;
-  window.closeDeleteConfirm(event);
-});

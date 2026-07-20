@@ -17,4 +17,4 @@
 - [ ] 2026-07-16 18:43:29 WIB — Mock avatars.
 - [ ] 2026-07-16 18:43:29 WIB — Craft a better animation for the header; it currently blinks.
 - [ ] 2026-07-16 18:43:29 WIB — Fix the chevron alignment.
-- [ ] 2026-07-16 18:43:29 WIB — Add a blur effect at the end of the scroll area.
+- [x] 2026-07-16 18:43:29 WIB — Add a clean fade at the end of the scroll area.

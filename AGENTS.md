@@ -97,3 +97,8 @@ The following environment variables are required (configured in Vercel or `.env`
   - As a rule of thumb, UI animations should generally stay under `300ms`.
 - **Version Bumping:**
   - When all requested modifications for a task are complete and verified, ask the user interactively if they want to bump the package version in `package.json` (major, minor, patch, or none) before final completion. After every version bump, ask the user interactively whether to commit to the local repo or push it to the remote repo.
+
+## 7. Agent Models
+
+- Run the main orchestrator with `model="gpt-5.6-sol"` and `reasoning_effort="medium"`.
+- Run workers and subagents with `model="gpt-5.6-luna"`, `reasoning_effort="high"`, and `fork_turns="none"`.

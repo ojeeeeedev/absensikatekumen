@@ -93,7 +93,7 @@
         <div id="login-footer">
           <a href="https://wa.link/3yg0ug">Lupa password?</a>
           <span class="login-version-divider">&bull;</span>
-          <span id="login-version" class="login-version-span">v2.7.3</span>
+          <span id="login-version" class="login-version-span">v2.7.5</span>
         </div>
       </div>
 
@@ -169,19 +169,6 @@
           </div>
             <!-- Queue History List -->
             <div id="queue-history-panel">
-              <div id="history-confirm-overlay" class="confirm-overlay" style="display: none;" role="alertdialog" aria-modal="true" aria-labelledby="history-confirm-title" aria-describedby="history-confirm-description">
-                <div class="confirm-content">
-                  <div>
-                    <strong id="history-confirm-title" class="confirm-title">Hapus riwayat pemindaian?</strong>
-                    <p id="history-confirm-description" class="confirm-message">Semua QR code yang berhasil dipindai tidak akan terpengaruh oleh aksi ini</p>
-                  </div>
-                  <div class="confirm-actions">
-                    <button id="confirm-btn-no" type="button" class="confirm-btn no" onclick="closeDeleteConfirm(event)">Batal</button>
-                    <button id="confirm-btn-yes" type="button" class="confirm-btn yes" onclick="confirmDeleteHistory(event)">Hapus</button>
-                  </div>
-                </div>
-              </div>
-
               <!-- Segmented Progress Bar Area -->
               <div id="history-progress-area" class="history-progress-container">
                 <div class="progress-bar-row">
@@ -215,8 +202,6 @@
                 </button>
                 
                 <div class="carousel-container">
-                  <button id="bulk-delete-start" type="button" class="bulk-delete-action start" aria-label="Hapus seluruh riwayat dari awal">Hapus</button>
-                  <button id="bulk-delete-end" type="button" class="bulk-delete-action end" aria-label="Hapus seluruh riwayat dari akhir">Hapus</button>
                   <div id="queue-list" class="queue-list-container horizontal-carousel">
                     <!-- Dynamically populated via script -->
                   </div>
@@ -235,7 +220,7 @@
         <!-- Footer -->
         <footer class="app-footer">
           <div class="footer-text">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.7.3</a> &bull; © 2026 Tim Katekumen Dewasa
+            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.7.5</a> &bull; © 2026 Tim Katekumen Dewasa
             &bull; <a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
           </div>
         </footer>

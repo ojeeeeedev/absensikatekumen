@@ -438,7 +438,6 @@ textarea {
 button,
 .nav-item,
 .topic-selector-btn-large,
-.confirm-btn,
 .upload-confirm-btn {
   min-height: 44px;
   border-radius: var(--radius-md);
@@ -813,8 +812,6 @@ button:disabled,
 }
 
 .queue-list-container.horizontal-carousel {
-  position: relative;
-  z-index: 2;
   overflow-x: auto;
   overflow-y: hidden;
   display: flex;
@@ -830,9 +827,7 @@ button:disabled,
   width: 100%;
   background: var(--bg-glass);
   border-radius: var(--radius-md);
-  transition: transform var(--duration-normal) var(--ease-standard);
 }
-.queue-list-container.horizontal-carousel.bulk-delete-dragging { transition: none; }
 .queue-list-container.horizontal-carousel::-webkit-scrollbar {
   display: none;
 }
@@ -1435,47 +1430,8 @@ a:focus-visible,
 }
 .carousel-container {
   position: relative;
-  isolation: isolate;
   flex: 1;
   overflow: hidden;
-}
-
-.bulk-delete-action {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  z-index: 1;
-  width: 72px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: var(--destructive);
-  color: var(--destructive-foreground);
-  font: 600 0.8rem/1 Inter, sans-serif;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-standard);
-}
-
-.bulk-delete-action.start {
-  left: 0;
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-}
-
-.bulk-delete-action.end {
-  right: 0;
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-}
-
-.carousel-container.bulk-delete-revealing .bulk-delete-action.active,
-.bulk-delete-action:focus-visible {
-  z-index: 3;
-  opacity: 1;
-}
-
-.bulk-delete-action:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: -3px;
 }
 
 /* Carousel Navigation Buttons */
@@ -1619,104 +1575,6 @@ a:focus-visible,
 .legend-item.error .dot { background-color: var(--status-duplicate-text); }
 .legend-item.pending .dot { background-color: var(--accent); }
 
-/* History Delete Confirmation Overlay */
-.confirm-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 20;
-  background: color-mix(in srgb, var(--popover) 76%, transparent);
-  backdrop-filter: blur(16px) saturate(0.8);
-  -webkit-backdrop-filter: blur(16px) saturate(0.8);
-  border: 1px solid var(--border-glass);
-  border-radius: 12px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  box-sizing: border-box;
-  opacity: 0;
-  transform: translateY(8px) scale(0.98);
-  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.confirm-overlay.show {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.confirm-content {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 320px;
-  align-items: stretch;
-  gap: 16px;
-}
-
-.confirm-title {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-}
-
-.confirm-message {
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
-}
-
-.confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.confirm-btn {
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background-color var(--duration-normal) var(--ease-standard),
-              border-color var(--duration-normal) var(--ease-standard),
-              color var(--duration-normal) var(--ease-standard),
-              opacity var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out);
-  border: 1px solid transparent;
-}
-
-.confirm-btn.yes {
-  background: var(--status-duplicate-bg);
-  border: 1px solid var(--status-duplicate-border);
-  color: var(--status-duplicate-text);
-}
-
-.confirm-btn.yes:hover {
-  color: var(--destructive-foreground);
-  background: var(--status-duplicate-text);
-  border-color: var(--status-duplicate-text);
-  transform: translateY(-1px);
-}
-
-.confirm-btn.no {
-  background: var(--status-idle-bg);
-  border: 1px solid var(--status-idle-border);
-  color: var(--text-primary);
-}
-
-.confirm-btn.no:hover {
-  background: var(--bg-hover);
-}
-
-.confirm-btn:active:not(:disabled) { transform: scale(0.98); }
-
-
 /* --- PROFILE ACCORDION STYLES --- */
 .profile-selector-container {
   display: flex;
@@ -1851,6 +1709,27 @@ a:focus-visible,
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+}
+
+.scroll-tail-viewport {
+  --scroll-fade-size: 24px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.scroll-tail-viewport.has-scroll-tail {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--scroll-fade-size)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--scroll-fade-size)),
+    transparent 100%
+  );
 }
 
 .search-combobox-popover[hidden] {
@@ -2053,13 +1932,19 @@ a:focus-visible,
   justify-content: space-between;
   cursor: pointer;
   outline: none;
+  width: 100%;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  background: transparent;
 }
 
-.student-accordion-header:is(.active, .closing) {
+.student-accordion-header.active {
   position: absolute;
   top: 0;
   right: 0;
-  z-index: 1;
+  z-index: 2;
   width: 100%;
   height: 64px;
   min-height: 64px;
@@ -2069,7 +1954,7 @@ a:focus-visible,
   border-bottom: 0;
 }
 
-.student-accordion-header:is(.active, .closing)::after {
+.student-accordion-header.active::after {
   content: "";
   position: absolute;
   top: 60px;
@@ -2079,30 +1964,30 @@ a:focus-visible,
   pointer-events: none;
 }
 
-.student-accordion-header:is(.active, .closing):focus-visible {
+.student-accordion-header.active:focus-visible {
   outline-offset: -2px;
 }
 
-.student-accordion-header:is(.active, .closing):is(:hover, :focus-visible) .expand-arrow {
+.student-accordion-header.active:is(:hover, :focus-visible) .expand-arrow {
   opacity: 1;
 }
 
-.student-accordion-header:is(.active, .closing) .inactive-badge {
+.student-accordion-header.active .inactive-badge {
   display: none;
 }
 
-.student-accordion-header:is(.active, .closing) .header-left {
+.student-accordion-header.active .header-left {
   position: absolute;
   inset: 0 48px;
   justify-content: center;
   pointer-events: none;
 }
 
-.student-accordion-header:is(.active, .closing) :is(.student-thumb-frame, .student-thumb-placeholder, .student-id-text) {
+.student-accordion-header.active :is(.student-thumb-frame, .student-thumb-placeholder, .student-id-text) {
   display: none;
 }
 
-.student-accordion-header:is(.active, .closing) .student-name-text {
+.student-accordion-header.active .student-name-text {
   font-family: var(--font-serif);
   width: 100%;
   font-size: var(--expanded-name-size, 1.25rem);
@@ -2113,9 +1998,29 @@ a:focus-visible,
   white-space: nowrap;
 }
 
-.student-accordion-header:is(.active, .closing) :is(.student-meta, .student-name-text-wrapper) {
+.student-accordion-header.active :is(.student-meta, .student-name-text-wrapper) {
   min-width: 0;
   max-width: 100%;
+}
+
+.student-accordion-header.closing {
+  position: static;
+  top: auto;
+  right: auto;
+  z-index: auto;
+  width: 100%;
+  height: auto;
+  min-height: 64px;
+  padding: 12px 16px;
+  justify-content: space-between;
+  background: transparent;
+  border-bottom: 0;
+  margin-bottom: calc(-1 * var(--closing-header-height, 0px));
+  transition: margin-bottom 290ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.student-accordion-header.closing::after {
+  display: none;
 }
 
 .header-left {
@@ -2135,6 +2040,7 @@ a:focus-visible,
 .student-thumb {
   width: 40px;
   height: 40px;
+  aspect-ratio: 1 / 1;
   border-radius: var(--radius-sm);
   object-fit: cover;
   border: 2px solid var(--border-glass);
@@ -2153,12 +2059,14 @@ a:focus-visible,
 .student-thumb-frame {
   width: 40px;
   height: 40px;
+  aspect-ratio: 1 / 1;
   border-radius: var(--radius-sm);
 }
 
 .student-photo-large-frame {
   width: 120px;
   height: 150px;
+  aspect-ratio: 4 / 5;
   border-radius: 12px;
   box-shadow: var(--shadow-md);
   cursor: pointer;
@@ -2262,28 +2170,41 @@ a:focus-visible,
 .expand-arrow {
   color: var(--text-primary);
   opacity: 0.7;
-  transition: transform 220ms var(--ease-standard);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.student-accordion-header.closing .expand-arrow {
+  transition: transform 290ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .student-accordion-header.active .expand-arrow {
   transform: rotate(180deg);
-  transition: transform 180ms var(--ease-out);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .student-accordion-body {
   display: grid;
   grid-template-rows: 0fr;
   background: var(--bg-hover);
-  overflow: hidden;
   visibility: hidden;
   border-top: 0px solid transparent;
+  transition: grid-template-rows 290ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0ms linear 290ms;
 }
 
-.student-accordion-body:is(.expanded, .closing) {
+.student-accordion-body.expanded {
   grid-template-rows: 1fr;
   visibility: visible;
   background: linear-gradient(to bottom, transparent 60px, var(--bg-hover) 60px);
   border-top: 0;
+  transition: grid-template-rows 420ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0ms linear;
+}
+
+.student-accordion-body.closing {
+  grid-template-rows: 0fr;
+  visibility: visible;
+  background: linear-gradient(to bottom, transparent 60px, var(--bg-hover) 60px);
+  border-top: 0;
+  transition: grid-template-rows 290ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0ms linear 290ms;
 }
 
 .student-accordion-item.skip-transition .student-accordion-body,
@@ -2294,27 +2215,28 @@ a:focus-visible,
 
 .student-accordion-inner {
   min-height: 0;
-  overflow: hidden;
-  padding: 0 20px;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 220ms var(--ease-standard), transform 220ms var(--ease-standard);
-}
-
-.student-accordion-body:is(.expanded, .closing) .student-accordion-inner {
   padding: 72px 20px 20px;
+  opacity: 0;
+  transform: translateY(-14px);
+  transform-origin: top;
+  transition: opacity 290ms cubic-bezier(0.4, 0, 0.2, 1), transform 290ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .student-accordion-body.expanded .student-accordion-inner {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1), transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .student-accordion-body.closing .student-accordion-inner {
   opacity: 0;
-  transform: translateY(-24px);
-  transition: opacity 160ms var(--ease-out), transform 220ms var(--ease-out);
+  transform: translateY(-14px);
+  transition: opacity 290ms cubic-bezier(0.4, 0, 0.2, 1), transform 290ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.student-accordion-clip {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .student-detail-card {
@@ -2328,6 +2250,7 @@ a:focus-visible,
 .student-photo-large {
   width: 120px;
   height: 150px;
+  aspect-ratio: 4 / 5;
   border-radius: 12px;
   object-fit: cover;
   border: 2px solid var(--border-glass);
@@ -2860,7 +2783,17 @@ body[data-active-view="profile"] .nav-tabs::before {
 #profile-view .empty-state { flex: 1 1 auto; }
 
 #profile-view .students-list-container {
-  padding: 0 1.25rem calc(1.25rem + var(--profile-scroll-slack, 0px)) 1.25rem;
+  padding: 0 1.25rem 1.25rem 1.25rem;
+}
+
+#profile-view .students-list-container.has-profile-focus-tail::after {
+  content: "";
+  display: block;
+  flex: 0 0 var(--profile-scroll-slack, 0px);
+  height: var(--profile-scroll-slack, 0px);
+  min-height: var(--profile-scroll-slack, 0px);
+  margin-bottom: var(--profile-scroll-slack, 0px);
+  pointer-events: none;
 }
 
 .glass-container.state-profile:not(.profile-expanded) #students-list {
@@ -3168,6 +3101,15 @@ body[data-active-view="profile"] .nav-tabs::before {
 
 
 @media (prefers-reduced-motion: reduce) {
+  .student-accordion-body,
+  .student-accordion-body:is(.expanded, .closing),
+  .student-accordion-inner,
+  .student-accordion-body.expanded .student-accordion-inner,
+  .student-accordion-body.closing .student-accordion-inner,
+  .student-accordion-header .expand-arrow {
+    transition: none !important;
+  }
+
   *,
   *::before,
   *::after {
@@ -3181,20 +3123,17 @@ body[data-active-view="profile"] .nav-tabs::before {
   .upload-preview-sheet,
   .student-photo-frame :is(.student-thumb, .student-photo-large),
   #login-btn,
-  .confirm-btn,
   .upload-confirm-btn {
     transition: opacity var(--duration-fast) var(--ease-out) !important;
   }
 
   .upload-preview-sheet,
   #login-btn:active:not(:disabled),
-  .confirm-btn:active:not(:disabled),
   .upload-confirm-btn:active:not(:disabled) {
     transform: none !important;
   }
 
   #login-btn:active:not(:disabled),
-  .confirm-btn:active:not(:disabled),
   .upload-confirm-btn:active:not(:disabled) {
     opacity: 0.92;
   }
