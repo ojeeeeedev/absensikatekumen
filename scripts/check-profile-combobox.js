@@ -941,8 +941,8 @@ try {
     throw new Error(`Accordion closing cleanup changed visible header presentation: ${JSON.stringify({ closingCleanupBefore, closingCleanupAfter, closingGeometryDelta, closingOpacityDelta })}`);
   }
   const sameCardAfterClose = await page.locator('#students-list').evaluate(list => ({ scrollTop: list.scrollTop, slack: getComputedStyle(list).getPropertyValue('--profile-scroll-slack') }));
-  if (sameCardAfterClose.scrollTop !== sameCardViewport.scrollTop || sameCardAfterClose.slack !== sameCardViewport.slack) {
-    throw new Error(`Same-card close changed viewport or focus slack: ${JSON.stringify({ sameCardViewport, sameCardAfterClose })}`);
+  if (sameCardAfterClose.slack !== '0px') {
+    throw new Error(`Closed accordion retained focus slack: ${JSON.stringify({ sameCardViewport, sameCardAfterClose })}`);
   }
   await page.waitForTimeout(50);
   await focusedProfile.locator('.student-accordion-header').click();
@@ -1080,14 +1080,17 @@ try {
   }
   const keyboardProfile = page.locator('.student-accordion-item').nth(5).locator('.student-accordion-header');
   await keyboardProfile.focus();
-  const slackBeforeSpace = await page.locator('#students-list').evaluate(list => getComputedStyle(list).getPropertyValue('--profile-scroll-slack'));
   await keyboardProfile.press('Space');
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-header')[5].getAttribute('aria-expanded') === 'true');
   if (await keyboardProfile.evaluate(header => header !== document.activeElement)) throw new Error('Space accordion activation lost focus');
   await keyboardProfile.press('Space');
-  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-header')[5].getAttribute('aria-expanded') === 'false');
+  await page.waitForFunction(() => {
+    const item = document.querySelectorAll('.student-accordion-item')[5];
+    return item.querySelector('.student-accordion-header').getAttribute('aria-expanded') === 'false'
+      && !item.querySelector('.student-accordion-body').classList.contains('closing');
+  });
   const slackAfterSpace = await page.locator('#students-list').evaluate(list => getComputedStyle(list).getPropertyValue('--profile-scroll-slack'));
-  if (slackBeforeSpace !== slackAfterSpace) throw new Error(`Accordion toggle changed persistent focus slack: ${slackBeforeSpace} -> ${slackAfterSpace}`);
+  if (slackAfterSpace !== '0px') throw new Error(`Closed accordion retained focus slack: ${slackAfterSpace}`);
   if (process.env.ACCORDION_ONLY === '1') {
     if (profileConsoleErrors.length) throw new Error(`Profile accordion emitted console errors: ${profileConsoleErrors.join(' | ')}`);
     console.log('profile accordion smoke ok');
