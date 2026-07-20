@@ -399,6 +399,9 @@ function renderStudents(students) {
               <span class="detail-value detail-id-value">${escapeHTML(student.studentId)}</span>
             </div>
           </div>
+          <a class="profile-reach-link" href="/api/reach?studentId=${encodeURIComponent(student.studentId)}" target="_blank" rel="noopener noreferrer" aria-label="Chat dengan ${escapeHTML(student.name)} via WhatsApp">
+            <span class="sr-only">Chat via WhatsApp</span>
+          </a>
           </div>
         </div>
       </div>

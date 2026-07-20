@@ -21,6 +21,10 @@ function doPost(e) {
       return buildResponse_({ status: "ok", students: students });
     }
 
+    if (data.action === "getStudentContact") {
+      return getStudentContact_(SpreadsheetApp.getActiveSpreadsheet(), data.studentId);
+    }
+
     // 2. Extract Data
     const rawId = data.studentId || "";
     const weekRaw = data.week;
@@ -195,6 +199,27 @@ function doGet(e) {
 function buildResponse_(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getStudentContact_(ss, studentId) {
+  const sheet = ss.getSheetByName("Data Siswa");
+  if (!sheet) return buildResponse_({ status: "error", message: "Sheet 'Data Siswa' not found" });
+
+  const rows = sheet.getDataRange().getValues();
+  const phoneColumn = rows[0] ? rows[0].indexOf("No.HP") : -1;
+  if (phoneColumn < 0) return buildResponse_({ status: "error", message: "Kolom 'No.HP' tidak ditemukan" });
+
+  const normalizedId = String(studentId || "").trim().toLowerCase();
+  if (!normalizedId) return buildResponse_({ status: "not_found" });
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][11] || "").trim().toLowerCase() !== normalizedId) continue;
+    const phone = String(rows[i][phoneColumn] || "").trim();
+    return phone
+      ? buildResponse_({ status: "ok", phone: phone })
+      : buildResponse_({ status: "missing_contact" });
+  }
+
+  return buildResponse_({ status: "not_found" });
 }
 
 /**

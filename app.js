@@ -123,6 +123,17 @@ app.get('/api/students', async (req, res) => {
   }
 });
 
+// Route to resolve one authenticated student contact and hand off to WhatsApp
+app.get('/api/reach', async (req, res) => {
+  try {
+    const handler = (await import('./api/reach.js')).default;
+    await handler(req, res);
+  } catch (error) {
+    console.error("Error running api/reach:", error);
+    res.status(500).json({ status: "error", message: "Internal Server Error" });
+  }
+});
+
 // Route to handle retrieving class list
 app.get('/api/classes', async (req, res) => {
   try {

@@ -86,6 +86,7 @@ The following environment variables are required (configured in Vercel or `.env`
 - **Security:**
   - All sensitive operations (Attendance, Dashboard) must be protected by JWT verification.
   - Supabase images must be served through the authenticated same-origin `/api/photo` proxy; storage buckets remain private.
+  - `/api/reach` is the intentionally non-semantic authenticated WhatsApp handoff. Do not rename it to a contact-specific route or expose phone numbers through roster payloads such as `/api/students`.
 - **Optimization:**
   - **Caching:** GAS logic uses `CacheService` (6h TTL) to minimize slow Sheet read operations.
   - **Payloads:** Keep the JSON payloads between Frontend and GAS lean.
