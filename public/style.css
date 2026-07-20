@@ -177,6 +177,9 @@
 }
 
 re-icon {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
   flex-shrink: 0;
 }
 
@@ -401,8 +404,8 @@ body,
 body {
   width: 100%;
   height: 100vh;
-  height: calc(var(--vh, 1vh) * 100);
   height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
   background-color: var(--bg-body);
   color: var(--text-primary);
   font-family: var(--font-sans);
@@ -413,6 +416,7 @@ body {
   padding: max(var(--space-4), env(safe-area-inset-top)) 0 max(var(--space-4), env(safe-area-inset-bottom));
   overflow: hidden;
   position: relative;
+  top: var(--viewport-offset, 0px);
 }
 
 button,
@@ -434,17 +438,13 @@ textarea {
 button,
 .nav-item,
 .topic-selector-btn-large,
-.confirm-btn,
-.upload-photo-btn,
-.upload-cancel-btn,
 .upload-confirm-btn {
   min-height: 44px;
   border-radius: var(--radius-md);
 }
 
 button:disabled,
-.upload-confirm-btn:disabled,
-.upload-cancel-btn:disabled {
+.upload-confirm-btn:disabled {
   cursor: not-allowed;
   color: var(--slate-9) !important;
   background: var(--slate-3) !important;
@@ -507,6 +507,8 @@ button:disabled,
 
 #app-container.state-auth {
   margin-block: auto;
+  max-height: calc(var(--vh, 1vh) * 100 - 2 * var(--space-4));
+  overflow-y: auto;
 }
 
 .app-section {
@@ -810,8 +812,6 @@ button:disabled,
 }
 
 .queue-list-container.horizontal-carousel {
-  position: relative;
-  z-index: 2;
   overflow-x: auto;
   overflow-y: hidden;
   display: flex;
@@ -827,9 +827,7 @@ button:disabled,
   width: 100%;
   background: var(--bg-glass);
   border-radius: var(--radius-md);
-  transition: transform var(--duration-normal) var(--ease-standard);
 }
-.queue-list-container.horizontal-carousel.bulk-delete-dragging { transition: none; }
 .queue-list-container.horizontal-carousel::-webkit-scrollbar {
   display: none;
 }
@@ -1432,47 +1430,8 @@ a:focus-visible,
 }
 .carousel-container {
   position: relative;
-  isolation: isolate;
   flex: 1;
   overflow: hidden;
-}
-
-.bulk-delete-action {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  z-index: 1;
-  width: 72px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: var(--destructive);
-  color: var(--destructive-foreground);
-  font: 600 0.8rem/1 Inter, sans-serif;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-standard);
-}
-
-.bulk-delete-action.start {
-  left: 0;
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-}
-
-.bulk-delete-action.end {
-  right: 0;
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-}
-
-.carousel-container.bulk-delete-revealing .bulk-delete-action.active,
-.bulk-delete-action:focus-visible {
-  z-index: 3;
-  opacity: 1;
-}
-
-.bulk-delete-action:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: -3px;
 }
 
 /* Carousel Navigation Buttons */
@@ -1616,104 +1575,6 @@ a:focus-visible,
 .legend-item.error .dot { background-color: var(--status-duplicate-text); }
 .legend-item.pending .dot { background-color: var(--accent); }
 
-/* History Delete Confirmation Overlay */
-.confirm-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 20;
-  background: color-mix(in srgb, var(--popover) 76%, transparent);
-  backdrop-filter: blur(16px) saturate(0.8);
-  -webkit-backdrop-filter: blur(16px) saturate(0.8);
-  border: 1px solid var(--border-glass);
-  border-radius: 12px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  box-sizing: border-box;
-  opacity: 0;
-  transform: translateY(8px) scale(0.98);
-  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.confirm-overlay.show {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.confirm-content {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 320px;
-  align-items: stretch;
-  gap: 16px;
-}
-
-.confirm-title {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-}
-
-.confirm-message {
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
-}
-
-.confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.confirm-btn {
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background-color var(--duration-normal) var(--ease-standard),
-              border-color var(--duration-normal) var(--ease-standard),
-              color var(--duration-normal) var(--ease-standard),
-              opacity var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out);
-  border: 1px solid transparent;
-}
-
-.confirm-btn.yes {
-  background: var(--status-duplicate-bg);
-  border: 1px solid var(--status-duplicate-border);
-  color: var(--status-duplicate-text);
-}
-
-.confirm-btn.yes:hover {
-  color: var(--destructive-foreground);
-  background: var(--status-duplicate-text);
-  border-color: var(--status-duplicate-text);
-  transform: translateY(-1px);
-}
-
-.confirm-btn.no {
-  background: var(--status-idle-bg);
-  border: 1px solid var(--status-idle-border);
-  color: var(--text-primary);
-}
-
-.confirm-btn.no:hover {
-  background: var(--bg-hover);
-}
-
-.confirm-btn:active:not(:disabled) { transform: scale(0.98); }
-
-
 /* --- PROFILE ACCORDION STYLES --- */
 .profile-selector-container {
   display: flex;
@@ -1819,14 +1680,10 @@ a:focus-visible,
 }
 
 .search-combobox-arrow {
-  display: block;
-  width: 10px;
-  height: 10px;
+  width: 18px;
+  height: 18px;
   margin-right: 4px;
   color: var(--text-secondary);
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(45deg);
   transition: color var(--duration-normal) var(--ease-standard),
               transform var(--duration-normal) var(--ease-standard);
 }
@@ -1837,7 +1694,7 @@ a:focus-visible,
 }
 
 .search-combobox-trigger[aria-expanded="true"] .search-combobox-arrow {
-  transform: rotate(-135deg);
+  transform: rotate(180deg);
 }
 
 .search-combobox-popover {
@@ -1852,6 +1709,27 @@ a:focus-visible,
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+}
+
+.scroll-tail-viewport {
+  --scroll-fade-size: 24px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.scroll-tail-viewport.has-scroll-tail {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--scroll-fade-size)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--scroll-fade-size)),
+    transparent 100%
+  );
 }
 
 .search-combobox-popover[hidden] {
@@ -2054,42 +1932,94 @@ a:focus-visible,
   justify-content: space-between;
   cursor: pointer;
   outline: none;
+  width: 100%;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  background: transparent;
 }
 
-.student-accordion-header:is(.active, .closing) {
+.student-accordion-header.active {
   position: absolute;
   top: 0;
   right: 0;
-  z-index: 1;
+  z-index: 2;
   width: 100%;
-  height: 44px;
-  min-height: 44px;
+  height: 64px;
+  min-height: 64px;
   padding: 0 16px;
   justify-content: flex-end;
   background: transparent;
   border-bottom: 0;
 }
 
-.student-accordion-header:is(.active, .closing)::after {
+.student-accordion-header.active::after {
   content: "";
   position: absolute;
-  top: 40px;
+  top: 60px;
   right: 0;
   left: 0;
   border-top: 1px solid var(--border-glass);
   pointer-events: none;
 }
 
-.student-accordion-header:is(.active, .closing):focus-visible {
+.student-accordion-header.active:focus-visible {
   outline-offset: -2px;
 }
 
-.student-accordion-header:is(.active, .closing):is(:hover, :focus-visible) .expand-arrow {
+.student-accordion-header.active:is(:hover, :focus-visible) .expand-arrow {
   opacity: 1;
 }
 
-.student-accordion-header:is(.active, .closing) .header-left,
-.student-accordion-header:is(.active, .closing) .inactive-badge {
+.student-accordion-header.active .inactive-badge {
+  display: none;
+}
+
+.student-accordion-header.active .header-left {
+  position: absolute;
+  inset: 0 48px;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.student-accordion-header.active :is(.student-thumb-frame, .student-thumb-placeholder, .student-id-text) {
+  display: none;
+}
+
+.student-accordion-header.active .student-name-text {
+  font-family: var(--font-serif);
+  width: 100%;
+  font-size: var(--expanded-name-size, 1.25rem);
+  font-weight: 400;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-accordion-header.active :is(.student-meta, .student-name-text-wrapper) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.student-accordion-header.closing {
+  position: static;
+  top: auto;
+  right: auto;
+  z-index: auto;
+  width: 100%;
+  height: auto;
+  min-height: 64px;
+  padding: 12px 16px;
+  justify-content: space-between;
+  background: transparent;
+  border-bottom: 0;
+  margin-bottom: calc(-1 * var(--closing-header-height, 0px));
+  transition: margin-bottom 290ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.student-accordion-header.closing::after {
   display: none;
 }
 
@@ -2110,6 +2040,7 @@ a:focus-visible,
 .student-thumb {
   width: 40px;
   height: 40px;
+  aspect-ratio: 1 / 1;
   border-radius: var(--radius-sm);
   object-fit: cover;
   border: 2px solid var(--border-glass);
@@ -2128,15 +2059,58 @@ a:focus-visible,
 .student-thumb-frame {
   width: 40px;
   height: 40px;
+  aspect-ratio: 1 / 1;
   border-radius: var(--radius-sm);
 }
 
 .student-photo-large-frame {
   width: 120px;
   height: 150px;
-  margin-bottom: 16px;
+  aspect-ratio: 4 / 5;
   border-radius: 12px;
   box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+
+.photo-replace-menu {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: white;
+  border-radius: inherit;
+  background: var(--overlay-sheet);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms var(--ease-out), background-color 160ms var(--ease-standard);
+}
+
+.photo-replace-menu re-icon {
+  font-size: 2rem;
+}
+
+.photo-replace-menu span {
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.student-photo-large-frame.is-replace-open .photo-replace-menu {
+  opacity: 1;
+  pointer-events: none;
+}
+
+.student-photo-large-frame.is-dragover .photo-replace-menu {
+  background: color-mix(in srgb, var(--accent) 72%, transparent);
+}
+
+.student-photo-large-frame:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
 }
 
 .profile-photo-spinner {
@@ -2196,28 +2170,41 @@ a:focus-visible,
 .expand-arrow {
   color: var(--text-primary);
   opacity: 0.7;
-  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.student-accordion-header.closing .expand-arrow {
+  transition: transform 290ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .student-accordion-header.active .expand-arrow {
   transform: rotate(180deg);
-  transition-duration: 180ms;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .student-accordion-body {
   display: grid;
   grid-template-rows: 0fr;
   background: var(--bg-hover);
-  overflow: hidden;
   visibility: hidden;
   border-top: 0px solid transparent;
+  transition: grid-template-rows 290ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0ms linear 290ms;
 }
 
-.student-accordion-body:is(.expanded, .closing) {
+.student-accordion-body.expanded {
   grid-template-rows: 1fr;
   visibility: visible;
-  background: linear-gradient(to bottom, transparent 40px, var(--bg-hover) 40px);
+  background: linear-gradient(to bottom, transparent 60px, var(--bg-hover) 60px);
   border-top: 0;
+  transition: grid-template-rows 420ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0ms linear;
+}
+
+.student-accordion-body.closing {
+  grid-template-rows: 0fr;
+  visibility: visible;
+  background: linear-gradient(to bottom, transparent 60px, var(--bg-hover) 60px);
+  border-top: 0;
+  transition: grid-template-rows 290ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0ms linear 290ms;
 }
 
 .student-accordion-item.skip-transition .student-accordion-body,
@@ -2228,57 +2215,46 @@ a:focus-visible,
 
 .student-accordion-inner {
   min-height: 0;
-  overflow: hidden;
-  padding: 0 20px;
+  padding: 72px 20px 20px;
   opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1), transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.student-accordion-body:is(.expanded, .closing) .student-accordion-inner {
-  padding: 52px 20px 20px;
+  transform: translateY(-14px);
+  transform-origin: top;
+  transition: opacity 290ms cubic-bezier(0.4, 0, 0.2, 1), transform 290ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .student-accordion-body.expanded .student-accordion-inner {
   opacity: 1;
   transform: translateY(0);
-  transition-duration: 180ms;
+  transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1), transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.student-accordion-body.closing .student-accordion-inner {
+  opacity: 0;
+  transform: translateY(-14px);
+  transition: opacity 290ms cubic-bezier(0.4, 0, 0.2, 1), transform 290ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.student-accordion-clip {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .student-detail-card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 16px;
   width: 100%;
 }
 
 .student-photo-large {
   width: 120px;
   height: 150px;
+  aspect-ratio: 4 / 5;
   border-radius: 12px;
   object-fit: cover;
   border: 2px solid var(--border-glass);
   box-shadow: var(--shadow-md);
-  margin-bottom: 16px;
-}
-
-.detail-name {
-  font-family: var(--font-serif);
-  font-size: calc(1.25rem + 4px);
-  font-style: italic;
-  font-weight: 400;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-  text-align: center;
-}
-
-.detail-id {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  color: var(--accent);
-  font-weight: 500;
-  margin-bottom: 16px;
-  text-align: center;
 }
 
 .detail-info-grid {
@@ -2286,7 +2262,7 @@ a:focus-visible,
   border-top: 1px solid var(--border-glass);
   padding-top: 16px;
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: 82px minmax(0, 1fr);
   align-items: center;
   gap: 12px 8px;
 }
@@ -2296,20 +2272,24 @@ a:focus-visible,
 }
 
 .detail-label {
-  font-size: 0.7rem;
+  display: grid;
+  grid-template-columns: 1.1rem 1.8rem 0.4rem;
+  align-items: center;
+  column-gap: 5px;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  opacity: 0.6;
-  color: var(--text-primary);
+  color: var(--slate-11);
   margin-bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .detail-icon-inline {
-  font-size: 0.9rem !important;
-  opacity: 0.8;
+  font-size: 1.05rem !important;
+  color: var(--slate-11);
+}
+
+.detail-colon {
+  text-align: center;
 }
 
 .detail-value {
@@ -2318,6 +2298,10 @@ a:focus-visible,
   font-weight: 500;
   color: var(--text-primary);
   overflow-wrap: anywhere;
+}
+
+.detail-id-value {
+  font-family: var(--font-mono);
 }
 
 #students-loader {
@@ -2799,7 +2783,17 @@ body[data-active-view="profile"] .nav-tabs::before {
 #profile-view .empty-state { flex: 1 1 auto; }
 
 #profile-view .students-list-container {
-  padding: 0 1.25rem calc(1.25rem + var(--profile-scroll-slack, 0px)) 1.25rem;
+  padding: 0 1.25rem 1.25rem 1.25rem;
+}
+
+#profile-view .students-list-container.has-profile-focus-tail::after {
+  content: "";
+  display: block;
+  flex: 0 0 var(--profile-scroll-slack, 0px);
+  height: var(--profile-scroll-slack, 0px);
+  min-height: var(--profile-scroll-slack, 0px);
+  margin-bottom: var(--profile-scroll-slack, 0px);
+  pointer-events: none;
 }
 
 .glass-container.state-profile:not(.profile-expanded) #students-list {
@@ -2813,48 +2807,6 @@ body[data-active-view="profile"] .nav-tabs::before {
   flex: 1;
   min-height: 40vh;
   padding: 30px 1.25rem;
-}
-
-/* =========================================
-   PHOTO UPLOAD — BUTTON & CONTROLS
-   ========================================= */
-.upload-photo-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--accent);
-  background: transparent;
-  color: var(--accent);
-  font-family: var(--font-sans);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: 0.2px;
-}
-
-.upload-photo-btn re-icon {
-  font-size: 1rem !important;
-}
-
-.upload-photo-btn:hover {
-  background: var(--accent);
-  color: var(--accent-foreground);
-  box-shadow: 0 4px 12px var(--accent-glow);
-  transform: translateY(-1px);
-}
-
-.upload-photo-btn:active {
-  transform: translateY(0);
-}
-
-.upload-photo-btn:disabled {
-  opacity: 1;
-  cursor: not-allowed;
-  transform: none;
 }
 
 /* =========================================
@@ -2912,13 +2864,15 @@ body[data-active-view="profile"] .nav-tabs::before {
 }
 
 .upload-preview-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
-  justify-content: space-between;
   margin-bottom: 1.25rem;
 }
 
 .upload-preview-title {
+  grid-column: 2;
+  text-align: center;
   font-family: var(--font-serif);
   font-size: calc(1rem + 4px);
   font-style: italic;
@@ -2927,11 +2881,15 @@ body[data-active-view="profile"] .nav-tabs::before {
 }
 
 .upload-preview-close {
-  background: none;
+  grid-column: 3;
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+  background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--text-secondary);
-  padding: 4px;
+  color: var(--destructive);
+  padding: 0;
   border-radius: 50%;
   transition: all 0.2s ease;
   display: flex;
@@ -2939,8 +2897,8 @@ body[data-active-view="profile"] .nav-tabs::before {
 }
 
 .upload-preview-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: color-mix(in srgb, var(--destructive) 14%, transparent);
+  color: var(--destructive-foreground);
 }
 
 .upload-preview-body {
@@ -3041,36 +2999,12 @@ body[data-active-view="profile"] .nav-tabs::before {
 
 /* Action buttons row */
 .upload-actions {
-  display: flex;
-  gap: 10px;
   width: 100%;
   margin-top: 4px;
 }
 
-.upload-cancel-btn {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border-glass);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color var(--duration-normal) var(--ease-standard),
-              color var(--duration-normal) var(--ease-standard),
-              opacity var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out);
-}
-
-.upload-cancel-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
 .upload-confirm-btn {
-  flex: 2;
+  width: 100%;
   padding: 10px;
   border-radius: 10px;
   border: none;
@@ -3097,7 +3031,6 @@ body[data-active-view="profile"] .nav-tabs::before {
   box-shadow: 0 6px 16px var(--accent-glow);
 }
 
-.upload-cancel-btn:active:not(:disabled),
 .upload-confirm-btn:active:not(:disabled) {
   transform: scale(0.98);
 }
@@ -3168,6 +3101,15 @@ body[data-active-view="profile"] .nav-tabs::before {
 
 
 @media (prefers-reduced-motion: reduce) {
+  .student-accordion-body,
+  .student-accordion-body:is(.expanded, .closing),
+  .student-accordion-inner,
+  .student-accordion-body.expanded .student-accordion-inner,
+  .student-accordion-body.closing .student-accordion-inner,
+  .student-accordion-header .expand-arrow {
+    transition: none !important;
+  }
+
   *,
   *::before,
   *::after {
@@ -3181,23 +3123,17 @@ body[data-active-view="profile"] .nav-tabs::before {
   .upload-preview-sheet,
   .student-photo-frame :is(.student-thumb, .student-photo-large),
   #login-btn,
-  .confirm-btn,
-  .upload-cancel-btn,
   .upload-confirm-btn {
     transition: opacity var(--duration-fast) var(--ease-out) !important;
   }
 
   .upload-preview-sheet,
   #login-btn:active:not(:disabled),
-  .confirm-btn:active:not(:disabled),
-  .upload-cancel-btn:active:not(:disabled),
   .upload-confirm-btn:active:not(:disabled) {
     transform: none !important;
   }
 
   #login-btn:active:not(:disabled),
-  .confirm-btn:active:not(:disabled),
-  .upload-cancel-btn:active:not(:disabled),
   .upload-confirm-btn:active:not(:disabled) {
     opacity: 0.92;
   }

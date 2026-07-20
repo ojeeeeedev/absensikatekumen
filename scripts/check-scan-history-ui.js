@@ -148,6 +148,18 @@ try {
   }
   if (await page.locator('.history-dismiss-btn').count() !== 3) throw new Error('Pending history received a dismiss button');
 
+  const removedBulkDelete = await page.evaluate(() => ({
+    rails: document.querySelectorAll('.bulk-delete-action').length,
+    overlay: Boolean(document.getElementById('history-confirm-overlay')),
+    globals: ['openDeleteConfirm', 'closeDeleteConfirm', 'confirmDeleteHistory']
+      .filter(name => typeof window[name] === 'function'),
+    clearCompleted: typeof scanQueue.clearCompleted,
+    transform: getComputedStyle(document.getElementById('queue-list')).transform,
+  }));
+  if (removedBulkDelete.rails || removedBulkDelete.overlay || removedBulkDelete.globals.length || removedBulkDelete.clearCompleted !== 'undefined' || removedBulkDelete.transform !== 'none') {
+    throw new Error(`Bulk-delete traces remain: ${JSON.stringify(removedBulkDelete)}`);
+  }
+
   const dismissGeometry = await page.locator('.history-dismiss-btn').first().evaluate(button => {
     const card = button.closest('.queue-row').getBoundingClientRect();
     const hitTarget = button.getBoundingClientRect();
@@ -260,6 +272,7 @@ try {
     throw new Error(`Carousel indicators are not compact: ${JSON.stringify(dotSpacing)}`);
   }
   await page.setViewportSize({ width: 390, height: 664 });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const shortViewportLayout = await page.evaluate(() => {
     const rect = selector => document.querySelector(selector).getBoundingClientRect();
     const reader = rect('#reader-container');
@@ -282,6 +295,7 @@ try {
     throw new Error(`Short scan layout does not reclaim the footer gap: ${JSON.stringify(shortViewportLayout)}`);
   }
   await page.setViewportSize({ width: 390, height: 700 });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const tallShortLayout = await page.evaluate(() => {
     const rect = selector => document.querySelector(selector).getBoundingClientRect();
     const reader = rect('#reader-container');
@@ -423,89 +437,6 @@ try {
   await page.waitForTimeout(1000);
   if (await page.locator('.toast').count() !== 0) throw new Error('Toast exceeded the hard five-second limit');
 
-  const list = page.locator('#queue-list');
-  await list.evaluate(element => element.scrollTo({ left: 0, behavior: 'instant' }));
-  const listBox = await list.boundingBox();
-  await drag(page, listBox.x + 24, listBox.x + 54, listBox.y + listBox.height / 2);
-  if (await page.locator('#history-confirm-overlay').getAttribute('class').then(value => value.includes('show'))) throw new Error('Short edge drag opened confirmation');
-  await page.waitForTimeout(250);
-  await drag(page, listBox.x + 24, listBox.x + 94, listBox.y + listBox.height / 2);
-  const overlay = page.locator('#history-confirm-overlay');
-  const startGestureState = await page.evaluate(() => ({
-    overlayClass: document.getElementById('history-confirm-overlay').className,
-    actionHidden: document.getElementById('bulk-delete-start').hidden,
-    scrollLeft: document.getElementById('queue-list').scrollLeft,
-    clientWidth: document.getElementById('queue-list').clientWidth,
-    scrollWidth: document.getElementById('queue-list').scrollWidth,
-  }));
-  if (!startGestureState.overlayClass.includes('show')) throw new Error(`Start edge gesture failed: ${JSON.stringify(startGestureState)}`);
-  await overlay.waitFor({ state: 'visible' });
-  const confirmationText = (await overlay.textContent()).replace(/\s+/g, ' ').trim();
-  if (!confirmationText.includes('Hapus riwayat pemindaian? Semua QR code yang berhasil dipindai tidak akan terpengaruh oleh aksi ini')) {
-    throw new Error('Bulk-delete confirmation copy is incorrect');
-  }
-  const confirmationCancel = page.getByRole('button', { name: 'Batal' });
-  const confirmationMotion = await confirmationCancel.evaluate(button => {
-    const style = getComputedStyle(button);
-    return { properties: style.transitionProperty.split(',').map(value => value.trim()), duration: style.transitionDuration };
-  });
-  if (!confirmationMotion.properties.includes('transform') || confirmationMotion.properties.includes('all') || !confirmationMotion.duration.includes('0.12s')) {
-    throw new Error(`Confirmation press transition is incorrect: ${JSON.stringify(confirmationMotion)}`);
-  }
-  await confirmationCancel.evaluate(button => { button.disabled = true; });
-  await confirmationCancel.hover();
-  await page.mouse.down();
-  await page.waitForTimeout(80);
-  const disabledState = await confirmationCancel.evaluate(button => {
-    const style = getComputedStyle(button);
-    const resolve = value => {
-      const probe = document.createElement('span');
-      probe.style.color = value;
-      document.body.append(probe);
-      const color = getComputedStyle(probe).color;
-      probe.remove();
-      return color;
-    };
-    return {
-      transform: style.transform,
-      background: style.backgroundColor,
-      border: style.borderTopColor,
-      text: style.color,
-      opacity: style.opacity,
-      expected: {
-        background: resolve('var(--slate-3)'),
-        border: resolve('var(--slate-6)'),
-        text: resolve('var(--slate-9)'),
-      },
-    };
-  });
-  await page.mouse.up();
-  if (disabledState.transform !== 'none' || disabledState.background !== disabledState.expected.background || disabledState.border !== disabledState.expected.border || disabledState.text !== disabledState.expected.text || disabledState.opacity !== '1') {
-    throw new Error(`Disabled confirmation colors are incorrect: ${JSON.stringify(disabledState)}`);
-  }
-  await confirmationCancel.evaluate(button => { button.disabled = false; });
-  await confirmationCancel.hover();
-  await page.mouse.down();
-  await page.waitForTimeout(80);
-  const confirmationPressed = await confirmationCancel.evaluate(button => getComputedStyle(button).transform);
-  await page.mouse.up();
-  if (Number(confirmationPressed.match(/^matrix\(([^,]+)/)?.[1] ?? 1) >= 1) throw new Error(`Confirmation press feedback is missing: ${confirmationPressed}`);
-  await page.waitForTimeout(300);
-  if (await page.evaluate(() => document.activeElement?.id) !== 'bulk-delete-start') throw new Error('Confirmation focus was not restored');
-  await page.keyboard.press('Enter');
-  await overlay.waitFor({ state: 'visible' });
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(300);
-  if (await overlay.isVisible()) throw new Error('Escape did not close bulk-delete confirmation');
-
-  await list.evaluate(element => element.scrollTo({ left: element.scrollWidth, behavior: 'instant' }));
-  await page.waitForTimeout(50);
-  await drag(page, listBox.x + listBox.width - 24, listBox.x + listBox.width - 94, listBox.y + listBox.height / 2);
-  await overlay.waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Hapus', exact: true }).click();
-  const remainingQueue = await page.evaluate(() => JSON.parse(localStorage.getItem('scan_queue')));
-  if (remainingQueue.length !== 1 || remainingQueue[0].id !== 'pending-1') throw new Error('Bulk delete did not preserve pending history');
-
   await page.evaluate(() => {
     scanQueue.queue = [];
     scanQueue.render();
@@ -519,7 +450,7 @@ try {
     alignItems: getComputedStyle(emptyState).alignItems,
     textAlign: getComputedStyle(emptyState).textAlign,
   }));
-  if (emptyHistory.icon !== 'qr' || emptyHistory.alignItems !== 'center' || emptyHistory.textAlign !== 'center' || !emptyHistory.text.includes('Pemindaian terbaru akan muncul di sini.')) {
+  if (emptyHistory.icon !== 'scanner' || emptyHistory.alignItems !== 'center' || emptyHistory.textAlign !== 'center' || !emptyHistory.text.includes('Pemindaian terbaru akan tampil di sini.')) {
     throw new Error(`Empty scan history is not centered with meaningful content: ${JSON.stringify(emptyHistory)}`);
   }
 

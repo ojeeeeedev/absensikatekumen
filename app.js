@@ -179,6 +179,21 @@ app.get('/api/version', async (req, res) => {
   }
 });
 
+app.post('/api/dev/icons', async (req, res) => {
+  const address = req.socket.remoteAddress;
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address)) {
+    return res.status(403).json({ status: 'error', message: 'Icon editing is limited to localhost.' });
+  }
+
+  try {
+    const { saveIcon } = await import(`./scripts/save-login-icon.js?updated=${Date.now()}`);
+    const result = await saveIcon(req.body || {});
+    res.json({ status: 'success', ...result });
+  } catch (error) {
+    res.status(400).json({ status: 'error', message: error.message });
+  }
+});
+
 // ==========================================
 // 3. STATIC FILES
 // ==========================================

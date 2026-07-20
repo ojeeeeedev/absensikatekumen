@@ -11,7 +11,7 @@
     toast.className = `toast ${type}`;
     toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
-    const iconName = type === 'error' ? 'close-circle2' : type === 'info' ? 'info-circle' : type === 'duplicate' ? 'refresh' : 'check-circle';
+    const iconName = type === 'error' ? 'x-circle' : type === 'info' ? 'circle-info' : type === 'duplicate' ? 'refresh' : 'check';
     const icon = window.createAppIcon(iconName, 'toast-icon');
     const content = document.createElement('span');
     content.className = 'toast-content';

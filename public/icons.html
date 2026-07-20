@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reicon Icons</title>
+    <script>
+      document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+    </script>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      body {
+        height: auto;
+        min-height: 100dvh;
+        display: block;
+        overflow: auto;
+        padding: var(--space-8) var(--space-4);
+      }
+
+      main {
+        width: min(100%, 960px);
+        margin: 0 auto;
+      }
+
+      header {
+        margin-bottom: var(--space-6);
+      }
+
+      h1 {
+        margin-bottom: var(--space-2);
+        font-size: 1.5rem;
+      }
+
+      p {
+        color: var(--muted-foreground);
+      }
+
+      .preview {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 160px;
+        gap: var(--space-6);
+        align-items: end;
+        margin-bottom: var(--space-8);
+        padding-bottom: var(--space-8);
+        border-bottom: 1px solid var(--border);
+      }
+
+      label {
+        display: block;
+        margin-bottom: var(--space-2);
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      .preview-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 140px;
+        gap: var(--space-3);
+      }
+
+      #icon-name,
+      #icon-weight {
+        width: 100%;
+        min-height: 44px;
+        padding: 0 var(--space-3);
+        color: var(--foreground);
+        background: var(--slate-2);
+        border: 1px solid var(--input);
+        border-radius: var(--radius-md);
+      }
+
+      #icon-name:focus-visible,
+      #icon-weight:focus-visible {
+        border-color: var(--marian-8);
+        outline: 3px solid var(--ring);
+        outline-offset: 0;
+      }
+
+      #preview-status {
+        min-height: 1.25rem;
+        margin-top: var(--space-2);
+        font-size: 0.8125rem;
+      }
+
+      #preview-status[data-invalid="true"] {
+        color: var(--destructive);
+      }
+
+      .save-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        margin-top: var(--space-3);
+      }
+
+      #save-icon {
+        min-height: 44px;
+        padding: 0 var(--space-4);
+        color: var(--primary-foreground);
+        background: var(--primary);
+        border: 0;
+        cursor: pointer;
+      }
+
+      #save-icon:hover {
+        background: var(--accent-hover);
+      }
+
+      #save-icon:focus-visible {
+        outline: 3px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      #save-status {
+        font-size: 0.8125rem;
+      }
+
+      .specimen {
+        display: grid;
+        min-height: 140px;
+        place-items: center;
+        padding: var(--space-4);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+      }
+
+      #live-icon {
+        width: 64px;
+        height: 64px;
+      }
+
+      #live-icon svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      ul {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--space-3);
+        list-style: none;
+      }
+
+      .section-title {
+        margin: 0 0 var(--space-3);
+        font-size: 1rem;
+      }
+
+      #target-list {
+        margin-bottom: var(--space-8);
+      }
+
+      .icon-option {
+        width: 100%;
+        min-height: 138px;
+        padding: var(--space-4);
+        text-align: left;
+        color: var(--foreground);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+      }
+
+      .icon-option:hover {
+        background: var(--bg-hover);
+      }
+
+      .icon-option:focus-visible {
+        outline: 3px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      .icon-option re-icon {
+        display: block;
+        width: 32px;
+        height: 32px;
+        margin-bottom: var(--space-3);
+        color: var(--foreground);
+      }
+
+      .icon-option > svg {
+        display: block;
+        width: 32px;
+        height: 32px;
+        margin-bottom: var(--space-3);
+        color: var(--foreground);
+      }
+
+      .target-option[data-selected="true"] {
+        border-color: var(--marian-8);
+        box-shadow: 0 0 0 2px var(--ring);
+      }
+
+      code {
+        color: var(--muted-foreground);
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+        overflow-wrap: anywhere;
+      }
+
+      .usage {
+        display: block;
+        margin-top: var(--space-2);
+        color: var(--muted-foreground);
+        font-size: 0.75rem;
+        line-height: 1.35;
+      }
+
+      @media (max-width: 520px) {
+        .preview {
+          grid-template-columns: 1fr;
+          align-items: stretch;
+        }
+
+        .preview-fields {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Reicon icons</h1>
+        <p id="icon-count"></p>
+      </header>
+
+      <section class="preview" aria-labelledby="preview-heading">
+        <div>
+          <h2 id="preview-heading" class="sr-only">Live icon preview</h2>
+          <div class="preview-fields">
+            <div>
+              <label for="icon-name">Reicon name or URL</label>
+              <input id="icon-name" value="login2" autocomplete="off" spellcheck="false" aria-describedby="preview-status" />
+            </div>
+            <div>
+              <label for="icon-weight">Weight</label>
+              <select id="icon-weight">
+                <option value="outline">Outline</option>
+                <option value="filled" selected>Filled</option>
+              </select>
+            </div>
+          </div>
+          <p id="preview-status" role="status" aria-live="polite"></p>
+          <div class="save-row">
+            <button id="save-icon" type="button">Save selected icon</button>
+            <p id="save-status" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="specimen" aria-label="Icon preview">
+          <div id="live-icon" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <h2 class="section-title">App icons</h2>
+      <p class="usage">Select an icon used by the app, then paste its replacement name or URL and save.</p>
+      <ul id="target-list"></ul>
+    </main>
+
+    <script src="https://unpkg.com/reicon/cdn/reicon.min.js"></script>
+    <script>
+      const availableIcons = new Set(Reicon.icons);
+      const usageByIcon = {
+        "arrow-circle-right": "Login submit button",
+        "bolt": "Onboarding: consecutive QR scanning",
+        "book-open": "Initial and active topic selectors",
+        "cake": "Profile birthday field",
+        "calendar": "Topic date selectors",
+        "calendardate": "Initial and active topic selectors",
+        "calendar-mark": "Profile birthday field",
+        "camera": "Change-profile-photo button",
+        "camera-add": "Photo upload dropzone",
+        "check": "Successful scan history rows",
+        "check-circle": "Login success, active count, and success toasts",
+        "chevron-down": "Topic, class, profile, and onboarding accordions",
+        "chevron-left": "Previous topic control",
+        "chevron-right": "Next topic control",
+        "close-circle": "Failed scan history rows, errors, inactive count, and upload close button",
+        "circle-info": "Topic instructions and information toasts",
+        "eye": "Visible-password state",
+        "eye-off": "Hidden-password state",
+        "eye-off2": "Hidden-password state",
+        "eye-open": "Visible-password state",
+        "gallery-add": "Profile photo replacement",
+        "home-user": "Profile KI details",
+        "incognito": "Empty student search state",
+        "info-circle": "Topic instructions and information toasts",
+        "layers": "Onboarding: information layout",
+        "login2": "Login submit button",
+        "login4": "Login submit button",
+        "logout": "Main navigation sign-out",
+        "logout4": "Main navigation sign-out",
+        "qr": "Scan navigation and QR actions",
+        "refresh": "Duplicate scan history rows, duplicate toasts, and onboarding changes",
+        "search": "Profile and selector search fields",
+        "scanner": "Scan navigation and empty scan history",
+        "sparkles": "Onboarding new-features heading",
+        "speedometer": "Onboarding: scanner speed",
+        "streets-nav": "Onboarding: simplified navigation",
+        "square-arrow-down2": "Profile and onboarding expand controls",
+        "square-arrow-left2": "Previous topic control",
+        "square-arrow-right2": "Next topic control",
+        "timer-alt": "Pending scan queue rows",
+        "user": "Profile placeholders and KK details",
+        "user-id": "Profile ID details and onboarding profile feature",
+        "user-minus": "Inactive student group",
+        "user-off": "Inactive student group",
+        "user-search": "Empty student search state",
+        "user-square3": "Change-profile-photo button",
+        "users": "Profile navigation and profile overview",
+        "users2": "Profile KI details",
+        "users3": "Class selector",
+        "upload": "Photo upload dropzone",
+        "verified": "Login success, active count, and success toasts",
+        "wifi-off": "Onboarding: offline storage",
+        "x-circle": "Errors, inactive count, and dismiss controls"
+      };
+      const targetList = document.getElementById('target-list');
+      const input = document.getElementById('icon-name');
+      const weightSelect = document.getElementById('icon-weight');
+      const preview = document.getElementById('live-icon');
+      const status = document.getElementById('preview-status');
+      const saveButton = document.getElementById('save-icon');
+      const saveStatus = document.getElementById('save-status');
+      const sourceFiles = ['index.html', 'icons.js', 'onboarding.js', 'profile.js', 'script.js', 'toast.js'];
+      const appIcons = new Map();
+      const renderedAppIcons = new Map();
+      let currentName = '';
+      let selectedIcon = '';
+      let previewRequest = 0;
+
+      const componentName = (name) => name
+        .split('-')
+        .map((part) => part[0].toUpperCase() + part.slice(1))
+        .join('');
+
+      const updatePreview = async (syncUrlWeight = false) => {
+        const request = ++previewRequest;
+        const rawValue = input.value.trim();
+        const parsed = new URL(rawValue, 'https://reicon.dev/icon/');
+        const name = rawValue
+          ? decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || '').toLowerCase()
+          : '';
+        const urlWeight = parsed.searchParams.get('weight')?.toLowerCase();
+        if (syncUrlWeight && ['outline', 'filled'].includes(urlWeight)) weightSelect.value = urlWeight;
+        const weight = weightSelect.value;
+        currentName = '';
+        saveButton.disabled = true;
+        status.dataset.invalid = 'false';
+        if (!name) {
+          preview.replaceChildren();
+          status.textContent = 'Paste an icon name or URL from reicon.dev.';
+          return;
+        }
+
+        status.textContent = 'Loading…';
+        try {
+          const module = await import(`https://unpkg.com/reicon@1.1.1/icons/${componentName(name)}.js`);
+          if (request !== previewRequest) return;
+          const icon = module.default({ size: 64, weight: weight === 'filled' ? 'Filled' : 'Outline' });
+          preview.replaceChildren(icon);
+          currentName = name;
+          saveButton.disabled = !selectedIcon;
+          status.textContent = `Valid Reicon icon: ${name} (${weight}).`;
+        } catch {
+          if (request !== previewRequest) return;
+          preview.replaceChildren();
+          status.dataset.invalid = 'true';
+          status.textContent = 'Icon name not found in Reicon 1.1.1.';
+        }
+      };
+
+      const usageTextFor = (name) => {
+        return usageByIcon[name] || 'Used by the app';
+      };
+
+      const renderTargetList = () => {
+        targetList.replaceChildren();
+        for (const assignment of [...appIcons.values()].sort((a, b) => a.name.localeCompare(b.name))) {
+          const item = document.createElement('li');
+          const button = document.createElement('button');
+          const icon = renderedAppIcons.get(assignment.name)?.cloneNode(true) || document.createElement('re-icon');
+          const label = document.createElement('code');
+          const usage = document.createElement('span');
+          button.type = 'button';
+          button.className = 'icon-option target-option';
+          button.dataset.selected = String(selectedIcon === assignment.name);
+          button.setAttribute('aria-label', `Replace ${assignment.name}. ${usageTextFor(assignment.name)}.`);
+          if (icon.localName === 're-icon') {
+            icon.setAttribute('icon', assignment.name);
+            if (assignment.weight === 'filled') icon.setAttribute('weight', 'filled');
+            icon.setAttribute('decorative', '');
+          } else {
+            icon.setAttribute('aria-hidden', 'true');
+          }
+          label.textContent = assignment.name;
+          usage.className = 'usage';
+          usage.textContent = usageTextFor(assignment.name);
+          button.append(icon, label, usage);
+          button.addEventListener('click', () => {
+            selectedIcon = assignment.name;
+            input.value = assignment.name;
+            weightSelect.value = assignment.weight;
+            renderTargetList();
+            updatePreview();
+          });
+          item.append(button);
+          targetList.append(item);
+        }
+      };
+
+      const collectAppIcons = (source) => {
+        for (const match of source.matchAll(/<re-icon\b[^>]*\bicon=["']([^"']+)["'][^>]*>/g)) {
+          appIcons.set(match[1], { name: match[1], weight: /\bweight=["']filled["']/.test(match[0]) ? 'filled' : 'outline' });
+        }
+        for (const match of source.matchAll(/setAttribute\(\s*["']icon["']\s*,\s*["']([^"']+)["']/g)) {
+          if (!appIcons.has(match[1])) appIcons.set(match[1], { name: match[1], weight: 'outline' });
+        }
+        const iconBlocks = [
+          ...source.matchAll(/const\s+iconName\s*=\s*[^;]+;/g),
+          ...source.matchAll(/const\s+(?:icon[\w$]*|[A-Za-z_$][\w$]*Icon[\w$]*)\s*=\s*\{[\s\S]*?\};/g),
+        ];
+        for (const block of iconBlocks) {
+          for (const match of block[0].matchAll(/["']([a-z0-9]+(?:-[a-z0-9]+)*)["']/g)) {
+            if (availableIcons.has(match[1]) && !appIcons.has(match[1])) appIcons.set(match[1], { name: match[1], weight: 'outline' });
+          }
+        }
+      };
+
+      const loadAppIcons = async () => {
+        try {
+          appIcons.clear();
+          const sources = await Promise.all(sourceFiles.map(async file => {
+            const response = await fetch(`/${file}`, { cache: 'no-store' });
+            return response.text();
+          }));
+          sources.forEach(collectAppIcons);
+          renderTargetList();
+          document.getElementById('icon-count').textContent = `${appIcons.size} icons used by the app.`;
+        } catch {
+          targetList.innerHTML = '<li>App icons could not be loaded.</li>';
+        }
+      };
+
+      loadAppIcons();
+
+      input.addEventListener('input', () => updatePreview(true));
+      weightSelect.addEventListener('change', () => updatePreview());
+      saveButton.addEventListener('click', async () => {
+        saveButton.disabled = true;
+        saveStatus.textContent = 'Saving…';
+        try {
+          const response = await fetch('/api/dev/icons', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentName: selectedIcon, name: currentName, weight: weightSelect.value }),
+          });
+          const contentType = response.headers.get('content-type') || '';
+          const result = contentType.includes('application/json')
+            ? await response.json()
+            : null;
+          if (!response.ok) {
+            const message = response.status === 404
+              ? 'Save API unavailable. Restart npm start and try again.'
+              : result?.message || `Save failed (${response.status}).`;
+            throw new Error(message);
+          }
+          if (!result) throw new Error('Save API returned an invalid response.');
+          const renderedIcon = preview.firstElementChild?.cloneNode(true);
+          if (renderedIcon) renderedAppIcons.set(result.name, renderedIcon);
+          selectedIcon = result.name;
+          await loadAppIcons();
+          saveStatus.textContent = `Replaced ${result.replaced} ${result.currentName} reference${result.replaced === 1 ? '' : 's'} with ${result.name}.`;
+        } catch (error) {
+          saveStatus.textContent = error.message;
+        } finally {
+          saveButton.disabled = !currentName;
+        }
+      });
+      updatePreview();
+    </script>
+  </body>
+</html>

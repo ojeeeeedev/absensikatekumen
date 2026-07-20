@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
 const colorSource = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
 const requiredColorDeclarations = [
@@ -51,12 +51,14 @@ async function scrollToListEnd(locator) {
 
 let browser;
 try {
+  accordionCheck: {
   await waitForServer();
   const legacyProfileResponse = await fetch(`${baseUrl}/profile.html`, { redirect: 'manual' });
   if (legacyProfileResponse.status !== 308 || legacyProfileResponse.headers.get('location') !== '/profile') {
     throw new Error('Legacy profile route did not redirect to /profile');
   }
-  browser = await chromium.launch({ headless: true });
+  const browserType = process.env.PLAYWRIGHT_BROWSER === 'webkit' ? webkit : chromium;
+  browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
   await context.addInitScript(() => {
@@ -70,6 +72,9 @@ try {
     };
   });
   const page = await context.newPage();
+  const profileConsoleErrors = [];
+  page.on('pageerror', error => profileConsoleErrors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') profileConsoleErrors.push(message.text()); });
   let releaseProfilePhoto;
   let profilePhotoRequests = 0;
   const profilePhotoGate = new Promise(resolve => { releaseProfilePhoto = resolve; });
@@ -97,7 +102,9 @@ try {
         ? 'Katekis Induk Khusus'
         : index === 3
           ? 'Katekis Kecil Khusus'
-          : `Katekumen ${index + 1}`,
+          : index === 20
+            ? 'Katekumen Dengan Nama Sangat Panjang'
+            : `Katekumen ${index + 1}`,
       image: index === 0 ? '/api/photo?studentId=2026%2FMAL%2F001' : '',
       kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
       katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
@@ -360,13 +367,38 @@ try {
   if (classNativeScroll.parentId !== 'class-combobox' || classNativeScroll.position !== 'absolute' || classNativeScroll.transitionDuration !== '0s' || classNativeScroll.transform !== 'none' || classNativeScroll.overflowY !== 'auto') {
     throw new Error(`Class popover does not use native in-place scrolling: ${JSON.stringify(classNativeScroll)}`);
   }
+  await page.waitForTimeout(32);
+  const classTail = await page.locator('#class-combobox-popover').evaluate(popover => {
+    const list = popover.querySelector('.scroll-tail-viewport');
+    const style = getComputedStyle(list);
+    const overlayStyle = getComputedStyle(popover, '::after');
+    return {
+      active: popover.classList.contains('has-scroll-tail'),
+      viewportActive: list.classList.contains('has-scroll-tail'),
+      maskImage: style.maskImage || style.webkitMaskImage,
+      maskRepeat: style.maskRepeat || style.webkitMaskRepeat,
+      overlayContent: overlayStyle.content,
+      backdropFilter: overlayStyle.backdropFilter || overlayStyle.webkitBackdropFilter,
+    };
+  });
+  if (!classTail.active || !classTail.viewportActive || !classTail.maskImage.includes('linear-gradient') || classTail.maskRepeat !== 'no-repeat' || classTail.overlayContent !== 'none' || classTail.backdropFilter !== 'none') {
+    throw new Error(`Class scroll-tail cue is incorrect: ${JSON.stringify(classTail)}`);
+  }
   await page.setViewportSize({ width: 320, height: 568 });
   const classListEnd = await scrollToListEnd(page.locator('#class-combobox-options'));
   if (classListEnd.scrollTop < classListEnd.maxScrollTop - 1 || classListEnd.lastBottom > classListEnd.visibleBottom + 1) {
     throw new Error(`Class list end is clipped by the mobile keyboard viewport: ${JSON.stringify(classListEnd)}`);
   }
+  await page.waitForTimeout(32);
+  if (await page.locator('#class-combobox-popover').evaluate(popover => popover.classList.contains('has-scroll-tail'))) {
+    throw new Error('Class scroll-tail cue remained visible at the end of the list');
+  }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('#class-combobox-search').fill('mal');
+  await page.waitForTimeout(32);
+  if (await page.locator('#class-combobox-popover').evaluate(popover => popover.classList.contains('has-scroll-tail'))) {
+    throw new Error('Class scroll-tail cue appeared for filtered non-overflowing content');
+  }
   const options = await page.locator('#class-combobox-options [role="option"]').allTextContents();
   if (options.length !== 1 || !options[0].includes('Malam')) throw new Error('Class filtering failed');
   await page.locator('#class-combobox-search').press('ArrowDown');
@@ -418,10 +450,42 @@ try {
 
   const uploadProfile = page.locator('.student-accordion-item').first();
   await uploadProfile.locator('.student-accordion-header').click();
-  const uploadButton = uploadProfile.locator('.upload-photo-btn');
+  const replacementFrame = uploadProfile.locator('.student-photo-large-frame');
+  const replacementInput = replacementFrame.locator('.photo-replace-input');
+  await replacementFrame.locator('re-icon[icon="gallery-add"] svg').first().waitFor({ state: 'attached' });
+  if (await replacementFrame.locator('.photo-replace-menu span').textContent() !== 'Ubah Foto') {
+    throw new Error('Inline photo replacement helper text is missing');
+  }
+  const replacementFile = { name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') };
+  const detailLayout = await uploadProfile.locator('.detail-info-grid').evaluate(grid => {
+    const labels = [...grid.querySelectorAll('.detail-label')];
+    const colons = [...grid.querySelectorAll('.detail-colon')].map(colon => colon.getBoundingClientRect().left);
+    const iconSize = parseFloat(getComputedStyle(labels[0].querySelector('re-icon')).fontSize);
+    const values = [...grid.querySelectorAll('.detail-value')];
+    const idValue = grid.querySelector('.detail-id-value');
+    return {
+      rowCount: labels.length,
+      colonSpread: Math.max(...colons) - Math.min(...colons),
+      labelSize: parseFloat(getComputedStyle(labels[0]).fontSize),
+      iconSize,
+      opacity: parseFloat(getComputedStyle(labels[0]).opacity),
+      idIconWeight: grid.querySelector('re-icon[icon="user-id"]')?.getAttribute('weight'),
+      idLabel: labels.at(-1)?.textContent.replace(/\s+/g, ''),
+      idValue: idValue?.textContent,
+      idColor: idValue ? getComputedStyle(idValue).color : '',
+      detailColor: getComputedStyle(values[0]).color,
+      idFont: idValue ? getComputedStyle(idValue).fontFamily : '',
+      duplicateName: !!grid.closest('.student-detail-card').querySelector('.detail-name'),
+    };
+  });
+  if (detailLayout.rowCount !== 4 || detailLayout.colonSpread > 1 || detailLayout.labelSize < 12 || detailLayout.iconSize < 16 || detailLayout.opacity < 1 || detailLayout.idIconWeight !== 'filled' || detailLayout.idLabel !== 'ID:' || detailLayout.idValue !== '2026/MAL/001' || detailLayout.idColor !== detailLayout.detailColor || !detailLayout.idFont.toLowerCase().includes('mono') || detailLayout.duplicateName) {
+    throw new Error(`Profile detail labels are not aligned or legible: ${JSON.stringify(detailLayout)}`);
+  }
   const modal = page.locator('#upload-preview-modal');
   const waitForUploadOpen = async () => {
-    await uploadButton.click();
+    await replacementFrame.hover();
+    await replacementInput.setInputFiles([]);
+    await replacementInput.setInputFiles(replacementFile);
     await page.waitForFunction(() => document.getElementById('upload-preview-modal')?.classList.contains('is-visible'));
   };
   const waitForUploadClosed = async () => {
@@ -429,6 +493,13 @@ try {
     const state = await modal.evaluate(element => ({ open: element.classList.contains('open'), overflow: document.body.style.overflow }));
     if (state.open || state.overflow) throw new Error(`Upload sheet cleanup failed: ${JSON.stringify(state)}`);
   };
+  await replacementFrame.hover();
+  if (!await replacementFrame.evaluate(frame => frame.classList.contains('is-replace-open'))) throw new Error('Inline photo replacement menu did not open on hover');
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(220);
+  if (await replacementFrame.evaluate(frame => frame.classList.contains('is-replace-open') || getComputedStyle(frame.querySelector('.photo-replace-menu')).opacity !== '0')) {
+    throw new Error('Inline photo replacement menu did not fade out after hover ended');
+  }
   await waitForUploadOpen();
   const uploadMotion = await modal.evaluate(element => {
     const overlay = getComputedStyle(element);
@@ -442,23 +513,28 @@ try {
   if (uploadMotion.overlay.property !== 'opacity' || Math.abs(uploadMotion.overlay.duration - 0.28) > 0.001 || !uploadMotion.sheet.properties.includes('opacity') || !uploadMotion.sheet.properties.includes('transform') || uploadMotion.sheet.durations.some(duration => Math.abs(duration - 0.28) > 0.001) || !uploadMotion.sheet.easing.includes('cubic-bezier(0.23, 1, 0.32, 1)') || uploadMotion.overflow !== 'hidden') {
     throw new Error(`Upload sheet entrance motion is incorrect: ${JSON.stringify(uploadMotion)}`);
   }
-  const cancelButton = page.locator('#upload-cancel-btn');
-  await cancelButton.hover();
-  await page.mouse.down();
-  await page.waitForTimeout(80);
-  const cancelPressed = await cancelButton.evaluate(button => getComputedStyle(button).transform);
   const uploadSheetBox = await page.locator('.upload-preview-sheet').boundingBox();
-  await page.mouse.move(uploadSheetBox.x + 10, uploadSheetBox.y + 10);
-  await page.mouse.up();
-  if (Number(cancelPressed.match(/^matrix\(([^,]+)/)?.[1] ?? 1) >= 1) throw new Error(`Upload cancel press feedback is incorrect: ${cancelPressed}`);
-  await page.locator('#upload-close-btn').click();
+  const closeButton = page.locator('#upload-close-btn');
+  const closeStyle = await closeButton.evaluate(button => {
+    const style = getComputedStyle(button);
+    const title = button.parentElement.querySelector('.upload-preview-title').getBoundingClientRect();
+    const sheet = button.closest('.upload-preview-sheet').getBoundingClientRect();
+    return {
+      width: parseFloat(style.width),
+      height: parseFloat(style.height),
+      radius: style.borderRadius,
+      color: style.color,
+      titleOffset: Math.abs((title.left + title.width / 2) - (sheet.left + sheet.width / 2)),
+    };
+  });
+  if (closeStyle.width !== closeStyle.height || closeStyle.radius !== '50%' || closeStyle.titleOffset > 1) {
+    throw new Error(`Upload header layout is incorrect: ${JSON.stringify(closeStyle)}`);
+  }
+  await closeButton.click();
   const closingUpload = await modal.evaluate(element => ({ open: element.classList.contains('open'), closing: element.classList.contains('is-closing'), inert: element.inert, visible: element.classList.contains('is-visible'), overflow: document.body.style.overflow }));
   if (!closingUpload.open || !closingUpload.closing || !closingUpload.inert || closingUpload.visible || closingUpload.overflow !== 'hidden') {
     throw new Error(`Upload sheet exit state is incorrect: ${JSON.stringify(closingUpload)}`);
   }
-  await waitForUploadClosed();
-  await waitForUploadOpen();
-  await page.locator('#upload-cancel-btn').click();
   await waitForUploadClosed();
   await waitForUploadOpen();
   await page.keyboard.press('Escape');
@@ -467,7 +543,7 @@ try {
   await modal.click({ position: { x: 5, y: 5 } });
   await waitForUploadClosed();
   await waitForUploadOpen();
-  await page.locator('#upload-file-input').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') });
+  await page.locator('#upload-file-input').setInputFiles(replacementFile);
   const confirmButton = page.locator('#upload-confirm-btn');
   await confirmButton.hover();
   await page.mouse.down();
@@ -541,6 +617,34 @@ try {
   if (!expandedShell.expanded || !expandedShell.listScrollable || expandedShell.profileScrollable || expandedShell.profileOverflow !== 'hidden' || expandedShell.listOverflow !== 'auto' || Math.abs(expandedShell.containerHeight - initialShell.containerHeight) >= 1 || Math.abs(expandedShell.navTop - initialShell.navTop) >= 1 || Math.abs(expandedShell.triggerTop - profileSpacing.triggerTop) >= 1) {
     throw new Error(`Profile shell did not preserve the full-height viewport layout: ${JSON.stringify({ initialShell, expandedShell })}`);
   }
+
+  const profileTail = await page.evaluate(async () => {
+    const profile = document.getElementById('profile-view');
+    const list = document.getElementById('students-list');
+    list.scrollTop = 0;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const style = getComputedStyle(list);
+    const overlayStyle = getComputedStyle(profile, '::after');
+    return {
+      active: profile.classList.contains('has-scroll-tail'),
+      viewportActive: list.classList.contains('has-scroll-tail'),
+      maskImage: style.maskImage || style.webkitMaskImage,
+      maskRepeat: style.maskRepeat || style.webkitMaskRepeat,
+      overlayContent: overlayStyle.content,
+      backdropFilter: overlayStyle.backdropFilter || overlayStyle.webkitBackdropFilter,
+    };
+  });
+  if (!profileTail.active || !profileTail.viewportActive || !profileTail.maskImage.includes('linear-gradient') || profileTail.maskRepeat !== 'no-repeat' || profileTail.overlayContent !== 'none' || profileTail.backdropFilter !== 'none') {
+    throw new Error(`Profile scroll-tail cue is incorrect: ${JSON.stringify(profileTail)}`);
+  }
+  await page.locator('#students-list').evaluate(async list => {
+    list.scrollTop = list.scrollHeight;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  if (await page.locator('#profile-view').evaluate(profile => profile.classList.contains('has-scroll-tail'))) {
+    throw new Error('Profile scroll-tail cue remained visible at the end of the list');
+  }
+  await page.locator('#students-list').evaluate(list => { list.scrollTop = 0; });
 
   const stickyProfileHeader = await page.evaluate(async () => {
     const profile = document.getElementById('profile-view');
@@ -633,6 +737,31 @@ try {
   }
 
   const firstProfile = page.locator('.student-accordion-item').first();
+  const accordionSemantics = await page.evaluate(() => {
+    const items = [...document.querySelectorAll('.student-accordion-item')];
+    return {
+      buttons: items.every(item => {
+        const header = item.querySelector('.student-accordion-header');
+        const body = item.querySelector('.student-accordion-body');
+        return header?.tagName === 'BUTTON'
+          && header.type === 'button'
+          && header.getAttribute('aria-controls') === body?.id
+          && body?.getAttribute('role') === 'region'
+          && body?.getAttribute('aria-labelledby') === header.id;
+      }),
+      dimensions: [...document.querySelectorAll('.student-thumb, .student-photo-large')].every(image =>
+        (image.classList.contains('student-thumb') && image.getAttribute('width') === '40' && image.getAttribute('height') === '40')
+        || (image.classList.contains('student-photo-large') && image.getAttribute('width') === '120' && image.getAttribute('height') === '150')),
+      intrinsicGrid: getComputedStyle(items[0].querySelector('.student-accordion-body')).gridTemplateRows === '0px',
+      clip: (() => {
+        const clip = items[0].querySelector('.student-accordion-clip');
+        return !!clip && getComputedStyle(clip).minHeight === '0px' && getComputedStyle(clip).overflow === 'hidden';
+      })(),
+    };
+  });
+  if (!accordionSemantics.buttons || !accordionSemantics.dimensions || !accordionSemantics.intrinsicGrid || !accordionSemantics.clip) {
+    throw new Error(`Profile accordion semantics are incomplete: ${JSON.stringify(accordionSemantics)}`);
+  }
   await page.locator('#students-list').evaluate(list => { list.scrollTop = 0; });
   const hoverBefore = await firstProfile.evaluate(item => ({
     top: item.getBoundingClientRect().top,
@@ -655,26 +784,49 @@ try {
     const arrowRect = item.querySelector('.expand-arrow').getBoundingClientRect();
     return itemRect.right - (arrowRect.left + arrowRect.right) / 2;
   });
-  await focusedProfile.locator('.student-accordion-header').click();
+  await focusedProfile.locator('.student-accordion-header').dispatchEvent('click', { detail: 1 });
   const pointerOpenMotion = await focusedProfile.evaluate(item => [
+    ...item.querySelector('.student-accordion-body').getAnimations(),
     ...item.querySelector('.student-accordion-inner').getAnimations(),
     ...item.querySelector('.expand-arrow').getAnimations()
-  ].map(animation => ({
+  ].filter(animation => animation.transitionProperty !== 'visibility').map(animation => ({
     property: animation.transitionProperty,
     duration: animation.effect.getTiming().duration,
     easing: animation.effect.getTiming().easing
   })));
-  if (pointerOpenMotion.length !== 3 || pointerOpenMotion.some(animation => !['opacity', 'transform'].includes(animation.property) || animation.duration !== 180 || animation.easing !== 'cubic-bezier(0.23, 1, 0.32, 1)')) {
+  if (JSON.stringify(pointerOpenMotion.map(animation => animation.property).sort()) !== JSON.stringify(['grid-template-rows', 'opacity', 'transform', 'transform'])
+    || pointerOpenMotion.some(animation => animation.duration !== 420 || animation.easing !== 'cubic-bezier(0.22, 1, 0.36, 1)')) {
     throw new Error(`Profile accordion opening motion is not composited and aligned: ${JSON.stringify(pointerOpenMotion)}`);
+  }
+  const openingTrajectory = await page.evaluate(async () => {
+    const list = document.getElementById('students-list');
+    const header = document.querySelectorAll('.student-accordion-header')[20];
+    const slack = getComputedStyle(list).getPropertyValue('--profile-scroll-slack');
+    const samples = [];
+    for (let index = 0; index < 26; index += 1) {
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      samples.push({ top: header.getBoundingClientRect().top, scrollTop: list.scrollTop, slack: getComputedStyle(list).getPropertyValue('--profile-scroll-slack') });
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const settledScrollTop = list.scrollTop;
+    await new Promise(resolve => setTimeout(resolve, 140));
+    return { slack, samples, settledScrollTop, lateScrollTop: list.scrollTop };
+  });
+  if (!openingTrajectory.slack || openingTrajectory.samples.some(sample => sample.slack !== openingTrajectory.slack)
+    || openingTrajectory.lateScrollTop !== openingTrajectory.settledScrollTop
+    || openingTrajectory.samples.some((sample, index) => index > 0 && sample.top > openingTrajectory.samples[index - 1].top + 1)) {
+    throw new Error(`Profile accordion focus trajectory was interrupted or changed late: ${JSON.stringify(openingTrajectory)}`);
   }
   await page.waitForFunction(() => {
     const item = document.querySelectorAll('.student-accordion-item')[20];
     const header = item.querySelector('.student-accordion-header');
     const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
-    return header === document.activeElement
-      && header.getAttribute('aria-expanded') === 'true'
-      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+    return header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
   });
+  if (await focusedProfile.locator('.student-accordion-header').evaluate(header => header === document.activeElement)) {
+    throw new Error('Pointer accordion click moved DOM focus');
+  }
   await page.waitForFunction(() => {
     const header = document.querySelectorAll('.student-accordion-header')[20];
     const detail = header.nextElementSibling.querySelector('.student-detail-card');
@@ -690,6 +842,9 @@ try {
     const bodyRect = body.getBoundingClientRect();
     const detailRect = body.querySelector('.student-detail-card').getBoundingClientRect();
     const dividerStyle = getComputedStyle(header, '::after');
+    const name = header.querySelector('.student-name-text');
+    const nameRect = name.getBoundingClientRect();
+    const nameStyle = getComputedStyle(name);
     return {
       label: header.getAttribute('aria-label'),
       height: headerRect.height,
@@ -697,6 +852,15 @@ try {
       itemWidth: itemRect.width,
       position: getComputedStyle(header).position,
       identityDisplay: getComputedStyle(header.querySelector('.header-left')).display,
+      name: header.querySelector('.student-name-text').textContent,
+      nameDisplay: getComputedStyle(header.querySelector('.student-name-text')).display,
+      nameFont: nameStyle.fontFamily,
+      nameSize: parseFloat(nameStyle.fontSize),
+      nameFits: name.scrollWidth <= name.clientWidth + 1,
+      nameCenterOffset: Math.abs((nameRect.left + nameRect.right) / 2 - (headerRect.left + headerRect.right) / 2),
+      nameVerticalOffset: Math.abs((nameRect.top + nameRect.bottom) / 2 - (headerRect.top + headerRect.bottom) / 2),
+      thumbDisplay: getComputedStyle(header.querySelector('.student-photo-frame, .student-thumb-placeholder')).display,
+      idDisplay: getComputedStyle(header.querySelector('.student-id-text')).display,
       arrowDisplay: getComputedStyle(arrow).display,
       arrowWidth: arrowRect.width,
       arrowHeight: arrowRect.height,
@@ -708,26 +872,77 @@ try {
       bodyTopOffset: bodyRect.top - itemRect.top,
       detailTopGap: detailRect.top - headerRect.bottom,
       topLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 8)),
-      bottomLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 42))
+      bottomLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 62))
     };
   });
-  if (!compactExpandedHeader.label?.includes('Katekumen 21, 2026/MAL/021') || compactExpandedHeader.height !== 44 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '40px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
+  if (!compactExpandedHeader.label?.includes('Katekumen Dengan Nama Sangat Panjang, 2026/MAL/021') || compactExpandedHeader.height !== 64 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay === 'none' || compactExpandedHeader.name !== 'Katekumen Dengan Nama Sangat Panjang' || compactExpandedHeader.nameDisplay === 'none' || !compactExpandedHeader.nameFont.includes('DM Serif Display') || compactExpandedHeader.nameSize >= 20 || compactExpandedHeader.nameSize < 12 || !compactExpandedHeader.nameFits || compactExpandedHeader.nameCenterOffset >= 1 || compactExpandedHeader.nameVerticalOffset >= 1 || compactExpandedHeader.thumbDisplay !== 'none' || compactExpandedHeader.idDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '60px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
     throw new Error(`Expanded profile header is not a full-width accessible collapse control: ${JSON.stringify(compactExpandedHeader)}`);
   }
+  const sameCardViewport = await page.locator('#students-list').evaluate(list => ({ scrollTop: list.scrollTop, slack: getComputedStyle(list).getPropertyValue('--profile-scroll-slack') }));
+  await page.evaluate(() => { window.__readClosingCleanupProbe = () => {
+    const item = document.querySelectorAll('.student-accordion-item')[20];
+    const read = () => {
+      const header = item.querySelector('.student-accordion-header');
+      const name = header.querySelector('.student-name-text');
+      const thumb = header.querySelector('.student-photo-frame, .student-thumb-placeholder');
+      const id = header.querySelector('.student-id-text');
+      const left = header.querySelector('.header-left');
+      const arrow = header.querySelector('.expand-arrow');
+      const body = item.querySelector('.student-accordion-body');
+      const rect = element => { const value = element.getBoundingClientRect(); return { top: value.top, left: value.left, width: value.width, height: value.height }; };
+      const styleSnapshot = element => { const style = getComputedStyle(element); return { display: style.display, position: style.position, padding: style.padding, fontFamily: style.fontFamily, fontSize: style.fontSize, fontWeight: style.fontWeight, textAlign: style.textAlign, transform: style.transform, opacity: style.opacity }; };
+      return {
+        classes: { header: header.className, body: body.className },
+        item: rect(item), header: rect(header), name: rect(name), thumb: rect(thumb), id: rect(id), left: rect(left), arrow: rect(arrow), body: rect(body),
+        styles: { header: styleSnapshot(header), name: styleSnapshot(name), thumb: styleSnapshot(thumb), id: styleSnapshot(id), left: styleSnapshot(left), arrow: styleSnapshot(arrow) }
+      };
+    };
+    return read();
+  }; });
   await focusedProfile.locator('.student-accordion-header').click();
   const pointerCloseMotion = await focusedProfile.evaluate(item => ({
     closing: item.querySelector('.student-accordion-body').classList.contains('closing'),
     animations: [
+      ...item.querySelector('.student-accordion-body').getAnimations(),
       ...item.querySelector('.student-accordion-inner').getAnimations(),
-      ...item.querySelector('.expand-arrow').getAnimations()
-    ].map(animation => ({
+      ...item.querySelector('.expand-arrow').getAnimations(),
+      ...item.querySelector('.student-name-text').getAnimations(),
+      ...[...item.querySelectorAll('.student-photo-frame, .student-thumb-placeholder, .student-id-text')].flatMap(element => element.getAnimations())
+    ].filter(animation => animation.transitionProperty !== 'visibility').map(animation => ({
       property: animation.transitionProperty,
       duration: animation.effect.getTiming().duration,
       easing: animation.effect.getTiming().easing
     }))
   }));
-  if (!pointerCloseMotion.closing || pointerCloseMotion.animations.length !== 3 || pointerCloseMotion.animations.some(animation => !['opacity', 'transform'].includes(animation.property) || animation.duration !== 150 || animation.easing !== 'cubic-bezier(0.23, 1, 0.32, 1)')) {
+  if (!pointerCloseMotion.closing || pointerCloseMotion.animations.length !== 7
+    || pointerCloseMotion.animations.some(animation => animation.duration < 288 || animation.duration > 292 || animation.easing !== 'cubic-bezier(0.4, 0, 0.2, 1)')) {
     throw new Error(`Profile accordion closing motion is not composited and aligned: ${JSON.stringify(pointerCloseMotion)}`);
+  }
+  await page.waitForTimeout(280);
+  const closingCleanupBefore = await page.evaluate(() => window.__readClosingCleanupProbe());
+  await page.waitForFunction(() => !document.querySelectorAll('.student-accordion-item')[20].querySelector('.student-accordion-body').classList.contains('closing'));
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+  const closingCleanupAfter = await page.evaluate(() => window.__readClosingCleanupProbe());
+  const closingGeometryDelta = ['item', 'header', 'name', 'thumb', 'id', 'left', 'arrow', 'body'].map(key => Math.max(
+    Math.abs(closingCleanupBefore[key].top - closingCleanupAfter[key].top),
+    Math.abs(closingCleanupBefore[key].left - closingCleanupAfter[key].left),
+    Math.abs(closingCleanupBefore[key].width - closingCleanupAfter[key].width),
+    Math.abs(closingCleanupBefore[key].height - closingCleanupAfter[key].height)
+  ));
+  const closingOpacityDelta = ['name', 'thumb', 'id', 'left', 'arrow'].map(key => Math.abs(
+    parseFloat(closingCleanupBefore.styles[key].opacity) - parseFloat(closingCleanupAfter.styles[key].opacity)
+  ));
+  if (Math.max(...closingGeometryDelta.slice(1, 7)) > 1 || Math.max(...closingOpacityDelta) > 0.02
+    || closingCleanupAfter.styles.header.position !== 'static'
+    || closingCleanupAfter.styles.name.fontFamily !== closingCleanupBefore.styles.name.fontFamily
+    || closingCleanupAfter.styles.thumb.display !== closingCleanupBefore.styles.thumb.display
+    || closingCleanupAfter.styles.id.display !== closingCleanupBefore.styles.id.display
+    || closingCleanupAfter.styles.arrow.transform !== 'none') {
+    throw new Error(`Accordion closing cleanup changed visible header presentation: ${JSON.stringify({ closingCleanupBefore, closingCleanupAfter, closingGeometryDelta, closingOpacityDelta })}`);
+  }
+  const sameCardAfterClose = await page.locator('#students-list').evaluate(list => ({ scrollTop: list.scrollTop, slack: getComputedStyle(list).getPropertyValue('--profile-scroll-slack') }));
+  if (sameCardAfterClose.scrollTop !== sameCardViewport.scrollTop || sameCardAfterClose.slack !== sameCardViewport.slack) {
+    throw new Error(`Same-card close changed viewport or focus slack: ${JSON.stringify({ sameCardViewport, sameCardAfterClose })}`);
   }
   await page.waitForTimeout(50);
   await focusedProfile.locator('.student-accordion-header').click();
@@ -760,7 +975,7 @@ try {
             .map(element => `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${[...element.classList].map(name => `.${name}`).join('')}`)
         };
       }, theme);
-      if (responsiveState.overflow > 1 || responsiveState.identityDisplay !== 'none' || responsiveState.arrowWidth === 0 || responsiveState.arrowHeight === 0) {
+      if (responsiveState.overflow > 1 || responsiveState.identityDisplay === 'none' || responsiveState.arrowWidth === 0 || responsiveState.arrowHeight === 0) {
         throw new Error(`Expanded profile header failed at ${width}px in ${theme} theme: ${JSON.stringify(responsiveState)}`);
       }
     }
@@ -775,7 +990,6 @@ try {
     ...item.querySelector('.student-accordion-inner').getAnimations(),
     ...item.querySelector('.expand-arrow').getAnimations()
   ].length);
-  if (keyboardCloseAnimations !== 0) throw new Error('Keyboard accordion close still animates');
   await page.waitForFunction(() => {
     const header = document.querySelectorAll('.student-accordion-header')[20];
     return header.getAttribute('aria-expanded') === 'false'
@@ -784,9 +998,12 @@ try {
   await focusedProfile.locator('.student-accordion-header').press('Enter');
   await page.waitForFunction(() => {
     const item = document.querySelectorAll('.student-accordion-item')[20];
-    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
+    const list = document.getElementById('students-list');
+    const listRect = list.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
     return item.querySelector('.student-accordion-header').getAttribute('aria-expanded') === 'true'
-      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+      && itemRect.top >= listRect.top - 1
+      && itemRect.bottom <= listRect.bottom + 1;
   });
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -801,23 +1018,42 @@ try {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await focusedProfile.locator('.student-accordion-header').press('Enter');
 
+  const adjacentFocusedProfile = page.locator('.student-accordion-item').nth(21);
+  await adjacentFocusedProfile.locator('.student-accordion-header').click();
+  await page.waitForFunction(() => {
+    const item = document.querySelectorAll('.student-accordion-item')[21];
+    const header = item.querySelector('.student-accordion-header');
+    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
+    return header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
+  });
+
   const secondFocusedProfile = page.locator('.student-accordion-item').nth(25);
   await secondFocusedProfile.locator('.student-accordion-header').click();
-  const switchAnimations = await page.evaluate(() => [20, 25].flatMap(index => {
+  const switchAnimations = await page.evaluate(() => [21, 25].flatMap(index => {
     const item = document.querySelectorAll('.student-accordion-item')[index];
     return [
       ...item.querySelector('.student-accordion-inner').getAnimations(),
       ...item.querySelector('.expand-arrow').getAnimations()
     ];
   }).length);
-  if (switchAnimations !== 0) throw new Error('Direct accordion switch is still one-sided');
+  if (switchAnimations < 2) throw new Error('Direct accordion switch did not coordinate both sides');
   await page.waitForFunction(() => {
     const item = document.querySelectorAll('.student-accordion-item')[25];
     const header = item.querySelector('.student-accordion-header');
     const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
-    return header === document.activeElement
-      && header.getAttribute('aria-expanded') === 'true'
-      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+    return header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
+  });
+
+  const aboveFocusedProfile = page.locator('.student-accordion-item').nth(5);
+  await aboveFocusedProfile.locator('.student-accordion-header').click();
+  await page.waitForFunction(() => {
+    const item = document.querySelectorAll('.student-accordion-item')[5];
+    const header = item.querySelector('.student-accordion-header');
+    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
+    return header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
   });
 
   const lastFocusedProfile = page.locator('.student-accordion-item').nth(34);
@@ -826,10 +1062,37 @@ try {
     const item = document.querySelectorAll('.student-accordion-item')[34];
     const header = item.querySelector('.student-accordion-header');
     const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
-    return header === document.activeElement
-      && header.getAttribute('aria-expanded') === 'true'
-      && Math.abs(item.getBoundingClientRect().top - expectedTop) < 2;
+    return header.getAttribute('aria-expanded') === 'true'
+      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
   });
+
+  for (const index of [3, 9, 15, 21, 27, 33, 5, 11, 17, 23]) {
+    await page.locator('.student-accordion-item').nth(index).locator('.student-accordion-header').click();
+  }
+  await page.waitForTimeout(500);
+  const rapidTapState = await page.evaluate(() => ({
+    expanded: document.querySelectorAll('.student-accordion-header[aria-expanded="true"]').length,
+    closing: document.querySelectorAll('.student-accordion-body.closing').length,
+    visibleRegions: document.querySelectorAll('.student-accordion-body[aria-hidden="false"]').length,
+  }));
+  if (rapidTapState.expanded !== 1 || rapidTapState.closing !== 0 || rapidTapState.visibleRegions !== 1) {
+    throw new Error(`Rapid accordion taps left stale state: ${JSON.stringify(rapidTapState)}`);
+  }
+  const keyboardProfile = page.locator('.student-accordion-item').nth(5).locator('.student-accordion-header');
+  await keyboardProfile.focus();
+  const slackBeforeSpace = await page.locator('#students-list').evaluate(list => getComputedStyle(list).getPropertyValue('--profile-scroll-slack'));
+  await keyboardProfile.press('Space');
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-header')[5].getAttribute('aria-expanded') === 'true');
+  if (await keyboardProfile.evaluate(header => header !== document.activeElement)) throw new Error('Space accordion activation lost focus');
+  await keyboardProfile.press('Space');
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-header')[5].getAttribute('aria-expanded') === 'false');
+  const slackAfterSpace = await page.locator('#students-list').evaluate(list => getComputedStyle(list).getPropertyValue('--profile-scroll-slack'));
+  if (slackBeforeSpace !== slackAfterSpace) throw new Error(`Accordion toggle changed persistent focus slack: ${slackBeforeSpace} -> ${slackAfterSpace}`);
+  if (process.env.ACCORDION_ONLY === '1') {
+    if (profileConsoleErrors.length) throw new Error(`Profile accordion emitted console errors: ${profileConsoleErrors.join(' | ')}`);
+    console.log('profile accordion smoke ok');
+    break accordionCheck;
+  }
 
   await page.locator('#class-combobox-trigger').click();
   await page.locator('#class-combobox-popover').waitFor({ state: 'visible' });
@@ -849,6 +1112,16 @@ try {
   await page.locator('#class-combobox-search').press('Escape');
   await page.locator('#class-combobox-popover').waitFor({ state: 'hidden' });
 
+  await page.evaluate(() => {
+    const animate = Element.prototype.animate;
+    window.__headingAnimationTimings = [];
+    Element.prototype.animate = function(keyframes, options) {
+      if (this.id === 'app-view-title') {
+        window.__headingAnimationTimings.push({ duration: options.duration, easing: options.easing });
+      }
+      return animate.call(this, keyframes, options);
+    };
+  });
   await page.locator('[data-app-view="scan"]').click();
   await page.waitForURL(`${baseUrl}/`);
   await page.locator('[data-app-view="profile"]').click();
@@ -870,9 +1143,12 @@ try {
     titleOutline: getComputedStyle(document.getElementById('app-view-title')).outlineStyle,
     logoLeft: header.querySelector('.header-logo').getBoundingClientRect().left,
     textLeft: header.querySelector('.header-text').getBoundingClientRect().left,
-    animated: document.getElementById('profile-view').getAnimations().length > 0
+    headingAnimationTimings: window.__headingAnimationTimings
   }), initialShell.header);
-  if (!persistentHeader.sameNode || persistentHeader.heading !== 'Profil Katekumen' || persistentHeader.titleOutline !== 'none' || !persistentHeader.animated || Math.abs(persistentHeader.rect.x - initialShell.header.x) >= 1 || Math.abs(persistentHeader.rect.width - initialShell.header.width) >= 1 || Math.abs(persistentHeader.rect.height - initialShell.header.height) >= 1 || Math.abs(persistentHeader.logoLeft - initialShell.logoLeft) >= 1 || Math.abs(persistentHeader.textLeft - initialShell.textLeft) >= 1) {
+  const expectedHeadingTimings = [100, 160, 100, 160];
+  const headingMotionMatches = persistentHeader.headingAnimationTimings.length === expectedHeadingTimings.length
+    && persistentHeader.headingAnimationTimings.every((timing, index) => timing.duration === expectedHeadingTimings[index] && timing.easing === 'cubic-bezier(0.23, 1, 0.32, 1)');
+  if (!persistentHeader.sameNode || persistentHeader.heading !== 'Profil Katekumen' || persistentHeader.titleOutline !== 'none' || !headingMotionMatches || Math.abs(persistentHeader.rect.x - initialShell.header.x) >= 1 || Math.abs(persistentHeader.rect.width - initialShell.header.width) >= 1 || Math.abs(persistentHeader.rect.height - initialShell.header.height) >= 1 || Math.abs(persistentHeader.logoLeft - initialShell.logoLeft) >= 1 || Math.abs(persistentHeader.textLeft - initialShell.textLeft) >= 1) {
     throw new Error(`Shared header shifted or failed to animate: ${JSON.stringify({ initial: initialShell.header, current: persistentHeader })}`);
   }
 
@@ -939,6 +1215,11 @@ try {
   await scanPage.locator('#topic-trigger-large').click();
   await scanPage.locator('#topic-combobox-large-popover').waitFor({ state: 'visible' });
   const largeTopicPopover = scanPage.locator('#topic-combobox-large-popover');
+  await scanPage.waitForTimeout(32);
+  if (!await largeTopicPopover.evaluate(popover => popover.classList.contains('has-scroll-tail'))) throw new Error('Large topic scroll-tail cue is missing');
+  await scrollToListEnd(largeTopicPopover.locator('.search-combobox-options'));
+  await scanPage.waitForTimeout(32);
+  if (await largeTopicPopover.evaluate(popover => popover.classList.contains('has-scroll-tail'))) throw new Error('Large topic scroll-tail cue remained visible at the end');
   await largeTopicPopover.locator('.search-combobox-search').fill('Perkenalan');
   if (await largeTopicPopover.locator('[role="option"]').count() !== 1) throw new Error('Large topic combobox filtering failed');
   await largeTopicPopover.locator('.search-combobox-search').press('Escape');
@@ -946,6 +1227,12 @@ try {
   await scanPage.locator('#topic-combobox-trigger').click();
   await scanPage.locator('#topic-combobox-popover').waitFor({ state: 'visible' });
   const topicPopover = scanPage.locator('#topic-combobox-popover');
+  await scanPage.waitForTimeout(32);
+  if (!await topicPopover.evaluate(popover => popover.classList.contains('has-scroll-tail'))) throw new Error('Active topic scroll-tail cue is missing');
+  await scrollToListEnd(topicPopover.locator('.search-combobox-options'));
+  await scanPage.waitForTimeout(32);
+  if (await topicPopover.evaluate(popover => popover.classList.contains('has-scroll-tail'))) throw new Error('Active topic scroll-tail cue remained visible at the end');
+  await topicPopover.locator('.search-combobox-options').evaluate(list => { list.scrollTop = 0; });
   const firstTopic = topicPopover.locator('[role="option"]').first();
   const idleBackground = await firstTopic.evaluate(option => getComputedStyle(option).backgroundColor);
   await firstTopic.hover();
@@ -1067,6 +1354,7 @@ try {
   }
   for (const viewport of viewportSizes) {
     await Promise.all([page.setViewportSize(viewport), scanPage.setViewportSize(viewport)]);
+    await Promise.all([page, scanPage].map(currentPage => currentPage.waitForFunction(() => Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) * 100 - visualViewport.height) < 1)));
     await scanPage.evaluate(() => window.setAppState(2));
     const scanViewport = await scanPage.evaluate(() => {
       const nav = document.getElementById('app-nav').getBoundingClientRect();
@@ -1185,6 +1473,25 @@ try {
   await loginPage.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   const loginButton = loginPage.locator('#login-btn');
   await loginButton.waitFor({ state: 'visible' });
+  await loginPage.locator('#login-input').focus();
+  await loginPage.setViewportSize({ width: 390, height: 420 });
+  await loginPage.waitForFunction(() => Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) * 100 - visualViewport.height) < 1);
+  const keyboardLayout = await loginPage.evaluate(() => {
+    const input = document.getElementById('login-input').getBoundingClientRect();
+    const body = document.body.getBoundingClientRect();
+    return {
+      inputTop: input.top,
+      inputBottom: input.bottom,
+      viewportTop: visualViewport.offsetTop,
+      viewportBottom: visualViewport.offsetTop + visualViewport.height,
+      bodyTop: body.top,
+      bodyHeight: body.height,
+    };
+  });
+  if (keyboardLayout.inputTop < keyboardLayout.viewportTop || keyboardLayout.inputBottom > keyboardLayout.viewportBottom || Math.abs(keyboardLayout.bodyTop - keyboardLayout.viewportTop) > 1 || Math.abs(keyboardLayout.bodyHeight - (keyboardLayout.viewportBottom - keyboardLayout.viewportTop)) > 1) {
+    throw new Error(`Login field is clipped by the mobile keyboard viewport: ${JSON.stringify(keyboardLayout)}`);
+  }
+  await loginPage.setViewportSize({ width: 390, height: 844 });
   const loginTransition = await loginButton.evaluate(button => {
     const style = getComputedStyle(button);
     return { properties: style.transitionProperty.split(',').map(value => value.trim()), duration: style.transitionDuration };
@@ -1208,6 +1515,7 @@ try {
   if (reducedLogin.transform !== 'none' || reducedLogin.opacity >= 1) throw new Error(`Reduced-motion login feedback is incorrect: ${JSON.stringify(reducedLogin)}`);
   await unauthenticatedContext.close();
   console.log('search combobox smoke ok');
+  }
 } finally {
   await browser?.close();
   server.kill();

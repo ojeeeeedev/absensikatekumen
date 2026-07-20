@@ -11,11 +11,10 @@
   8. [x] **Lowest — isolated CSS:** Make the glow around the **Masuk** button symmetrical; the top is currently not glowing.
   9. [x] **Lowest — isolated CSS:** Match the profile-page search field corner radius to the info element.
 
-- [ ] 2026-07-16 18:43:29 WIB — Bundle used icons.
-- [ ] 2026-07-16 18:43:29 WIB — Account for the keyboard on the login screen.
+- [x] 2026-07-16 18:43:29 WIB — Account for the keyboard on the login screen.
 - [ ] 2026-07-16 18:43:29 WIB — Build a test suite for checking the backend.
 - [ ] 2026-07-16 18:43:29 WIB — Mock the sheet.
 - [ ] 2026-07-16 18:43:29 WIB — Mock avatars.
 - [ ] 2026-07-16 18:43:29 WIB — Craft a better animation for the header; it currently blinks.
 - [ ] 2026-07-16 18:43:29 WIB — Fix the chevron alignment.
-- [ ] 2026-07-16 18:43:29 WIB — Add a blur effect at the end of the scroll area.
+- [x] 2026-07-16 18:43:29 WIB — Add a clean fade at the end of the scroll area.

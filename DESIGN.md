@@ -137,7 +137,6 @@ Tables/lists:
 - Prefer native tables for true tabular data.
 - Current profile accordion is a list; it must remain keyboard accessible and scannable.
 - Metadata uses tabular numeric styling.
-- Edge-swipe destructive actions need a visible text rail plus a keyboard-accessible equivalent.
 
 Empty, loading, error states:
 - Empty states include what is missing and next action.
