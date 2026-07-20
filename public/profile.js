@@ -15,7 +15,7 @@ const updateProfileFocusTail = () => {
   if (!listContainer) return;
   const slackHost = listContainer.closest('.students-list-container') || listContainer;
   const header = listContainer.querySelector('.student-accordion-header');
-  if (!header) {
+  if (!header || !activeProfileId) {
     listContainer.classList.remove('has-profile-focus-tail');
     slackHost.style.setProperty('--profile-scroll-slack', '0px');
     return;
@@ -237,6 +237,7 @@ function renderStudents(students) {
     header.style.removeProperty('--closing-header-height');
     cancelClosingVisual(header);
     header.setAttribute('aria-expanded', 'false');
+    updateProfileFocusTail();
   };
 
   const startCoordinatedScroll = (item, header, body, initialOffset, revision, shouldAnimate) => {
@@ -562,6 +563,7 @@ function renderStudents(students) {
       }
 
       activeProfileId = profileId;
+      updateProfileFocusTail();
       profileRefs.forEach(({ body: candidateBody, header: candidateHeader }) => {
         if (candidateBody === body) return;
         if (candidateBody.classList.contains('expanded') || candidateBody.classList.contains('closing')) {
