@@ -2304,6 +2304,31 @@ a:focus-visible,
   font-family: var(--font-mono);
 }
 
+.profile-reach-link {
+  display: block;
+  width: min(207px, 100%);
+  min-height: 48px;
+  flex: 0 0 48px;
+  border-radius: 12px;
+  background: url('/assets/whatsapp-button-green.svg') center / contain no-repeat;
+  text-decoration: none;
+  transition: filter var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+
+[data-theme="dark"] .profile-reach-link {
+  background-image: url('/assets/whatsapp-button-white.svg');
+}
+
+.profile-reach-link:hover {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+.profile-reach-link:active {
+  transform: scale(0.98);
+}
+
 #students-loader {
   display: flex;
   flex-direction: column;
@@ -3123,18 +3148,21 @@ body[data-active-view="profile"] .nav-tabs::before {
   .upload-preview-sheet,
   .student-photo-frame :is(.student-thumb, .student-photo-large),
   #login-btn,
-  .upload-confirm-btn {
+  .upload-confirm-btn,
+  .profile-reach-link {
     transition: opacity var(--duration-fast) var(--ease-out) !important;
   }
 
   .upload-preview-sheet,
   #login-btn:active:not(:disabled),
-  .upload-confirm-btn:active:not(:disabled) {
+  .upload-confirm-btn:active:not(:disabled),
+  .profile-reach-link:active {
     transform: none !important;
   }
 
   #login-btn:active:not(:disabled),
-  .upload-confirm-btn:active:not(:disabled) {
+  .upload-confirm-btn:active:not(:disabled),
+  .profile-reach-link:active {
     opacity: 0.92;
   }
 }

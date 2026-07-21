@@ -419,6 +419,38 @@ try {
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
   if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
+  const reachLinks = await page.locator('.profile-reach-link').evaluateAll(links => links.map(link => ({
+    href: link.getAttribute('href'),
+    target: link.target,
+    rel: link.rel,
+    text: link.textContent.trim(),
+    label: link.getAttribute('aria-label'),
+    width: link.getBoundingClientRect().width,
+    height: link.getBoundingClientRect().height,
+    backgroundImage: getComputedStyle(link).backgroundImage,
+  })));
+  if (reachLinks.length !== 35 || reachLinks.some((link, index) =>
+    link.href !== `/api/reach?studentId=2026%2FMAL%2F${String(index + 1).padStart(3, '0')}`
+    || link.target !== '_blank'
+    || !link.rel.split(' ').includes('noopener')
+    || !link.rel.split(' ').includes('noreferrer')
+    || link.text !== 'Chat via WhatsApp'
+    || !link.label?.startsWith('Chat dengan ')
+    || Math.abs(link.width - 207) >= 1
+    || Math.abs(link.height - 48) >= 1
+    || !link.backgroundImage.includes('whatsapp-button-green.svg')
+    || /(?:\+?62|08)\d{8,}/.test(JSON.stringify(link)))) {
+    throw new Error(`Profile reach links expose contact data or have unsafe handoff attributes: ${JSON.stringify(reachLinks[0])}`);
+  }
+  const darkReachBackground = await page.evaluate(() => {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    const background = getComputedStyle(document.querySelector('.profile-reach-link')).backgroundImage;
+    document.documentElement.setAttribute('data-theme', 'light');
+    return background;
+  });
+  if (!darkReachBackground.includes('whatsapp-button-white.svg')) {
+    throw new Error(`Dark theme does not use the white WhatsApp branding asset: ${darkReachBackground}`);
+  }
   const progressivePhotoState = await page.locator('.student-accordion-item').first().evaluate(item => {
     const frame = item.querySelector('.student-thumb-frame');
     const spinner = frame.querySelector('.profile-photo-spinner');
