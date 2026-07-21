@@ -1717,16 +1717,34 @@ a:focus-visible,
   mask-repeat: no-repeat;
 }
 
+.scroll-tail-viewport:is(.has-scroll-head, .has-scroll-tail) {
+  -webkit-mask-image: var(--scroll-mask);
+  mask-image: var(--scroll-mask);
+}
+
 .scroll-tail-viewport.has-scroll-tail {
-  -webkit-mask-image: linear-gradient(
+  --scroll-mask: linear-gradient(
     to bottom,
     #000 0,
     #000 calc(100% - var(--scroll-fade-size)),
     transparent 100%
   );
-  mask-image: linear-gradient(
+}
+
+.scroll-tail-viewport.has-scroll-head {
+  --scroll-mask: linear-gradient(
     to bottom,
-    #000 0,
+    transparent 0,
+    #000 var(--scroll-fade-size),
+    #000 100%
+  );
+}
+
+.scroll-tail-viewport.has-scroll-head.has-scroll-tail {
+  --scroll-mask: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-size),
     #000 calc(100% - var(--scroll-fade-size)),
     transparent 100%
   );

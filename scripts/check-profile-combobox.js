@@ -86,13 +86,14 @@ try {
       body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
     });
   });
+  let profileClasses = [
+    { code: 'SAB', name: 'Sabtu Pagi' },
+    { code: 'MAL', name: 'Malam' },
+    ...Array.from({ length: 28 }, (_, index) => ({ code: `K${index + 1}`, name: `Kelas ${index + 1}` }))
+  ];
   await page.route('**/api/classes', route => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify({ status: 'ok', classes: [
-      { code: 'SAB', name: 'Sabtu Pagi' },
-      { code: 'MAL', name: 'Malam' },
-      ...Array.from({ length: 28 }, (_, index) => ({ code: `K${index + 1}`, name: `Kelas ${index + 1}` }))
-    ] })
+    body: JSON.stringify({ status: 'ok', classes: profileClasses })
   }));
   await page.route('**/api/students?*', route => route.fulfill({
     contentType: 'application/json',
@@ -374,14 +375,16 @@ try {
     const overlayStyle = getComputedStyle(popover, '::after');
     return {
       active: popover.classList.contains('has-scroll-tail'),
+      headActive: popover.classList.contains('has-scroll-head'),
       viewportActive: list.classList.contains('has-scroll-tail'),
+      viewportHeadActive: list.classList.contains('has-scroll-head'),
       maskImage: style.maskImage || style.webkitMaskImage,
       maskRepeat: style.maskRepeat || style.webkitMaskRepeat,
       overlayContent: overlayStyle.content,
       backdropFilter: overlayStyle.backdropFilter || overlayStyle.webkitBackdropFilter,
     };
   });
-  if (!classTail.active || !classTail.viewportActive || !classTail.maskImage.includes('linear-gradient') || classTail.maskRepeat !== 'no-repeat' || classTail.overlayContent !== 'none' || classTail.backdropFilter !== 'none') {
+  if (!classTail.active || classTail.headActive || !classTail.viewportActive || classTail.viewportHeadActive || !classTail.maskImage.includes('linear-gradient') || classTail.maskRepeat !== 'no-repeat' || classTail.overlayContent !== 'none' || classTail.backdropFilter !== 'none') {
     throw new Error(`Class scroll-tail cue is incorrect: ${JSON.stringify(classTail)}`);
   }
   await page.setViewportSize({ width: 320, height: 568 });
@@ -392,6 +395,9 @@ try {
   await page.waitForTimeout(32);
   if (await page.locator('#class-combobox-popover').evaluate(popover => popover.classList.contains('has-scroll-tail'))) {
     throw new Error('Class scroll-tail cue remained visible at the end of the list');
+  }
+  if (!await page.locator('#class-combobox-popover').evaluate(popover => popover.classList.contains('has-scroll-head'))) {
+    throw new Error('Class scroll-head cue is missing after scrolling');
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('#class-combobox-search').fill('mal');
@@ -659,14 +665,16 @@ try {
     const overlayStyle = getComputedStyle(profile, '::after');
     return {
       active: profile.classList.contains('has-scroll-tail'),
+      headActive: profile.classList.contains('has-scroll-head'),
       viewportActive: list.classList.contains('has-scroll-tail'),
+      viewportHeadActive: list.classList.contains('has-scroll-head'),
       maskImage: style.maskImage || style.webkitMaskImage,
       maskRepeat: style.maskRepeat || style.webkitMaskRepeat,
       overlayContent: overlayStyle.content,
       backdropFilter: overlayStyle.backdropFilter || overlayStyle.webkitBackdropFilter,
     };
   });
-  if (!profileTail.active || !profileTail.viewportActive || !profileTail.maskImage.includes('linear-gradient') || profileTail.maskRepeat !== 'no-repeat' || profileTail.overlayContent !== 'none' || profileTail.backdropFilter !== 'none') {
+  if (!profileTail.active || profileTail.headActive || !profileTail.viewportActive || profileTail.viewportHeadActive || !profileTail.maskImage.includes('linear-gradient') || profileTail.maskRepeat !== 'no-repeat' || profileTail.overlayContent !== 'none' || profileTail.backdropFilter !== 'none') {
     throw new Error(`Profile scroll-tail cue is incorrect: ${JSON.stringify(profileTail)}`);
   }
   await page.locator('#students-list').evaluate(async list => {
@@ -675,6 +683,9 @@ try {
   });
   if (await page.locator('#profile-view').evaluate(profile => profile.classList.contains('has-scroll-tail'))) {
     throw new Error('Profile scroll-tail cue remained visible at the end of the list');
+  }
+  if (!await page.locator('#profile-view').evaluate(profile => profile.classList.contains('has-scroll-head'))) {
+    throw new Error('Profile scroll-head cue is missing after scrolling');
   }
   await page.locator('#students-list').evaluate(list => { list.scrollTop = 0; });
 
@@ -1255,6 +1266,7 @@ try {
   await scrollToListEnd(largeTopicPopover.locator('.search-combobox-options'));
   await scanPage.waitForTimeout(32);
   if (await largeTopicPopover.evaluate(popover => popover.classList.contains('has-scroll-tail'))) throw new Error('Large topic scroll-tail cue remained visible at the end');
+  if (!await largeTopicPopover.evaluate(popover => popover.classList.contains('has-scroll-head'))) throw new Error('Large topic scroll-head cue is missing after scrolling');
   await largeTopicPopover.locator('.search-combobox-search').fill('Perkenalan');
   if (await largeTopicPopover.locator('[role="option"]').count() !== 1) throw new Error('Large topic combobox filtering failed');
   await largeTopicPopover.locator('.search-combobox-search').press('Escape');
@@ -1267,6 +1279,7 @@ try {
   await scrollToListEnd(topicPopover.locator('.search-combobox-options'));
   await scanPage.waitForTimeout(32);
   if (await topicPopover.evaluate(popover => popover.classList.contains('has-scroll-tail'))) throw new Error('Active topic scroll-tail cue remained visible at the end');
+  if (!await topicPopover.evaluate(popover => popover.classList.contains('has-scroll-head'))) throw new Error('Active topic scroll-head cue is missing after scrolling');
   await topicPopover.locator('.search-combobox-options').evaluate(list => { list.scrollTop = 0; });
   const firstTopic = topicPopover.locator('[role="option"]').first();
   const idleBackground = await firstTopic.evaluate(option => getComputedStyle(option).backgroundColor);
@@ -1549,6 +1562,22 @@ try {
   await loginPage.mouse.up();
   if (reducedLogin.transform !== 'none' || reducedLogin.opacity >= 1) throw new Error(`Reduced-motion login feedback is incorrect: ${JSON.stringify(reducedLogin)}`);
   await unauthenticatedContext.close();
+
+  profileClasses = profileClasses.slice(0, 6);
+  await page.reload({ waitUntil: 'networkidle' });
+  if (!await page.locator('#class-combobox-search').evaluate(search => search.hidden)) {
+    throw new Error('Class search is visible with fewer than seven classes');
+  }
+  await page.locator('#class-combobox-trigger').click();
+  await page.locator('#class-combobox-popover').waitFor({ state: 'visible' });
+  await page.waitForFunction(() => document.activeElement?.matches('#class-combobox-options [role="option"]'));
+  await page.keyboard.press('Escape');
+
+  profileClasses.push({ code: 'K7', name: 'Kelas 7' });
+  await page.reload({ waitUntil: 'networkidle' });
+  if (await page.locator('#class-combobox-search').evaluate(search => search.hidden)) {
+    throw new Error('Class search is hidden with seven classes');
+  }
   console.log('search combobox smoke ok');
   }
 } finally {

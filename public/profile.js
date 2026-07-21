@@ -737,7 +737,8 @@ window.initializeProfileView = function initializeProfileView() {
     placeholder: 'Pilih Kelas...',
     getValue: item => item.code,
     getLabel: item => `Kelompok ${item.name}`,
-    getSearchText: item => `${item.code} ${item.name}`
+    getSearchText: item => `${item.code} ${item.name}`,
+    minSearchItems: 7
   });
   loadClasses();
 

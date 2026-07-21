@@ -15,6 +15,8 @@
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const remaining = element.scrollHeight - element.scrollTop - element.clientHeight;
+        host.classList.toggle('has-scroll-head', element.scrollTop > 1);
+        element.classList.toggle('has-scroll-head', element.scrollTop > 1);
         host.classList.toggle('has-scroll-tail', remaining > 1);
         element.classList.toggle('has-scroll-tail', remaining > 1);
       });
@@ -44,7 +46,8 @@
     getValue,
     getLabel,
     getSearchText = getLabel,
-    getOptionClass = () => ''
+    getOptionClass = () => '',
+    minSearchItems = 0
   }) {
     const root = document.getElementById(rootId);
     const trigger = document.getElementById(triggerId);
@@ -127,12 +130,16 @@
       render();
       closeActiveCombobox = close;
       requestAnimationFrame(() => {
-        if (!popover.hidden && !popover.contains(document.activeElement)) search.focus();
+        if (!popover.hidden && !popover.contains(document.activeElement)) {
+          (search.hidden ? list.querySelector('[role="option"]') : search)?.focus();
+        }
       });
     }
 
     function setItems(nextItems, unavailableLabel) {
       items = Array.isArray(nextItems) ? nextItems : [];
+      search.hidden = items.length < minSearchItems;
+      if (search.hidden) search.value = '';
       select.replaceChildren(new Option(placeholder, '', true, true));
       select.firstElementChild.disabled = true;
       items.forEach(item => select.add(new Option(getLabel(item), getValue(item))));
