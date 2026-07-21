@@ -1,6 +1,6 @@
 {
   "name": "absensikatekumen",
-  "version": "2.7.5-b",
+  "version": "2.7.6",
   "type": "module",
   "engines": {
     "node": "24.x"
