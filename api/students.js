@@ -1,11 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
 import { getScriptMap, readJsonResponse } from './_gas-utils.js';
-import { photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
+import { PHOTO_MIME_TYPES, bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
 /**
  * Returns the GAS student roster with authenticated same-origin photo URLs.
- * The browser loads those photos independently so storage latency does not
- * block names and IDs from rendering.
  */
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -54,7 +53,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ status: "error", message: "Server GAS authentication is not configured" });
   }
 
-  const photosEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_KEY);
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_KEY;
+  const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
   try {
     const gasResponse = await fetch(scriptURL, {
@@ -78,10 +79,26 @@ export default async function handler(req, res) {
 
     const students = data.students.map(student => ({
       ...student,
-      image: photosEnabled && storageBaseNameForStudent(student.studentId)
-        ? photoUrlForStudent(student.studentId)
-        : ''
+      image: '',
     }));
+
+    if (supabase && students.length > 0) {
+      const { data: files, error } = await listAllFiles(supabase, bucketNameForClass(normalizedClassCode));
+      if (error) {
+        for (const student of students) {
+          if (storageBaseNameForStudent(student.studentId)) student.image = photoUrlForStudent(student.studentId);
+        }
+      } else if (files) {
+        const filenames = new Map(files.map(file => [file.name.toLowerCase(), file.name]));
+        for (const student of students) {
+          const baseName = storageBaseNameForStudent(student.studentId)?.toLowerCase();
+          const filename = baseName && Object.keys(PHOTO_MIME_TYPES)
+            .map(ext => filenames.get(`${baseName}.${ext}`))
+            .find(Boolean);
+          if (filename) student.image = photoUrlForStudent(student.studentId, '', filename);
+        }
+      }
+    }
 
     return res.status(200).json({ status: "ok", students });
   } catch (err) {

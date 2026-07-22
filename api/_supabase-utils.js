@@ -85,9 +85,10 @@ export function storageBaseNameForStudent(studentId) {
   return normalized.replace(/\//g, '-');
 }
 
-export function photoUrlForStudent(studentId, version = '') {
+export function photoUrlForStudent(studentId, version = '', filename = '') {
   const params = new URLSearchParams({ studentId });
   if (version) params.set('v', version);
+  if (filename) params.set('filename', filename);
   return `/api/photo?${params.toString()}`;
 }
 

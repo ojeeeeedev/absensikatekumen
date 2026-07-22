@@ -2,6 +2,11 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { createMockRequest, createMockResponse } from './helpers.js';
 
+const list = vi.fn();
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({ storage: { from: vi.fn(() => ({ list })) } })),
+}));
+
 import handler from '../api/students.js';
 
 const JWT_SECRET = 'test-jwt';
@@ -36,11 +41,16 @@ describe('/api/students', () => {
     configure();
     process.env.SUPABASE_URL = 'https://storage.example';
     process.env.SUPABASE_KEY = 'storage-key';
+    list.mockResolvedValue({ data: [{ name: '1-SAB-2.jpg' }], error: null });
     global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'ok', students: [{ studentId: '1/SAB/2' }] })) });
     const res = createMockResponse();
     await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'sab' } }), res);
     expect(res.statusCode).toBe(200);
-    expect(res.body.students).toEqual([{ studentId: '1/SAB/2', image: '/api/photo?studentId=1%2FSAB%2F2' }]);
+    expect(res.body.students).toEqual([{
+      studentId: '1/SAB/2',
+      image: '/api/photo?studentId=1%2FSAB%2F2&filename=1-SAB-2.jpg',
+    }]);
+    expect(list).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(GAS_URL, expect.any(Object));
   });
   it('returns 502 for non-JSON GAS responses', async () => {

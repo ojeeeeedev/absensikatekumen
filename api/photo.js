@@ -5,6 +5,7 @@ import {
   bucketNameForClass,
   classCodeFromStudentId,
   findStudentPhoto,
+  storageBaseNameForStudent,
 } from './_supabase-utils.js';
 
 export default async function handler(req, res) {
@@ -33,13 +34,34 @@ export default async function handler(req, res) {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     const bucketName = bucketNameForClass(classCode);
-    const photo = await findStudentPhoto(supabase, bucketName, studentId);
+    const requestedFilename = String(req.query?.filename || '').trim();
+    let photo;
+
+    if (requestedFilename) {
+      const parts = requestedFilename.split('.');
+      const ext = parts.pop()?.toLowerCase();
+      const expectedBase = storageBaseNameForStudent(studentId);
+      if (!PHOTO_MIME_TYPES[ext] || parts.join('.').toLowerCase() !== expectedBase.toLowerCase()) {
+        return res.status(400).json({ status: 'error', message: 'filename tidak valid' });
+      }
+      photo = { name: requestedFilename };
+    } else {
+      photo = await findStudentPhoto(supabase, bucketName, studentId);
+    }
+
     if (!photo) {
       return res.status(404).json({ status: 'error', message: 'Foto tidak ditemukan' });
     }
 
-    const ext = photo.name.split('.').pop().toLowerCase();
-    const { data, error } = await supabase.storage.from(bucketName).download(photo.name);
+    let ext = photo.name.split('.').pop().toLowerCase();
+    let { data, error } = await supabase.storage.from(bucketName).download(photo.name);
+    if ((error || !data) && requestedFilename) {
+      photo = await findStudentPhoto(supabase, bucketName, studentId);
+      if (photo) {
+        ext = photo.name.split('.').pop().toLowerCase();
+        ({ data, error } = await supabase.storage.from(bucketName).download(photo.name));
+      }
+    }
     if (error || !data) {
       return res.status(404).json({ status: 'error', message: 'Foto tidak ditemukan' });
     }

@@ -86,4 +86,43 @@ describe('/api/photo', () => {
     expect(Buffer.isBuffer(res.body)).toBe(true);
     expect(res.body.toString()).toBe('photo-bytes');
   });
+
+  it('downloads roster photos without another storage list request', async () => {
+    process.env.JWT_SECRET = JWT_SECRET;
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_KEY = 'service-key';
+    download.mockResolvedValue({ data: new Blob(['photo-bytes']), error: null });
+
+    for (const id of ['001', '002', '003']) {
+      const studentId = `2025/SAB/${id}`;
+      const req = createMockRequest({
+        method: 'GET',
+        headers: { cookie: `auth_token=${makeToken()}` },
+        query: { studentId, filename: `2025-SAB-${id}.jpg` },
+      });
+      const res = createMockResponse();
+      await handler(req, res);
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(list).not.toHaveBeenCalled();
+    expect(download).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects a filename that does not belong to the student', async () => {
+    process.env.JWT_SECRET = JWT_SECRET;
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_KEY = 'service-key';
+    const req = createMockRequest({
+      method: 'GET',
+      headers: { cookie: `auth_token=${makeToken()}` },
+      query: { studentId: '2025/SAB/001', filename: '2025-SAB-002.jpg' },
+    });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(download).not.toHaveBeenCalled();
+  });
 });
