@@ -54,6 +54,7 @@ const PhotoUploader = createProfilePhotoUploader({
 // ============================================================
 
 let classCombobox;
+let studentLoadId = 0;
 
 async function loadClasses() {
   try {
@@ -77,9 +78,16 @@ async function loadClasses() {
 }
 
 async function loadStudents(classCode) {
+  const loadId = ++studentLoadId;
   const listContainer = document.getElementById('students-list');
   const loader = document.getElementById('students-loader');
   const summaryContainer = document.getElementById('students-summary');
+  const infoBar = document.getElementById('profile-info-bar');
+
+  allStudents = [];
+  activeProfileId = null;
+  cancelProfileInteraction();
+  if (infoBar) infoBar.style.display = 'none';
   
   // Hide counts summary box immediately when starting to load a class
   if (summaryContainer) {
@@ -89,7 +97,11 @@ async function loadStudents(classCode) {
   // Reset the list position when loading a new class.
   if (listContainer) listContainer.scrollTop = 0;
   
-  if (listContainer) listContainer.innerHTML = '';
+  if (listContainer) {
+    listContainer.innerHTML = '';
+    listContainer.style.display = 'none';
+    listContainer.setAttribute('aria-busy', 'true');
+  }
   if (loader) loader.style.display = 'flex';
   
   try {
@@ -99,18 +111,27 @@ async function loadStudents(classCode) {
       }
     });
     const data = await res.json();
+    if (loadId !== studentLoadId) return;
     if (data.status === 'ok') {
       allStudents = data.students;
+      if (infoBar) infoBar.style.display = 'flex';
       renderStudents(allStudents);
       filterStudents();
     } else {
       showToast(data.message || "Gagal memuat data", "error");
     }
   } catch (e) {
+    if (loadId !== studentLoadId) return;
     console.error("Error loading students:", e);
     showToast("Gagal mengambil data katekumen", "error");
   } finally {
-    if (loader) loader.style.display = 'none';
+    if (loadId === studentLoadId) {
+      if (loader) loader.style.display = 'none';
+      if (listContainer) {
+        listContainer.style.removeProperty('display');
+        listContainer.setAttribute('aria-busy', 'false');
+      }
+    }
   }
 }
 
@@ -746,9 +767,7 @@ window.initializeProfileView = function initializeProfileView() {
   if (selector) {
     selector.addEventListener('change', (e) => {
       document.getElementById('app-container')?.classList.add('profile-expanded');
-      const infoBar = document.getElementById('profile-info-bar');
       const searchInput = document.getElementById('search-input');
-      if (infoBar) infoBar.style.display = 'flex';
       if (searchInput) {
         searchInput.value = '';
       }

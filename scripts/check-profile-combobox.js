@@ -95,22 +95,27 @@ try {
     contentType: 'application/json',
     body: JSON.stringify({ status: 'ok', classes: profileClasses })
   }));
-  await page.route('**/api/students?*', route => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ status: 'ok', students: Array.from({ length: 35 }, (_, index) => ({
-      studentId: `2026/MAL/${String(index + 1).padStart(3, '0')}`,
-      name: index === 2
-        ? 'Katekis Induk Khusus'
-        : index === 3
-          ? 'Katekis Kecil Khusus'
-          : index === 20
-            ? 'Katekumen Dengan Nama Sangat Panjang'
-            : `Katekumen ${index + 1}`,
-      image: index === 0 ? '/api/photo?studentId=2026%2FMAL%2F001' : '',
-      kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
-      katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
-    })) })
-  }));
+  let studentResponseDelays = {};
+  await page.route('**/api/students?*', async route => {
+    const classCode = new URL(route.request().url()).searchParams.get('classCode');
+    if (studentResponseDelays[classCode]) await new Promise(resolve => setTimeout(resolve, studentResponseDelays[classCode]));
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'ok', students: Array.from({ length: 35 }, (_, index) => ({
+        studentId: `2026/${classCode}/${String(index + 1).padStart(3, '0')}`,
+        name: index === 2
+          ? 'Katekis Induk Khusus'
+          : index === 3
+            ? 'Katekis Kecil Khusus'
+            : index === 20
+              ? 'Katekumen Dengan Nama Sangat Panjang'
+              : `Katekumen ${index + 1}`,
+        image: index === 0 ? `/api/photo?studentId=2026%2F${classCode}%2F001` : '',
+        kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
+        katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
+      })) })
+    });
+  });
   await page.route('**/api/upload-photo', route => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ status: 'ok', image: '/api/photo?studentId=2026%2FMAL%2F001&uploaded=1' })
@@ -425,6 +430,28 @@ try {
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
   if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
+  studentResponseDelays = { SAB: 120, MAL: 60 };
+  const switchingState = await page.evaluate(() => {
+    const selector = document.getElementById('class-selector');
+    selector.value = 'SAB';
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+    selector.value = 'MAL';
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+    return {
+      loaderVisible: getComputedStyle(document.getElementById('students-loader')).display !== 'none',
+      listHidden: getComputedStyle(document.getElementById('students-list')).display === 'none',
+      infoHidden: getComputedStyle(document.getElementById('profile-info-bar')).display === 'none',
+    };
+  });
+  if (!switchingState.loaderVisible || !switchingState.listHidden || !switchingState.infoHidden) {
+    throw new Error(`Class switch did not show an exclusive loading state: ${JSON.stringify(switchingState)}`);
+  }
+  await page.waitForFunction(() => document.querySelector('.student-id-text')?.textContent.startsWith('2026/MAL/'));
+  await page.waitForTimeout(100);
+  const switchedClass = await page.locator('.student-id-text').first().textContent();
+  if (!switchedClass.startsWith('2026/MAL/')) throw new Error(`Stale class response replaced the latest class: ${switchedClass}`);
+  studentResponseDelays = {};
+  console.log('profile class switch race ok');
   const reachLinks = await page.locator('.profile-reach-link').evaluateAll(links => links.map(link => ({
     href: link.getAttribute('href'),
     target: link.target,
