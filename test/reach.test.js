@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { createMockRequest, createMockResponse } from './helpers.js';
 import handler from '../api/reach.js';
 
-const JWT_SECRET = 'test-jwt';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-bytes-long';
 const GAS_URL = 'https://gas.example/reach';
 const originalEnv = { ...process.env };
 const originalFetch = global.fetch;
@@ -99,6 +99,17 @@ describe('/api/reach', () => {
 
     expect(res.statusCode).toBe(statusCode);
     expect(JSON.stringify(res.body)).not.toContain(data.phone || '0812');
+    expect(res.redirectUrl).toBeNull();
+  });
+
+  it('returns 504 when GAS times out', async () => {
+    configure();
+    global.fetch = vi.fn().mockRejectedValue(Object.assign(new Error('timed out'), { name: 'TimeoutError' }));
+    const res = createMockResponse();
+
+    await handler(request(), res);
+
+    expect(res.statusCode).toBe(504);
     expect(res.redirectUrl).toBeNull();
   });
 });

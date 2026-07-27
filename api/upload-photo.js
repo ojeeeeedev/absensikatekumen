@@ -72,7 +72,7 @@ export default async function handler(req, res) {
 
   // --- JWT Authentication ---
   try {
-    verifyJwt(req);
+    verifyJwt(req, { allowCookie: true });
   } catch (err) {
     return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
   }
@@ -151,24 +151,18 @@ export default async function handler(req, res) {
     // --- Ensure the bucket exists; create it if not (idempotent) ---
     await ensureBucketExists(supabase, bucketName);
 
-    // Delete any existing photos for this student (all extensions)
+    // Find existing photos so old extensions can be removed after a successful upload.
     const { data: existingFiles } = await supabase.storage
       .from(bucketName)
       .list('', { search: baseFilename });
 
-    if (existingFiles && existingFiles.length > 0) {
-      const toDelete = existingFiles
-        .filter(f => {
-          const nameParts = f.name.split('.');
-          nameParts.pop();
-          return nameParts.join('.') === baseFilename;
-        })
-        .map(f => f.name);
-
-      if (toDelete.length > 0) {
-        await supabase.storage.from(bucketName).remove(toDelete);
-      }
-    }
+    const toDelete = (existingFiles || [])
+      .filter(f => {
+        const nameParts = f.name.split('.');
+        nameParts.pop();
+        return nameParts.join('.') === baseFilename && f.name !== targetFilename;
+      })
+      .map(f => f.name);
 
     // Upload the new photo
     const { error: uploadError } = await supabase.storage
@@ -184,11 +178,16 @@ export default async function handler(req, res) {
       return res.status(500).json({ status: 'error', message: `Gagal mengunggah foto: ${uploadError.message}` });
     }
 
+    if (toDelete.length > 0) {
+      const { error: removeError } = await supabase.storage.from(bucketName).remove(toDelete);
+      if (removeError) console.error('[upload-photo] Old photo cleanup error:', removeError);
+    }
+
     return res.status(200).json({
       status: 'ok',
       message: 'Foto berhasil diunggah',
       filename: targetFilename,
-      image: photoUrlForStudent(studentId, Date.now().toString()),
+      image: photoUrlForStudent(studentId, Date.now().toString(), targetFilename),
     });
   } catch (err) {
     console.error('[upload-photo] Unexpected error:', err);

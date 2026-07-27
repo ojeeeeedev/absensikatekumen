@@ -38,9 +38,8 @@ try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
   await context.addInitScript(() => {
-    sessionStorage.setItem('authToken', 'preview');
+    sessionStorage.setItem('authState', 'authenticated');
     localStorage.setItem('hasSeenOnboardingV2', 'true');
     localStorage.setItem('selectedWeek', '0');
     localStorage.setItem('selectedTopicName', 'Pembukaan Kelas');
@@ -52,6 +51,10 @@ try {
   });
 
   const page = await context.newPage();
+  await page.route('**/api/absensi', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ status: 'ok' }),
+  }));
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.evaluate(() => {
     window.setAppState(2);

@@ -90,7 +90,13 @@ function doPost(e) {
     }
 
     // 4. Find Student using Map (O(1) Lookup)
-    const studentData = studentMap[studentIdNormalized];
+    let studentData = studentMap[studentIdNormalized];
+
+    if (!studentData && cachedData) {
+      cache.remove("STUDENT_MAP_V1");
+      studentMap = buildStudentMap_(ss, sheet);
+      studentData = studentMap[studentIdNormalized];
+    }
 
     if (!studentData) {
        return buildResponse_({
@@ -104,7 +110,6 @@ function doPost(e) {
     // However, if the sheet gets manually altered, in-memory check might not reflect it.
     // To balance speed and correctness, we read the specific status cell but bypass full lookups.
     // Let's check the cached status if we implement checkins in cache, otherwise read cell.
-    const statusCell = sheet.getRange(studentData.r, topikCol);
     const lock = LockService.getScriptLock();
     if (!lock.tryLock(5000)) {
       return buildResponse_({ status: "error", message: "Sistem sedang sibuk, silakan scan ulang." });
@@ -112,6 +117,20 @@ function doPost(e) {
 
     try {
       // ponytail: script-wide lock; revisit only if measured scan contention matters.
+      const rowStudentId = String(sheet.getRange(studentData.r, 12).getValue() || "").trim().toLowerCase();
+      if (rowStudentId !== studentIdNormalized) {
+        cache.remove("STUDENT_MAP_V1");
+        studentMap = buildStudentMap_(ss, sheet);
+        studentData = studentMap[studentIdNormalized];
+        if (!studentData) {
+          return buildResponse_({
+            status: "not found",
+            message: `❌ ID ${rawId.toUpperCase()} tidak terdaftar.`
+          });
+        }
+      }
+
+      const statusCell = sheet.getRange(studentData.r, topikCol);
       const currentValue = statusCell.getValue();
       if (currentValue === true || currentValue === "TRUE") {
         return buildResponse_({

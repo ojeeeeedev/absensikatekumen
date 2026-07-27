@@ -6,7 +6,7 @@ vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }));
 import { createClient } from '@supabase/supabase-js';
 import handler from '../api/absensi.js';
 
-const JWT_SECRET = 'test-jwt';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-bytes-long';
 const GAS_URL = 'https://gas.example/exec';
 const originalEnv = { ...process.env };
 const originalFetch = global.fetch;
@@ -29,12 +29,18 @@ describe('/api/absensi', () => {
     process.env.GAS_SECRET_KEY = 'gas-secret';
   }
 
-  it('returns an HS256 authorized token for the configured login secret', async () => {
+  it('sets an HttpOnly HS256 session cookie for the configured login secret', async () => {
     configure();
     const res = createMockResponse();
     await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: 'shared-secret' } }), res);
     expect(res.statusCode).toBe(200);
-    expect(jwt.verify(res.body.token, JWT_SECRET, { algorithms: ['HS256'] })).toMatchObject({ authorized: true });
+    const cookie = res.headers['Set-Cookie'];
+    const encodedToken = cookie.match(/^auth_token=([^;]+)/)[1];
+    expect(jwt.verify(decodeURIComponent(encodedToken), JWT_SECRET, { algorithms: ['HS256'] })).toMatchObject({ authorized: true });
+    expect(cookie).toContain('HttpOnly');
+    expect(cookie).toContain('Secure');
+    expect(cookie).toContain('SameSite=Strict');
+    expect(res.body.token).toBeUndefined();
   });
 
   it('fails closed when AUTH_SECRET is missing', async () => {
@@ -46,7 +52,7 @@ describe('/api/absensi', () => {
     expect(res.statusCode).toBe(500);
     expect(res.body).toMatchObject({ status: 'error' });
     expect(res.body.message).toBe('Server authentication is not configured');
-    expect(res.body.token).toBeUndefined();
+    expect(res.headers['Set-Cookie']).toBeUndefined();
     expect(global.fetch).not.toHaveBeenCalled();
     expect(createClient).not.toHaveBeenCalled();
   });
@@ -74,7 +80,35 @@ describe('/api/absensi', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('rejects attendance without a bearer token', async () => {
+  it('limits repeated failed logins from one forwarded address', async () => {
+    configure();
+    const headers = { 'x-forwarded-for': '203.0.113.42' };
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const failed = createMockResponse();
+      await handler(createMockRequest({ method: 'POST', headers, body: { action: 'login', secret: 'wrong' } }), failed);
+      expect(failed.statusCode).toBe(401);
+    }
+
+    const limited = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', headers, body: { action: 'login', secret: 'shared-secret' } }), limited);
+
+    expect(limited.statusCode).toBe(429);
+    expect(limited.headers['Retry-After']).toBeDefined();
+  });
+
+  it('validates an existing session cookie without exposing its token', async () => {
+    configure();
+    const res = createMockResponse();
+    await handler(createMockRequest({
+      method: 'POST',
+      headers: { cookie: `auth_token=${token()}` },
+      body: { action: 'session' },
+    }), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+  });
+
+  it('rejects attendance without a session cookie or bearer token', async () => {
     configure();
     const res = createMockResponse();
     await handler(createMockRequest({ method: 'POST', body: { studentId: '1/SAB/2', week: 'R1' } }), res);
@@ -108,6 +142,14 @@ describe('/api/absensi', () => {
     const res = createMockResponse();
     await handler(createMockRequest({ method: 'POST', headers: { authorization: `Bearer ${token()}` }, body: { studentId: '1/SAB/2', week: 'R1' } }), res);
     expect(res.statusCode).toBe(502);
+  });
+
+  it('returns 504 when GAS times out', async () => {
+    configure();
+    global.fetch = vi.fn().mockRejectedValue(Object.assign(new Error('timed out'), { name: 'TimeoutError' }));
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'POST', headers: { authorization: `Bearer ${token()}` }, body: { studentId: '1/SAB/2', week: 'R1' } }), res);
+    expect(res.statusCode).toBe(504);
   });
 
   it('forwards configured GAS secret on valid attendance', async () => {

@@ -13,7 +13,7 @@
         window.__setThemeLogo = (img) => { img.src = window.__themeLogoSrc; };
       })();
     </script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+" crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://script.google.com">
@@ -47,13 +47,9 @@
     <main id="app-container" class="glass-container">
       <script>
         (function() {
-          const cookieToken = document.cookie.split('; ').find(value => value.startsWith('auth_token='))?.split('=')[1];
-          const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
-          if (cookieToken && !sessionStorage.getItem('authToken')) {
-            sessionStorage.setItem('authToken', decodeURIComponent(cookieToken));
-          }
+          const authenticated = sessionStorage.getItem('authState') === 'authenticated';
           const container = document.currentScript.parentElement;
-          if (sessionToken) {
+          if (authenticated) {
             container.classList.add('state-scanning');
             const savedWeek = localStorage.getItem('selectedWeek');
             if (!savedWeek) {
@@ -93,7 +89,7 @@
         <div id="login-footer">
           <a href="https://wa.link/3yg0ug">Lupa password?</a>
           <span class="login-version-divider">&bull;</span>
-          <span id="login-version" class="login-version-span">v2.7.7</span>
+          <span id="login-version" class="login-version-span">v2.7.8</span>
         </div>
       </div>
 
@@ -220,7 +216,7 @@
         <!-- Footer -->
         <footer class="app-footer">
           <div class="footer-text">
-            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.7.7</a> &bull; © 2026 Tim Katekumen Dewasa
+            <a href="https://github.com/ojeeeeedev/absensikatekumen" class="footer-link" id="footer-version">v2.7.8</a> &bull; © 2026 Tim Katekumen Dewasa
             &bull; <a href="https://wa.link/rogbpe" class="footer-link">Bantuan?</a>
           </div>
         </footer>

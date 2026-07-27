@@ -7,8 +7,7 @@
     // Check if they already saw onboarding
     if (localStorage.getItem('hasSeenOnboardingV2')) return;
 
-    const sessionToken = sessionStorage.getItem('authToken');
-    if (!sessionToken) return;
+    if (sessionStorage.getItem('authState') !== 'authenticated') return;
 
     const appendModal = () => {
       if (document.getElementById('onboarding-modal')) return;

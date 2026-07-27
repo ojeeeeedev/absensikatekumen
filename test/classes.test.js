@@ -4,6 +4,7 @@ import handler from '../api/classes.js';
 import { createMockRequest, createMockResponse } from './helpers.js';
 
 describe('/api/classes', () => {
+  const jwtSecret = 'test-jwt-secret-at-least-32-bytes-long';
   const originalSecret = process.env.JWT_SECRET;
   const originalScriptMap = process.env.VERCEL_SCRIPT_MAP_JSON;
 
@@ -45,7 +46,7 @@ describe('/api/classes', () => {
   });
 
   it('should return 401 if Authorization token is invalid', async () => {
-    process.env.JWT_SECRET = 'my-secret-key';
+    process.env.JWT_SECRET = jwtSecret;
     const req = createMockRequest({
       method: 'GET',
       headers: {
@@ -61,7 +62,7 @@ describe('/api/classes', () => {
   });
 
   it('should return 200 with classes list for a valid token', async () => {
-    const secret = 'my-secret-key';
+    const secret = jwtSecret;
     process.env.JWT_SECRET = secret;
     process.env.VERCEL_SCRIPT_MAP_JSON = JSON.stringify({
       SAB: 'https://script.google.com/macros/s/sab-url/exec',
@@ -69,7 +70,7 @@ describe('/api/classes', () => {
       YOUR_CLASS_CODE_HERE: 'https://placeholder.url'
     });
 
-    const token = jwt.sign({ facilitator: 'test-user' }, secret, { algorithm: 'HS256' });
+    const token = jwt.sign({ authorized: true, facilitator: 'test-user' }, secret, { algorithm: 'HS256' });
 
     const req = createMockRequest({
       method: 'GET',

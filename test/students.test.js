@@ -9,7 +9,7 @@ vi.mock('@supabase/supabase-js', () => ({
 
 import handler from '../api/students.js';
 
-const JWT_SECRET = 'test-jwt';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-bytes-long';
 const GAS_URL = 'https://gas.example/students';
 const originalEnv = { ...process.env };
 const originalFetch = global.fetch;
@@ -57,6 +57,14 @@ describe('/api/students', () => {
     configure(); global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue('not json') }); const res = createMockResponse();
     await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'SAB' } }), res);
     expect(res.statusCode).toBe(502);
+  });
+
+  it('returns 504 when GAS times out', async () => {
+    configure();
+    global.fetch = vi.fn().mockRejectedValue(Object.assign(new Error('timed out'), { name: 'TimeoutError' }));
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'SAB' } }), res);
+    expect(res.statusCode).toBe(504);
   });
 
   it('forwards configured GAS secret in the student-list request', async () => {

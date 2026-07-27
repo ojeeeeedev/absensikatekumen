@@ -60,9 +60,8 @@ try {
   const browserType = process.env.PLAYWRIGHT_BROWSER === 'webkit' ? webkit : chromium;
   browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
   await context.addInitScript(() => {
-    sessionStorage.setItem('authToken', 'preview');
+    sessionStorage.setItem('authState', 'authenticated');
     localStorage.setItem('hasSeenOnboardingV2', 'true');
     const addEventListener = EventTarget.prototype.addEventListener;
     window.__profileScrollListeners = 0;
@@ -78,6 +77,10 @@ try {
   let releaseProfilePhoto;
   let profilePhotoRequests = 0;
   const profilePhotoGate = new Promise(resolve => { releaseProfilePhoto = resolve; });
+  await page.route('**/api/absensi', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ status: 'ok' }),
+  }));
   await page.route('**/api/photo?*', async route => {
     profilePhotoRequests += 1;
     await profilePhotoGate;

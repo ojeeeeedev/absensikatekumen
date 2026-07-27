@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
-import { getScriptMap, readJsonResponse } from './_gas-utils.js';
+import { fetchGas, getScriptMap, isTimeoutError, readJsonResponse } from './_gas-utils.js';
 import { PHOTO_MIME_TYPES, bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
 /**
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    verifyJwt(req);
+    verifyJwt(req, { allowCookie: true });
   } catch (err) {
     return res.status(401).json({ status: "error", message: "Akses ditolak: Token tidak valid" });
   }
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
   const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
   try {
-    const gasResponse = await fetch(scriptURL, {
+    const gasResponse = await fetchGas(scriptURL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -103,6 +103,9 @@ export default async function handler(req, res) {
     return res.status(200).json({ status: "ok", students });
   } catch (err) {
     console.error("API Error in /api/students:", err);
+    if (isTimeoutError(err)) {
+      return res.status(504).json({ status: "error", message: "Google Apps Script tidak merespons tepat waktu" });
+    }
     return res.status(500).json({ status: "error", message: err.message });
   }
 }

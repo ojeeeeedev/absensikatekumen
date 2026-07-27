@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { ensureBucketExists, bucketNameForClass } from './_supabase-utils.js';
 import { verifyJwt } from './_auth.js';
+import { getScriptMap } from './_gas-utils.js';
 
 /**
  * POST /api/init-bucket
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
 
   // --- JWT Authentication ---
   try {
-    verifyJwt(req);
+    verifyJwt(req, { allowCookie: true });
   } catch (err) {
     return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
   }
@@ -59,6 +60,16 @@ export default async function handler(req, res) {
       status: 'error',
       message: 'Format classCode tidak valid. Gunakan 2–5 karakter huruf/angka (contoh: SAB, TOM)',
     });
+  }
+
+  let scriptMap;
+  try {
+    scriptMap = getScriptMap();
+  } catch {
+    return res.status(500).json({ status: 'error', message: 'Server configuration error' });
+  }
+  if (!scriptMap[normalizedCode]) {
+    return res.status(400).json({ status: 'error', message: 'Kelas tidak terdaftar' });
   }
 
   // --- Supabase Client ---

@@ -1,7 +1,3 @@
-
-
-const getProfileToken = () => sessionStorage.getItem('authToken') || getCookie('auth_token');
-
 let allStudents = [];
 let activeProfileId = null;
 const updateProfileScrollTail = window.bindScrollTail(document.getElementById('students-list'));
@@ -41,7 +37,6 @@ if (profileList) profileFocusTailObserver?.observe(profileList);
 // Photo Upload Manager
 // ============================================================
 const PhotoUploader = createProfilePhotoUploader({
-  getToken: getProfileToken,
   findStudent: studentId => allStudents.find(student => student.studentId === studentId),
   onUploaded: () => {
     renderStudents(allStudents);
@@ -58,11 +53,7 @@ let studentLoadId = 0;
 
 async function loadClasses() {
   try {
-    const res = await fetch('/api/classes', {
-      headers: {
-        'Authorization': `Bearer ${getProfileToken()}`
-      }
-    });
+    const res = await fetch('/api/classes');
     const data = await res.json();
     if (data.status === 'ok') {
       classCombobox.setItems(data.classes, 'Kelas tidak tersedia');
@@ -105,11 +96,7 @@ async function loadStudents(classCode) {
   if (loader) loader.style.display = 'flex';
   
   try {
-    const res = await fetch(`/api/students?classCode=${classCode}`, {
-      headers: {
-        'Authorization': `Bearer ${getProfileToken()}`
-      }
-    });
+    const res = await fetch(`/api/students?classCode=${classCode}`);
     const data = await res.json();
     if (loadId !== studentLoadId) return;
     if (data.status === 'ok') {

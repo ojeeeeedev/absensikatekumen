@@ -6,7 +6,6 @@ const sharedBrowserGlobals = {
   Html5Qrcode: "readonly",
   createProfilePhotoUploader: "readonly",
   createSearchCombobox: "readonly",
-  getCookie: "readonly",
   handleScan: "readonly",
   initTheme: "readonly",
   openTopicSelector: "readonly",

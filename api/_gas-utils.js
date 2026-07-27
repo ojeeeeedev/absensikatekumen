@@ -11,6 +11,19 @@ export function getScriptMap(rawValue = process.env.VERCEL_SCRIPT_MAP_JSON) {
   return scriptMap;
 }
 
+const GAS_TIMEOUT_MS = 10_000;
+
+export function fetchGas(url, options = {}) {
+  return fetch(url, {
+    ...options,
+    signal: options.signal || AbortSignal.timeout(GAS_TIMEOUT_MS),
+  });
+}
+
+export function isTimeoutError(error) {
+  return error?.name === 'AbortError' || error?.name === 'TimeoutError';
+}
+
 export async function readJsonResponse(response) {
   const text = await response.text();
   try {

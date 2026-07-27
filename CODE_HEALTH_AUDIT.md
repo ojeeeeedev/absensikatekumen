@@ -5,6 +5,46 @@ Branch baseline: `codex/ui-font` at `a20df94`
 Runtime baseline: Node.js `v24.18.0`, npm `11.16.0`
 Execution update: 2026-07-14
 
+## Current audit update — 2026-07-27
+
+Baseline: `main` at `be859b0` with the existing user change in `TODO.md`.
+
+### Ranked findings
+
+| Priority | Finding | Impact | Suggested fix |
+| --- | --- | --- | --- |
+| P1 | Apps Script caches student row numbers for six hours and writes attendance to the cached row. | A Sheet row insert, deletion, or sort can write attendance to the wrong student. | Verify the student ID in the cached row while holding the lock. Rebuild the map and retry once when it does not match. |
+| P1 | Photo replacement deletes the current file before the new upload succeeds. | A storage or network failure can leave the student without a photo. | Upload first. Delete files with other extensions only after the upload succeeds. |
+| P1 | The browser loads an unversioned third-party QR script while JWTs remain readable by JavaScript. The current Vercel and local configurations do not set the main security headers. | An injected or compromised script can copy a facilitator JWT and use protected functions. | Self-host the QR library, use an `HttpOnly; Secure; SameSite=Strict` session cookie, and add CSP, HSTS, frame, content-type, referrer, and permissions headers. |
+| P2 | GAS requests do not have an application timeout. | A stalled upstream request can occupy a serverless function until the platform stops it. | Use a shared `AbortSignal.timeout()` value and return `504` for timeouts. |
+| P2 | Bucket creation accepts any well-formed class code. Its extra rate limit exists only in the local Express wrapper. | A valid or stolen token can create storage buckets outside the configured class set. | Require the class code to exist in `VERCEL_SCRIPT_MAP_JSON` and apply a deployment-level rate limit. |
+| P2 | The deployed login handler has no failed-attempt limit. | Attackers can repeatedly guess the shared facilitator password. | Add a login-specific shared or deployment-level rate limit and minimum secret lengths. |
+| P3 | Type checking is non-strict and covers only `app.js` and `api/**/*.js`. | A passing type check does not cover the browser, Apps Script, test, or tooling code. | Add the high-risk regression tests first, then expand type checking in small stages. |
+
+### Verification evidence
+
+- `npm test`: 15 files and 85 tests passed.
+- `npm run lint`: passed.
+- `npm run typecheck`: passed under the current limited configuration.
+- `npm run build`: passed.
+- `git diff --check`: passed.
+- `npm audit --omit=dev`: one low production vulnerability.
+- Full `npm audit`: two high development-tool vulnerabilities and one low vulnerability.
+- Browser and live GAS/Supabase checks were not run.
+
+### Execution status — 2026-07-27
+
+| Finding | Status |
+| --- | --- |
+| Stale Sheet row cache | Resolved. The Apps Script verifies the student ID in the cached row while holding the lock, clears stale cache data, rebuilds the map, and writes only to the refreshed row. |
+| Photo replacement data loss | Resolved. The replacement uploads first. Old extensions are removed only after upload success. |
+| Browser token and header exposure | Partially resolved. The server now issues a one-hour `HttpOnly; Secure; SameSite=Strict` cookie, validates the `authorized` claim, sets security headers, and pins `html5-qrcode` 2.3.8 with SHA-384 integrity. A future change should self-host the QR library and remove inline scripts so CSP can remove `'unsafe-inline'`. |
+| Missing GAS timeouts | Resolved. Attendance, student-list, and WhatsApp GAS calls use a shared 10-second timeout and return `504` on timeout. |
+| Arbitrary bucket classes | Resolved for class scope. Bucket creation now rejects classes outside `VERCEL_SCRIPT_MAP_JSON`. A deployment-level rate limit still needs Vercel configuration. |
+| Login brute force | Partially resolved. Five failures in 15 minutes block the source address on each warm serverless instance. A shared or edge rate limit is still needed for distributed enforcement. |
+| Limited type-check scope | Deferred. The current type check remains non-strict and backend-only. Expand it in a separate staged change. |
+| Dependency vulnerabilities | Resolved. `npm audit fix` updated vulnerable transitive packages, and `npm audit --audit-level=low` now reports zero vulnerabilities. |
+
 ## Executive summary
 
 The audited cleanup has been executed without changing public routes, payloads,

@@ -1,5 +1,5 @@
 import { verifyJwt } from './_auth.js';
-import { getScriptMap, readJsonResponse } from './_gas-utils.js';
+import { fetchGas, getScriptMap, isTimeoutError, readJsonResponse } from './_gas-utils.js';
 import { classCodeFromStudentId } from './_supabase-utils.js';
 
 function normalizeIndonesianPhone(value) {
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const gasResponse = await fetch(scriptURL, {
+    const gasResponse = await fetchGas(scriptURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -76,7 +76,10 @@ export default async function handler(req, res) {
     }
 
     return res.redirect(302, `https://wa.me/${phone}`);
-  } catch {
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return res.status(504).json({ status: 'error', message: 'Google Apps Script tidak merespons tepat waktu' });
+    }
     return res.status(502).json({ status: 'error', message: 'Gagal mengambil nomor WhatsApp' });
   }
 }

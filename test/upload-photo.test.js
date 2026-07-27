@@ -3,19 +3,28 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { createMockResponse } from './helpers.js';
 
+const storageEvents = [];
+let uploadResult = { error: null };
+let existingFiles = [];
 const storage = {
   createBucket: vi.fn().mockResolvedValue({ error: null }),
   from: vi.fn(() => ({
-    list: vi.fn().mockResolvedValue({ data: [], error: null }),
-    remove: vi.fn().mockResolvedValue({ error: null }),
-    upload: vi.fn().mockResolvedValue({ error: null }),
+    list: vi.fn().mockImplementation(async () => ({ data: existingFiles, error: null })),
+    remove: vi.fn().mockImplementation(async () => {
+      storageEvents.push('remove');
+      return { error: null };
+    }),
+    upload: vi.fn().mockImplementation(async () => {
+      storageEvents.push('upload');
+      return uploadResult;
+    }),
   })),
 };
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn(() => ({ storage })) }));
 
 import handler, { parseMultipart } from '../api/upload-photo.js';
 
-const JWT_SECRET = 'test-secret';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-bytes-long';
 const BOUNDARY = 'test-boundary';
 
 function multipartBody({ studentId, file, mimeType = 'image/jpeg' } = {}) {
@@ -55,6 +64,9 @@ describe('/api/upload-photo multipart validation', () => {
     process.env.JWT_SECRET = originalJwtSecret;
     process.env.SUPABASE_URL = originalSupabaseUrl;
     process.env.SUPABASE_KEY = originalSupabaseKey;
+    storageEvents.length = 0;
+    uploadResult = { error: null };
+    existingFiles = [];
     vi.clearAllMocks();
   });
 
@@ -155,5 +167,37 @@ describe('/api/upload-photo multipart validation', () => {
     expect(res.body.status).toBe('ok');
     expect(res.body.image).toMatch(/^\/api\/photo\?studentId=/);
     expect(storage.createBucket).toHaveBeenCalledWith('pasfoto-sab', expect.any(Object));
+  });
+
+  it('keeps the current photo when the replacement upload fails', async () => {
+    configureEnvironment();
+    existingFiles = [{ name: '2025-SAB-001.png' }];
+    uploadResult = { error: new Error('storage unavailable') };
+    const req = streamRequest(multipartBody({
+      studentId: '2025/SAB/001',
+      file: Buffer.from([0xff, 0xd8, 0xff]),
+    }));
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(500);
+    expect(storageEvents).toEqual(['upload']);
+  });
+
+  it('removes old extensions only after a successful replacement upload', async () => {
+    configureEnvironment();
+    existingFiles = [{ name: '2025-SAB-001.png' }];
+    const req = streamRequest(multipartBody({
+      studentId: '2025/SAB/001',
+      file: Buffer.from([0xff, 0xd8, 0xff]),
+    }));
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(storageEvents).toEqual(['upload', 'remove']);
+    expect(res.body.image).toContain('filename=2025-SAB-001.jpg');
   });
 });

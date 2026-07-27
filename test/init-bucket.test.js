@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { createMockRequest, createMockResponse } from './helpers.js';
 
@@ -21,7 +21,7 @@ import handler from '../api/init-bucket.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const JWT_SECRET = 'test-secret';
+const JWT_SECRET = 'test-jwt-secret-at-least-32-bytes-long';
 
 function makeToken() {
   return jwt.sign({ authorized: true }, JWT_SECRET, { algorithm: 'HS256' });
@@ -38,11 +38,20 @@ describe('/api/init-bucket', () => {
   const originalJwtSecret = process.env.JWT_SECRET;
   const originalSupabaseUrl = process.env.SUPABASE_URL;
   const originalSupabaseKey = process.env.SUPABASE_KEY;
+  const originalScriptMap = process.env.VERCEL_SCRIPT_MAP_JSON;
+
+  beforeEach(() => {
+    process.env.VERCEL_SCRIPT_MAP_JSON = JSON.stringify({
+      SAB: 'https://gas.example/sab',
+      TOM: 'https://gas.example/tom',
+    });
+  });
 
   afterEach(() => {
     process.env.JWT_SECRET = originalJwtSecret;
     process.env.SUPABASE_URL = originalSupabaseUrl;
     process.env.SUPABASE_KEY = originalSupabaseKey;
+    process.env.VERCEL_SCRIPT_MAP_JSON = originalScriptMap;
     vi.clearAllMocks();
   });
 
@@ -117,6 +126,23 @@ describe('/api/init-bucket', () => {
     const res = createMockResponse();
     await handler(req, res);
     expect(res.statusCode).toBe(400);
+  });
+
+  it('should reject a well-formed class code that is not configured', async () => {
+    process.env.JWT_SECRET = JWT_SECRET;
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_KEY = 'anon-key';
+    const req = createMockRequest({
+      method: 'POST',
+      headers: { authorization: `Bearer ${makeToken()}` },
+      body: { classCode: 'ABC' },
+    });
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(createClient).not.toHaveBeenCalled();
   });
 
   it('should return 500 when Supabase env vars are missing', async () => {
