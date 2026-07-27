@@ -1,13 +1,14 @@
-# GEMINI.md - Project Context: Presensi Katekumen Digital
+# AGENTS.md - Project Context: Presensi Katekumen Digital
 
 This document provides essential context and instructions for AI agents working on the **Presensi Katekumen Digital** project.
 
 ## 1. Project Overview
+
 A modern digital attendance system for the Catechumenate program at St. Peter's Cathedral, Bandung. It uses QR code scanning, real-time Google Sheets synchronization, and secure student image retrieval.
 
 - **Primary Purpose:** Streamline weekly attendance for students using mobile devices.
 - **Project Type:** Web Application (Serverless Architecture).
-- **Core Workflow:** 
+- **Core Workflow:**
   1. Facilitator Login (Shared Secret + JWT).
   2. QR Scan (Student ID).
   3. API Proxy (Vercel Node.js).
@@ -17,6 +18,7 @@ A modern digital attendance system for the Catechumenate program at St. Peter's 
 ---
 
 ## 2. Tech Stack
+
 - **Frontend:** Pure HTML5, CSS3, JavaScript (ES6+). Mobile-first, "Liquid glass" UI.
 - **Backend (API Layer):** Node.js (Vercel Serverless Functions).
 - **Backend (Logic Layer):** Google Apps Script (GAS).
@@ -27,6 +29,7 @@ A modern digital attendance system for the Catechumenate program at St. Peter's 
 ---
 
 ## 3. Key Files & Directory Structure
+
 - `api/`: Vercel serverless functions (Node.js).
   - `absensi.js`: Main endpoint for login and attendance processing.
   - `dashboard.js`: Handles secure dashboard redirects.
@@ -46,6 +49,7 @@ A modern digital attendance system for the Catechumenate program at St. Peter's 
 ## 4. Building and Running
 
 ### Local Development
+
 1. Install dependencies:
    ```bash
    npm install
@@ -60,7 +64,9 @@ A modern digital attendance system for the Catechumenate program at St. Peter's 
    ```
 
 ### Google Apps Script Management
+
 Use `clasp` to push changes to Google Apps Script:
+
 ```bash
 npx clasp push
 ```
@@ -68,19 +74,22 @@ npx clasp push
 ---
 
 ## 5. Environment Variables
+
 The following environment variables are required (configured in Vercel or `.env`):
+
 - `AUTH_SECRET`: Shared facilitator login password.
 - `JWT_SECRET`: Secret key for signing/verifying JWTs.
 - `SUPABASE_URL`: Supabase project URL.
 - `SUPABASE_KEY`: Supabase anon key.
 - `VERCEL_SCRIPT_MAP_JSON`: JSON map linking Class Codes to GAS Web App URLs.
-  - *Example:* `{"SAB":"https://script.google.com/macros/s/.../exec"}`
+  - _Example:_ `{"SAB":"https://script.google.com/macros/s/.../exec"}`
 - `DASHBOARD_URL`: URL to the Google Sheets dashboard.
 
 ---
 
 ## 6. Development Conventions
-- **Language/Style:** 
+
+- **Language/Style:**
   - Backend: Node.js with ESM (`"type": "module"`).
   - Frontend: Vanilla JavaScript, avoid heavy frameworks to keep the load times fast for mobile data users.
 - **Security:**
@@ -97,7 +106,7 @@ The following environment variables are required (configured in Vercel or `.env`
   - Use `$find-animation-opportunities` for read-only discovery of missing motion; use `$review-animations` to assess existing motion and `$improve-animations` to plan or implement fixes.
   - As a rule of thumb, UI animations should generally stay under `300ms`.
 - **Version Bumping:**
-  - When all requested modifications for a task are complete and verified, ask the user interactively if they want to bump the package version in `package.json` (major, minor, patch, or none) before final completion. After every version bump, ask the user interactively whether to commit to the local repo or push it to the remote repo.
+  - When all requested modifications for a task are complete and verified, ask the user interactively (give the user options in the CLI/app to choose from) if they want to bump the package version in `package.json` (major, minor, patch, letter (-a, -b, etc.), or none) before final completion. After every version bump, ask the user interactively whether to commit to the local repo or push it to the remote repo.
 
 ## 7. Agent Models
 
