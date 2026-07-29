@@ -1,114 +1,109 @@
-# AGENTS.md - Project Context: Presensi Katekumen Digital
+# AGENTS.md — Presensi Katekumen Digital
 
-This document provides essential context and instructions for AI agents working on the **Presensi Katekumen Digital** project.
+## Product and architecture
 
-## 1. Project Overview
+Mobile-first attendance system for the Catechumenate programme at St. Peter's Cathedral, Bandung.
 
-A modern digital attendance system for the Catechumenate program at St. Peter's Cathedral, Bandung. It uses QR code scanning, real-time Google Sheets synchronization, and secure student image retrieval.
+Flow:
 
-- **Primary Purpose:** Streamline weekly attendance for students using mobile devices.
-- **Project Type:** Web Application (Serverless Architecture).
-- **Core Workflow:**
-  1. Facilitator Login (Shared Secret + JWT).
-  2. QR Scan (Student ID).
-  3. API Proxy (Vercel Node.js).
-  4. Business Logic & Database (Google Apps Script + Google Sheets).
-  5. Image Retrieval (Supabase Storage).
+1. A facilitator signs in with a shared secret and receives a JWT.
+2. The frontend scans a student QR code.
+3. A Vercel Node.js serverless function validates and proxies the request.
+4. Google Apps Script applies attendance rules and updates Google Sheets.
+5. The authenticated `/api/photo` proxy retrieves photos from private Supabase Storage.
 
----
+Preserve this architecture unless the user explicitly requests a migration.
 
-## 2. Tech Stack
+- Frontend: HTML, CSS, and vanilla JavaScript.
+- API: ESM Vercel Serverless Functions.
+- Logic and data: Google Apps Script and Google Sheets.
+- Files: private Supabase Storage.
+- Local runtime: Vercel CLI or the existing Express wrapper.
 
-- **Frontend:** Pure HTML5, CSS3, JavaScript (ES6+). Mobile-first, "Liquid glass" UI.
-- **Backend (API Layer):** Node.js (Vercel Serverless Functions).
-- **Backend (Logic Layer):** Google Apps Script (GAS).
-- **Database:** Google Sheets.
-- **Storage:** Supabase Storage (Student Pasfoto).
-- **Deployment/Hosting:** Vercel.
+Do not introduce React, Next.js, TypeScript, a new database, or another backend framework unless explicitly requested.
 
----
+## Key paths
 
-## 3. Key Files & Directory Structure
+Verify paths and ownership before use.
 
-- `api/`: Vercel serverless functions (Node.js).
-  - `absensi.js`: Main endpoint for login and attendance processing.
-  - `dashboard.js`: Handles secure dashboard redirects.
-  - `register.js`: (Likely) registration logic.
-- `apps-script/`: Source code for Google Apps Script.
-  - `Code.js`: Core GAS business logic (doPost, doGet, caching).
-- `public/`: Frontend assets.
-  - `index.html`, `script.js`, `style.css`: The mobile-first web interface.
-  - `topics.js`: Statically defined weekly topics.
-- `app.js`: Express wrapper for local development (proxies ESM API handlers).
-- `middleware.js`: Vercel edge middleware for dashboard routing.
-- `.clasp.json`: Configuration for Google Apps Script CLI (clasp).
-- `vercel.json`: Vercel deployment configuration.
+- `api/`: Vercel handlers, including attendance, dashboard, registration, photo, and WhatsApp handoff routes.
+- `apps-script/Code.js`: Apps Script entry points, caching, and Sheet operations.
+- `public/`: the HTML, CSS, JavaScript, and static topic data.
+- `app.js`: local Express wrapper.
+- `middleware.js`: protected routing.
+- `.clasp.json`, `vercel.json`, `package.json`: deployment and runtime configuration.
 
----
-
-## 4. Building and Running
-
-### Local Development
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the development server (requires [Vercel CLI](https://vercel.com/cli)):
-   ```bash
-   npm start # runs `vercel dev`
-   ```
-   Or use the Express wrapper (if configured for your environment):
-   ```bash
-   node app.js
-   ```
-
-### Google Apps Script Management
-
-Use `clasp` to push changes to Google Apps Script:
+## Commands and configuration
 
 ```bash
-npx clasp push
+npm install
+npm start
+node app.js       # only when the task uses the Express wrapper
+npx clasp push    # only when the user explicitly requests Apps Script deployment
 ```
 
----
+Inspect `package.json` before using another script.
 
-## 5. Environment Variables
+Expected environment variables may include `AUTH_SECRET`, `JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_KEY`, `VERCEL_SCRIPT_MAP_JSON`, and `DASHBOARD_URL`.
 
-The following environment variables are required (configured in Vercel or `.env`):
+- Never expose or commit secret values, credentials, private URLs, or `.env` files.
+- Preserve the class-code-to-GAS mapping in `VERCEL_SCRIPT_MAP_JSON`.
+- Check all callers and deployment dependencies before renaming or removing a variable.
+- Do not alter production configuration or deploy without explicit approval.
 
-- `AUTH_SECRET`: Shared facilitator login password.
-- `JWT_SECRET`: Secret key for signing/verifying JWTs.
-- `SUPABASE_URL`: Supabase project URL.
-- `SUPABASE_KEY`: Supabase anon key.
-- `VERCEL_SCRIPT_MAP_JSON`: JSON map linking Class Codes to GAS Web App URLs.
-  - _Example:_ `{"SAB":"https://script.google.com/macros/s/.../exec"}`
-- `DASHBOARD_URL`: URL to the Google Sheets dashboard.
+## Security invariants
 
----
+- Verify JWTs server-side for attendance and dashboard operations.
+- Validate `studentId` and other external input at the trust boundary.
+- Keep Supabase buckets private and serve student images only through authenticated `/api/photo`.
+- Preserve `/api/reach` as the authenticated WhatsApp handoff. Do not rename it to a contact-specific route.
+- Never expose phone numbers in roster payloads, including `/api/students`.
+- Keep secrets, service keys, private URLs, and contact data out of frontend code.
+- Keep client errors generic when details could expose internal state.
+- Do not weaken authentication or route protection for local testing.
 
-## 6. Development Conventions
+## Apps Script and Sheets
 
-- **Language/Style:**
-  - Backend: Node.js with ESM (`"type": "module"`).
-  - Frontend: Vanilla JavaScript, avoid heavy frameworks to keep the load times fast for mobile data users.
-- **Security:**
-  - All sensitive operations (Attendance, Dashboard) must be protected by JWT verification.
-  - Supabase images must be served through the authenticated same-origin `/api/photo` proxy; storage buckets remain private.
-  - `/api/reach` is the intentionally non-semantic authenticated WhatsApp handoff. Do not rename it to a contact-specific route or expose phone numbers through roster payloads such as `/api/students`.
-- **Optimization:**
-  - **Caching:** GAS logic uses `CacheService` (6h TTL) to minimize slow Sheet read operations.
-  - **Payloads:** Keep the JSON payloads between Frontend and GAS lean.
-- **Error Handling:**
-  - Provide clear visual and haptic (vibration) feedback for success/error states on the mobile UI.
-  - Always validate incoming `studentId` formats before processing.
-- **Animation Workflow:**
-  - Use `$find-animation-opportunities` for read-only discovery of missing motion; use `$review-animations` to assess existing motion and `$improve-animations` to plan or implement fixes.
-  - As a rule of thumb, UI animations should generally stay under `300ms`.
-- **Version Bumping:**
-  - When all requested modifications for a task are complete and verified, ask the user interactively (give the user options in the CLI/app to choose from) if they want to bump the package version in `package.json` (major, minor, patch, letter (-a, -b, etc.), or none) before final completion. After every version bump, ask the user interactively whether to commit to the local repo or push it to the remote repo.
+- Keep attendance rules in Apps Script and Google Sheets as the system of record.
+- Before changing shared fields, check the Vercel caller and `apps-script/Code.js`.
+- Preserve deployed request and response contracts, Sheet names, columns, ID formats, date formats, and attendance rules unless the task changes them.
+- Verify the actual schema. Do not rely on comments alone.
+- Keep Sheet operations and cross-layer payloads bounded.
+- Preserve `CacheService` where it prevents repeated reads; change caching only for correctness.
+- Do not write to production data or run `clasp push` during verification.
 
-## 7. Agent Models
+## Frontend requirements
 
-- Run the main orchestrator with `model="gpt-5.6-sol"` and `reasoning_effort="medium"`.
-- Run workers and subagents with `model="gpt-5.6-luna"`, `reasoning_effort="high"`, and `fork_turns="none"`.
+- Design for narrow mobile screens and unreliable networks.
+- Preserve scanner speed, camera usability, accessible focus, touch targets, contrast, and existing haptics.
+- Show clear feedback for successful scans, invalid QR codes, authentication failure, duplicate attendance, network failure, and server failure.
+- Keep animations short and responsive. Inspect only the affected transition.
+- Do not add a large dependency for a minor UI change.
+
+## Change boundaries
+
+- Do not migrate the stack, data, or Sheet structure during routine maintenance.
+- Do not move Apps Script logic while changing frontend presentation.
+- Check all consumers before renaming an endpoint, environment variable, class code, or payload field.
+- Change deployment configuration only when required by the request.
+- Do not bump versions, commit, push, deploy, or release unless requested.
+
+## Focused verification
+
+Use the global verification rules, then apply the relevant checks:
+
+- Frontend: check the affected mobile viewport and interaction in a browser, including console errors.
+- Vercel API: test authentication success and failure, validation, status codes, downstream contracts, and private-data filtering.
+- Apps Script: check its Vercel caller and test parsing, validation, and errors without production writes or deployment.
+- Supabase photos: confirm the bucket remains private, `/api/photo` remains required, unauthenticated access fails, and storage details stay hidden.
+- Routing: test public and protected routes, unauthorized access, redirect loops, and compatibility with `vercel.json`.
+
+## Known constraints
+
+- Facilitators share one secret instead of individual accounts.
+- Google Sheets remains the database for workflow compatibility.
+- Apps Script latency, quotas, and cache expiry affect requests.
+- Local Express behavior may differ from Vercel.
+- Camera access outside localhost requires a secure context and varies by device.
+
+Do not silently replace these constraints with a migration. Report the trade-off when it affects the task.
