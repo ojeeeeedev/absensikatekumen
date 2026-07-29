@@ -854,6 +854,7 @@ try {
     const arrowRect = item.querySelector('.expand-arrow').getBoundingClientRect();
     return itemRect.right - (arrowRect.left + arrowRect.right) / 2;
   });
+  const collapsedListScrollHeight = await page.locator('#students-list').evaluate(list => list.scrollHeight);
   await focusedProfile.locator('.student-accordion-header').dispatchEvent('click', { detail: 1 });
   const pointerOpenMotion = await focusedProfile.evaluate(item => [
     ...item.querySelector('.student-accordion-body').getAnimations(),
@@ -871,18 +872,27 @@ try {
   const openingTrajectory = await page.evaluate(async () => {
     const list = document.getElementById('students-list');
     const header = document.querySelectorAll('.student-accordion-header')[20];
-    const slack = getComputedStyle(list).getPropertyValue('--profile-scroll-slack');
     const samples = [];
     for (let index = 0; index < 26; index += 1) {
       await new Promise(resolve => requestAnimationFrame(resolve));
-      samples.push({ top: header.getBoundingClientRect().top, scrollTop: list.scrollTop, slack: getComputedStyle(list).getPropertyValue('--profile-scroll-slack') });
+      samples.push({ top: header.getBoundingClientRect().top, scrollTop: list.scrollTop });
     }
     await new Promise(resolve => setTimeout(resolve, 100));
     const settledScrollTop = list.scrollTop;
     await new Promise(resolve => setTimeout(resolve, 140));
-    return { slack, samples, settledScrollTop, lateScrollTop: list.scrollTop };
+    return {
+      bodyHeight: header.nextElementSibling.getBoundingClientRect().height,
+      hasFocusTail: list.classList.contains('has-profile-focus-tail'),
+      scrollHeight: list.scrollHeight,
+      samples,
+      settledScrollTop,
+      lateScrollTop: list.scrollTop
+    };
   });
-  if (!openingTrajectory.slack || openingTrajectory.samples.some(sample => sample.slack !== openingTrajectory.slack)
+  const openedScrollGrowth = openingTrajectory.scrollHeight - collapsedListScrollHeight;
+  if (openingTrajectory.hasFocusTail
+    || openedScrollGrowth <= 0
+    || openedScrollGrowth > openingTrajectory.bodyHeight + 16
     || openingTrajectory.lateScrollTop !== openingTrajectory.settledScrollTop
     || openingTrajectory.samples.some((sample, index) => index > 0 && sample.top > openingTrajectory.samples[index - 1].top + 1)) {
     throw new Error(`Profile accordion focus trajectory was interrupted or changed late: ${JSON.stringify(openingTrajectory)}`);
@@ -948,7 +958,6 @@ try {
   if (!compactExpandedHeader.label?.includes('Katekumen Dengan Nama Sangat Panjang, 2026/MAL/021') || compactExpandedHeader.height !== 64 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay === 'none' || compactExpandedHeader.name !== 'Katekumen Dengan Nama Sangat Panjang' || compactExpandedHeader.nameDisplay === 'none' || !compactExpandedHeader.nameFont.includes('DM Serif Display') || compactExpandedHeader.nameSize >= 20 || compactExpandedHeader.nameSize < 12 || !compactExpandedHeader.nameFits || compactExpandedHeader.nameCenterOffset >= 1 || compactExpandedHeader.nameVerticalOffset >= 1 || compactExpandedHeader.thumbDisplay !== 'none' || compactExpandedHeader.idDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '60px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
     throw new Error(`Expanded profile header is not a full-width accessible collapse control: ${JSON.stringify(compactExpandedHeader)}`);
   }
-  const sameCardViewport = await page.locator('#students-list').evaluate(list => ({ scrollTop: list.scrollTop, slack: getComputedStyle(list).getPropertyValue('--profile-scroll-slack') }));
   await page.evaluate(() => { window.__readClosingCleanupProbe = () => {
     const item = document.querySelectorAll('.student-accordion-item')[20];
     const read = () => {
@@ -1009,10 +1018,6 @@ try {
     || closingCleanupAfter.styles.id.display !== closingCleanupBefore.styles.id.display
     || closingCleanupAfter.styles.arrow.transform !== 'none') {
     throw new Error(`Accordion closing cleanup changed visible header presentation: ${JSON.stringify({ closingCleanupBefore, closingCleanupAfter, closingGeometryDelta, closingOpacityDelta })}`);
-  }
-  const sameCardAfterClose = await page.locator('#students-list').evaluate(list => ({ scrollTop: list.scrollTop, slack: getComputedStyle(list).getPropertyValue('--profile-scroll-slack') }));
-  if (sameCardAfterClose.slack !== '0px') {
-    throw new Error(`Closed accordion retained focus slack: ${JSON.stringify({ sameCardViewport, sameCardAfterClose })}`);
   }
   await page.waitForTimeout(50);
   await focusedProfile.locator('.student-accordion-header').click();
@@ -1088,15 +1093,19 @@ try {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await focusedProfile.locator('.student-accordion-header').press('Enter');
 
+  const waitForFocusedProfile = index => page.waitForFunction(selectedIndex => {
+    const list = document.getElementById('students-list');
+    const item = document.querySelectorAll('.student-accordion-item')[selectedIndex];
+    const header = item.querySelector('.student-accordion-header');
+    const targetTop = list.getBoundingClientRect().top + 16;
+    const reachedTarget = Math.abs(item.getBoundingClientRect().top - targetTop) < 2;
+    const reachedNaturalEnd = Math.abs(list.scrollTop - (list.scrollHeight - list.clientHeight)) < 2;
+    return header.getAttribute('aria-expanded') === 'true' && (reachedTarget || reachedNaturalEnd);
+  }, index);
+
   const adjacentFocusedProfile = page.locator('.student-accordion-item').nth(21);
   await adjacentFocusedProfile.locator('.student-accordion-header').click();
-  await page.waitForFunction(() => {
-    const item = document.querySelectorAll('.student-accordion-item')[21];
-    const header = item.querySelector('.student-accordion-header');
-    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
-    return header.getAttribute('aria-expanded') === 'true'
-      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
-  });
+  await waitForFocusedProfile(21);
 
   const secondFocusedProfile = page.locator('.student-accordion-item').nth(25);
   await secondFocusedProfile.locator('.student-accordion-header').click();
@@ -1108,33 +1117,15 @@ try {
     ];
   }).length);
   if (switchAnimations < 2) throw new Error('Direct accordion switch did not coordinate both sides');
-  await page.waitForFunction(() => {
-    const item = document.querySelectorAll('.student-accordion-item')[25];
-    const header = item.querySelector('.student-accordion-header');
-    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
-    return header.getAttribute('aria-expanded') === 'true'
-      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
-  });
+  await waitForFocusedProfile(25);
 
   const aboveFocusedProfile = page.locator('.student-accordion-item').nth(5);
   await aboveFocusedProfile.locator('.student-accordion-header').click();
-  await page.waitForFunction(() => {
-    const item = document.querySelectorAll('.student-accordion-item')[5];
-    const header = item.querySelector('.student-accordion-header');
-    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
-    return header.getAttribute('aria-expanded') === 'true'
-      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
-  });
+  await waitForFocusedProfile(5);
 
   const lastFocusedProfile = page.locator('.student-accordion-item').nth(34);
   await lastFocusedProfile.locator('.student-accordion-header').click();
-  await page.waitForFunction(() => {
-    const item = document.querySelectorAll('.student-accordion-item')[34];
-    const header = item.querySelector('.student-accordion-header');
-    const expectedTop = document.getElementById('students-list').getBoundingClientRect().top;
-    return header.getAttribute('aria-expanded') === 'true'
-      && Math.abs(item.getBoundingClientRect().top - expectedTop - 16) < 2;
-  });
+  await waitForFocusedProfile(34);
 
   for (const index of [3, 9, 15, 21, 27, 33, 5, 11, 17, 23]) {
     await page.locator('.student-accordion-item').nth(index).locator('.student-accordion-header').click();
@@ -1159,8 +1150,6 @@ try {
     return item.querySelector('.student-accordion-header').getAttribute('aria-expanded') === 'false'
       && !item.querySelector('.student-accordion-body').classList.contains('closing');
   });
-  const slackAfterSpace = await page.locator('#students-list').evaluate(list => getComputedStyle(list).getPropertyValue('--profile-scroll-slack'));
-  if (slackAfterSpace !== '0px') throw new Error(`Closed accordion retained focus slack: ${slackAfterSpace}`);
   if (process.env.ACCORDION_ONLY === '1') {
     if (profileConsoleErrors.length) throw new Error(`Profile accordion emitted console errors: ${profileConsoleErrors.join(' | ')}`);
     console.log('profile accordion smoke ok');

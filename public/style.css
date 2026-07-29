@@ -2829,16 +2829,6 @@ body[data-active-view="profile"] .nav-tabs::before {
   padding: 0 1.25rem 1.25rem 1.25rem;
 }
 
-#profile-view .students-list-container.has-profile-focus-tail::after {
-  content: "";
-  display: block;
-  flex: 0 0 var(--profile-scroll-slack, 0px);
-  height: var(--profile-scroll-slack, 0px);
-  min-height: var(--profile-scroll-slack, 0px);
-  margin-bottom: var(--profile-scroll-slack, 0px);
-  pointer-events: none;
-}
-
 .glass-container.state-profile:not(.profile-expanded) #students-list {
   flex: 1 1 auto;
   min-height: 0;
