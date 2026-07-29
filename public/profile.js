@@ -10,28 +10,6 @@ const PROFILE_FOCUS_DURATION = 420;
 let profileFocusFrame = 0;
 let cancelProfileInteraction = () => {};
 
-const updateProfileFocusTail = () => {
-  const listContainer = document.getElementById('students-list');
-  if (!listContainer) return;
-  const slackHost = listContainer.closest('.students-list-container') || listContainer;
-  const header = listContainer.querySelector('.student-accordion-header');
-  if (!header || !activeProfileId) {
-    listContainer.classList.remove('has-profile-focus-tail');
-    slackHost.style.setProperty('--profile-scroll-slack', '0px');
-    return;
-  }
-  const headerHeight = header.getBoundingClientRect().height || 64;
-  const slack = Math.max(0, listContainer.clientHeight - headerHeight - PROFILE_FOCUS_OFFSET);
-  listContainer.classList.toggle('has-profile-focus-tail', slack > 0);
-  slackHost.style.setProperty('--profile-scroll-slack', `${Math.ceil(slack)}px`);
-};
-
-const profileFocusTailObserver = typeof ResizeObserver === 'function'
-  ? new ResizeObserver(updateProfileFocusTail)
-  : null;
-const profileList = document.getElementById('students-list');
-if (profileList) profileFocusTailObserver?.observe(profileList);
-
 // Note: handleLogout, updateActivity, and checkTopicExpiry are now centralized in session.js
 
 
@@ -258,7 +236,6 @@ function renderStudents(students) {
     header.style.removeProperty('--closing-header-height');
     cancelClosingVisual(header);
     header.setAttribute('aria-expanded', 'false');
-    updateProfileFocusTail();
   };
 
   const startCoordinatedScroll = (item, header, body, initialOffset, revision, shouldAnimate) => {
@@ -587,7 +564,6 @@ function renderStudents(students) {
       }
 
       activeProfileId = profileId;
-      updateProfileFocusTail();
       profileRefs.forEach(({ body: candidateBody, header: candidateHeader }) => {
         if (candidateBody === body) return;
         if (candidateBody.classList.contains('expanded') || candidateBody.classList.contains('closing')) {
@@ -677,7 +653,6 @@ function renderStudents(students) {
     <p>Tidak ada data katekumen ditemukan.</p>
   `;
   listContainer.appendChild(emptyState);
-  updateProfileFocusTail();
   updateProfileScrollTail();
 }
 
@@ -735,7 +710,6 @@ function filterStudents() {
 
   const emptyState = listContainer.querySelector('.empty-state');
   if (emptyState) emptyState.hidden = visibleCount > 0;
-  updateProfileFocusTail();
   updateProfileScrollTail();
 }
 
