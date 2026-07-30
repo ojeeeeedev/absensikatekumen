@@ -116,6 +116,7 @@ Inputs, selects, textareas, search, file inputs:
 
 Cards/stat cards/chart cards:
 - Use `card` surface, `border`, `radius-lg`, and subtle shadow.
+- A nested repeated-item card can use `secondary` when the parent already uses `card`.
 - Use status badges for status, not color alone.
 
 Navigation:

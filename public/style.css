@@ -1913,13 +1913,17 @@ a:focus-visible,
 
 .student-accordion-item {
   position: relative;
-  background: var(--bg-card);
+  background: var(--secondary);
   border: 1px solid var(--border-glass);
   border-radius: 12px;
+  box-shadow: var(--shadow-md);
   overflow: hidden;
   opacity: 1;
   transform: translateX(0);
-  transition: border-color var(--duration-fast) var(--ease-standard), opacity 0.2s ease;
+  transition:
+    background-color var(--duration-normal) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    opacity 0.2s ease;
   animation: slideInFromRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   flex-shrink: 0;
 }

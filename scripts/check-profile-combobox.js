@@ -832,9 +832,38 @@ try {
   if (!accordionSemantics.buttons || !accordionSemantics.dimensions || !accordionSemantics.intrinsicGrid || !accordionSemantics.clip) {
     throw new Error(`Profile accordion semantics are incomplete: ${JSON.stringify(accordionSemantics)}`);
   }
+  const profileCardThemes = await firstProfile.evaluate(item => {
+    const previousTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const container = item.closest('.glass-container');
+    const transitionNodes = [document.body, container, item];
+    const previousTransitions = transitionNodes.map(element => element.style.transition);
+    transitionNodes.forEach(element => element.style.setProperty('transition', 'none', 'important'));
+    const themes = ['light', 'dark'].map(theme => {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.getBoundingClientRect();
+      const cardStyle = getComputedStyle(item);
+      return {
+        theme,
+        background: cardStyle.backgroundColor,
+        containerBackground: getComputedStyle(container).backgroundColor,
+        border: cardStyle.borderTopColor,
+        shadow: cardStyle.boxShadow
+      };
+    });
+    document.documentElement.setAttribute('data-theme', previousTheme);
+    document.documentElement.getBoundingClientRect();
+    transitionNodes.forEach((element, index) => {
+      element.style.transition = previousTransitions[index];
+    });
+    return themes;
+  });
+  if (profileCardThemes.some(theme => theme.background === theme.containerBackground || theme.border === 'rgba(0, 0, 0, 0)' || theme.shadow === 'none')) {
+    throw new Error(`Profile card surface is not distinct in both themes: ${JSON.stringify(profileCardThemes)}`);
+  }
   await page.locator('#students-list').evaluate(list => { list.scrollTop = 0; });
   const hoverBefore = await firstProfile.evaluate(item => ({
     top: item.getBoundingClientRect().top,
+    shadow: getComputedStyle(item).boxShadow,
     borderColor: getComputedStyle(item).borderTopColor
   }));
   await firstProfile.hover();
@@ -844,8 +873,8 @@ try {
     shadow: getComputedStyle(item).boxShadow,
     borderColor: getComputedStyle(item).borderTopColor
   }));
-  if (Math.abs(hoverState.top - hoverBefore.top) >= 1 || hoverState.shadow !== 'none' || hoverState.borderColor === hoverBefore.borderColor) {
-    throw new Error(`Profile card hover moved or painted outside its scroll container: ${JSON.stringify({ hoverBefore, hoverState })}`);
+  if (Math.abs(hoverState.top - hoverBefore.top) >= 1 || hoverBefore.shadow === 'none' || hoverState.shadow !== hoverBefore.shadow || hoverState.borderColor === hoverBefore.borderColor) {
+    throw new Error(`Profile card surface or bounded hover state is incorrect: ${JSON.stringify({ hoverBefore, hoverState })}`);
   }
 
   const focusedProfile = page.locator('.student-accordion-item').nth(20);
