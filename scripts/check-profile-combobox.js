@@ -77,9 +77,11 @@ try {
   page.on('console', message => { if (message.type() === 'error') profileConsoleErrors.push(message.text()); });
   let releaseProfilePhoto;
   let profilePhotoRequests = 0;
+  const profilePhotoRequestUrls = [];
   const profilePhotoGate = new Promise(resolve => { releaseProfilePhoto = resolve; });
   await page.route('**/api/photo?*', async route => {
     profilePhotoRequests += 1;
+    profilePhotoRequestUrls.push(route.request().url());
     await profilePhotoGate;
     await route.fulfill({
       contentType: 'image/png',
@@ -96,7 +98,9 @@ try {
     body: JSON.stringify({ status: 'ok', classes: profileClasses })
   }));
   let studentResponseDelays = {};
+  let profileRosterRequests = 0;
   await page.route('**/api/students?*', async route => {
+    profileRosterRequests += 1;
     const classCode = new URL(route.request().url()).searchParams.get('classCode');
     if (studentResponseDelays[classCode]) await new Promise(resolve => setTimeout(resolve, studentResponseDelays[classCode]));
     await route.fulfill({
@@ -110,15 +114,17 @@ try {
             : index === 20
               ? 'Katekumen Dengan Nama Sangat Panjang'
               : `Katekumen ${index + 1}`,
-        image: index === 0 ? `/api/photo?studentId=2026%2F${classCode}%2F001` : '',
+        image: index < 2 ? `/api/photo?studentId=2026%2F${classCode}%2F${String(index + 1).padStart(3, '0')}` : '',
         kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
         katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
       })) })
     });
   });
+  const photoRequestsFor = studentId => profilePhotoRequestUrls.filter(url => new URL(url).searchParams.get('studentId') === studentId).length;
+  let uploadedPhotoUrl = '/api/photo?studentId=2026%2FMAL%2F001&uploaded=1';
   await page.route('**/api/upload-photo', route => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify({ status: 'ok', image: '/api/photo?studentId=2026%2FMAL%2F001&uploaded=1' })
+    body: JSON.stringify({ status: 'ok', image: uploadedPhotoUrl })
   }));
 
   await page.goto(`${baseUrl}/profile`, { waitUntil: 'networkidle' });
@@ -513,6 +519,17 @@ try {
     throw new Error(`Profile photo fade is incorrect: ${JSON.stringify(photoMotion)}`);
   }
 
+  await page.locator('.student-accordion-item').nth(1).locator('.student-thumb').scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => {
+    const image = document.querySelectorAll('.student-thumb')[1];
+    return image?.complete && image.naturalWidth > 0;
+  });
+  await page.locator('#search-input').fill('Katekumen');
+  await page.waitForFunction(() => {
+    const firstItem = document.querySelector('.student-accordion-item');
+    return firstItem && !firstItem.hidden;
+  });
+
   const uploadProfile = page.locator('.student-accordion-item').first();
   await uploadProfile.locator('.student-accordion-header').click();
   const replacementFrame = uploadProfile.locator('.student-photo-large-frame');
@@ -547,10 +564,10 @@ try {
     throw new Error(`Profile detail labels are not aligned or legible: ${JSON.stringify(detailLayout)}`);
   }
   const modal = page.locator('#upload-preview-modal');
-  const waitForUploadOpen = async () => {
-    await replacementFrame.hover();
-    await replacementInput.setInputFiles([]);
-    await replacementInput.setInputFiles(replacementFile);
+  const waitForUploadOpen = async (frame, input, file) => {
+    await frame.hover();
+    await input.setInputFiles([]);
+    await input.setInputFiles(file);
     await page.waitForFunction(() => document.getElementById('upload-preview-modal')?.classList.contains('is-visible'));
   };
   const waitForUploadClosed = async () => {
@@ -565,7 +582,7 @@ try {
   if (await replacementFrame.evaluate(frame => frame.classList.contains('is-replace-open') || getComputedStyle(frame.querySelector('.photo-replace-menu')).opacity !== '0')) {
     throw new Error('Inline photo replacement menu did not fade out after hover ended');
   }
-  await waitForUploadOpen();
+  await waitForUploadOpen(replacementFrame, replacementInput, replacementFile);
   const uploadMotion = await modal.evaluate(element => {
     const overlay = getComputedStyle(element);
     const sheet = getComputedStyle(element.querySelector('.upload-preview-sheet'));
@@ -601,14 +618,49 @@ try {
     throw new Error(`Upload sheet exit state is incorrect: ${JSON.stringify(closingUpload)}`);
   }
   await waitForUploadClosed();
-  await waitForUploadOpen();
+  await waitForUploadOpen(replacementFrame, replacementInput, replacementFile);
   await page.keyboard.press('Escape');
   await waitForUploadClosed();
-  await waitForUploadOpen();
+  await waitForUploadOpen(replacementFrame, replacementInput, replacementFile);
   await modal.click({ position: { x: 5, y: 5 } });
   await waitForUploadClosed();
-  await waitForUploadOpen();
+  await waitForUploadOpen(replacementFrame, replacementInput, replacementFile);
   await page.locator('#upload-file-input').setInputFiles(replacementFile);
+  const rosterRequestsBeforeUpload = profileRosterRequests;
+  const photoRequestsBeforeUpload = {
+    target: photoRequestsFor('2026/MAL/001'),
+    untouched: photoRequestsFor('2026/MAL/002'),
+  };
+  const uploadStateBefore = await page.evaluate(() => {
+    const findItem = studentId => [...document.querySelectorAll('.student-accordion-item')]
+      .find(item => item.dataset.profileId === studentId);
+    const target = findItem('2026/MAL/001');
+    const untouched = findItem('2026/MAL/002');
+    const list = document.getElementById('students-list');
+    list.scrollTop = Math.min(80, list.scrollHeight - list.clientHeight);
+    window.__uploadNodes = {
+      targetItem: target,
+      targetHeader: target?.querySelector('.student-accordion-header'),
+      targetBody: target?.querySelector('.student-accordion-body'),
+      targetThumb: target?.querySelector('.student-thumb'),
+      targetLarge: target?.querySelector('.student-photo-large'),
+      untouchedItem: untouched,
+      untouchedThumb: untouched?.querySelector('.student-thumb'),
+      untouchedLarge: untouched?.querySelector('.student-photo-large'),
+      focusedElement: document.activeElement,
+    };
+    return {
+      expanded: target?.querySelector('.student-accordion-header')?.getAttribute('aria-expanded') === 'true',
+      search: document.getElementById('search-input').value,
+      scrollTop: list.scrollTop,
+      untouchedThumbSrc: untouched?.querySelector('.student-thumb')?.getAttribute('src'),
+      untouchedLargeSrc: untouched?.querySelector('.student-photo-large')?.getAttribute('src'),
+      focusedElement: document.activeElement,
+    };
+  });
+  if (!uploadStateBefore.expanded || uploadStateBefore.search !== 'Katekumen' || uploadStateBefore.scrollTop <= 0) {
+    throw new Error(`Profile upload test did not establish a stable interaction state: ${JSON.stringify({ ...uploadStateBefore, focusedElement: undefined })}`);
+  }
   const confirmButton = page.locator('#upload-confirm-btn');
   await confirmButton.hover();
   await page.mouse.down();
@@ -619,7 +671,108 @@ try {
   if (Number(confirmPressed.match(/^matrix\(([^,]+)/)?.[1] ?? 1) >= 1) throw new Error(`Upload confirm press feedback is incorrect: ${confirmPressed}`);
   await confirmButton.click();
   await waitForUploadClosed();
-  const loadedPhotoRequests = profilePhotoRequests;
+  await page.waitForFunction(() => {
+    const target = [...document.querySelectorAll('.student-accordion-item')]
+      .find(item => item.dataset.profileId === '2026/MAL/001');
+    const thumb = target?.querySelector('.student-thumb');
+    const large = target?.querySelector('.student-photo-large');
+    return thumb?.getAttribute('src')?.includes('uploaded=1')
+      && large?.getAttribute('src')?.includes('uploaded=1')
+      && thumb.complete
+      && large.complete;
+  });
+  const uploadStateAfter = await page.evaluate(() => {
+    const nodes = window.__uploadNodes;
+    const findItem = studentId => [...document.querySelectorAll('.student-accordion-item')]
+      .find(item => item.dataset.profileId === studentId);
+    const target = findItem('2026/MAL/001');
+    const untouched = findItem('2026/MAL/002');
+    const list = document.getElementById('students-list');
+    return {
+      targetSame: target === nodes.targetItem,
+      headerSame: target?.querySelector('.student-accordion-header') === nodes.targetHeader,
+      bodySame: target?.querySelector('.student-accordion-body') === nodes.targetBody,
+      thumbSame: target?.querySelector('.student-thumb') === nodes.targetThumb,
+      largeSame: target?.querySelector('.student-photo-large') === nodes.targetLarge,
+      targetExpanded: target?.querySelector('.student-accordion-header')?.getAttribute('aria-expanded') === 'true',
+      targetThumbSrc: target?.querySelector('.student-thumb')?.getAttribute('src'),
+      targetLargeSrc: target?.querySelector('.student-photo-large')?.getAttribute('src'),
+      untouchedSame: untouched === nodes.untouchedItem,
+      untouchedThumbSame: untouched?.querySelector('.student-thumb') === nodes.untouchedThumb,
+      untouchedLargeSame: untouched?.querySelector('.student-photo-large') === nodes.untouchedLarge,
+      untouchedThumbSrc: untouched?.querySelector('.student-thumb')?.getAttribute('src'),
+      untouchedLargeSrc: untouched?.querySelector('.student-photo-large')?.getAttribute('src'),
+      search: document.getElementById('search-input').value,
+      scrollTop: list.scrollTop,
+      focusSame: document.activeElement === nodes.focusedElement,
+    };
+  });
+  if (!uploadStateAfter.targetSame || !uploadStateAfter.headerSame || !uploadStateAfter.bodySame || !uploadStateAfter.thumbSame || !uploadStateAfter.largeSame || !uploadStateAfter.targetExpanded || !uploadStateAfter.targetThumbSrc?.includes('uploaded=1') || !uploadStateAfter.targetLargeSrc?.includes('uploaded=1') || !uploadStateAfter.untouchedSame || !uploadStateAfter.untouchedThumbSame || !uploadStateAfter.untouchedLargeSame || uploadStateAfter.untouchedThumbSrc !== uploadStateBefore.untouchedThumbSrc || uploadStateAfter.untouchedLargeSrc !== uploadStateBefore.untouchedLargeSrc || uploadStateAfter.search !== uploadStateBefore.search || uploadStateAfter.scrollTop !== uploadStateBefore.scrollTop || !uploadStateAfter.focusSame) {
+    throw new Error(`Photo replacement changed profile state or unrelated DOM: ${JSON.stringify({ uploadStateBefore: { ...uploadStateBefore, focusedElement: undefined }, uploadStateAfter })}`);
+  }
+  if (profileRosterRequests !== rosterRequestsBeforeUpload || photoRequestsFor('2026/MAL/002') !== photoRequestsBeforeUpload.untouched || photoRequestsFor('2026/MAL/001') <= photoRequestsBeforeUpload.target) {
+    throw new Error(`Photo replacement fetched the roster or untouched photos: ${JSON.stringify({ profileRosterRequests, rosterRequestsBeforeUpload, photoRequestsBeforeUpload, targetPhotoRequests: photoRequestsFor('2026/MAL/001'), untouchedPhotoRequests: photoRequestsFor('2026/MAL/002') })}`);
+  }
+
+  await page.locator('#search-input').fill('');
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item:not([hidden])').length === 35);
+  const emptyUploadProfile = page.locator('.student-accordion-item').nth(2);
+  await emptyUploadProfile.locator('.student-accordion-header').click();
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-header[aria-expanded="true"]')[0]?.closest('.student-accordion-item')?.dataset.profileId === '2026/MAL/003');
+  const emptyReplacementFrame = emptyUploadProfile.locator('.student-photo-large-frame');
+  const emptyReplacementInput = emptyReplacementFrame.locator('.photo-replace-input');
+  const emptyUploadBefore = await page.evaluate(() => {
+    const item = [...document.querySelectorAll('.student-accordion-item')]
+      .find(candidate => candidate.dataset.profileId === '2026/MAL/003');
+    window.__emptyUploadNodes = {
+      item,
+      header: item?.querySelector('.student-accordion-header'),
+      body: item?.querySelector('.student-accordion-body'),
+      largeFrame: item?.querySelector('.student-photo-large-frame'),
+    };
+    return {
+      hasThumb: !!item?.querySelector('.student-thumb'),
+      hasLarge: !!item?.querySelector('.student-photo-large'),
+      expanded: item?.querySelector('.student-accordion-header')?.getAttribute('aria-expanded') === 'true',
+    };
+  });
+  if (emptyUploadBefore.hasThumb || emptyUploadBefore.hasLarge || !emptyUploadBefore.expanded) {
+    throw new Error(`Empty profile photo state is incorrect before upload: ${JSON.stringify(emptyUploadBefore)}`);
+  }
+  uploadedPhotoUrl = '/api/photo?studentId=2026%2FMAL%2F003&uploaded=2';
+  await waitForUploadOpen(emptyReplacementFrame, emptyReplacementInput, replacementFile);
+  await page.locator('#upload-file-input').setInputFiles(replacementFile);
+  await confirmButton.click();
+  await waitForUploadClosed();
+  await page.waitForFunction(() => {
+    const target = [...document.querySelectorAll('.student-accordion-item')]
+      .find(item => item.dataset.profileId === '2026/MAL/003');
+    const thumb = target?.querySelector('.student-thumb');
+    const large = target?.querySelector('.student-photo-large');
+    return thumb?.getAttribute('src')?.includes('uploaded=2')
+      && large?.getAttribute('src')?.includes('uploaded=2');
+  });
+  const emptyUploadAfter = await page.evaluate(() => {
+    const nodes = window.__emptyUploadNodes;
+    const item = [...document.querySelectorAll('.student-accordion-item')]
+      .find(candidate => candidate.dataset.profileId === '2026/MAL/003');
+    return {
+      itemSame: item === nodes.item,
+      headerSame: item?.querySelector('.student-accordion-header') === nodes.header,
+      bodySame: item?.querySelector('.student-accordion-body') === nodes.body,
+      largeFrameSame: item?.querySelector('.student-photo-large-frame') === nodes.largeFrame,
+      thumbSrc: item?.querySelector('.student-thumb')?.getAttribute('src'),
+      largeSrc: item?.querySelector('.student-photo-large')?.getAttribute('src'),
+      expanded: item?.querySelector('.student-accordion-header')?.getAttribute('aria-expanded') === 'true',
+    };
+  });
+  if (!emptyUploadAfter.itemSame || !emptyUploadAfter.headerSame || !emptyUploadAfter.bodySame || !emptyUploadAfter.largeFrameSame || !emptyUploadAfter.thumbSrc?.includes('uploaded=2') || !emptyUploadAfter.largeSrc?.includes('uploaded=2') || !emptyUploadAfter.expanded) {
+    throw new Error(`First profile photo upload did not preserve the card: ${JSON.stringify({ emptyUploadBefore, emptyUploadAfter })}`);
+  }
+  if (profileRosterRequests !== rosterRequestsBeforeUpload || photoRequestsFor('2026/MAL/002') !== photoRequestsBeforeUpload.untouched || photoRequestsFor('2026/MAL/003') < 1) {
+    throw new Error(`First profile photo upload fetched the roster or untouched photos: ${JSON.stringify({ profileRosterRequests, rosterRequestsBeforeUpload, untouchedPhotoRequests: photoRequestsFor('2026/MAL/002'), expectedUntouchedPhotoRequests: photoRequestsBeforeUpload.untouched, emptyTargetPhotoRequests: photoRequestsFor('2026/MAL/003') })}`);
+  }
+
   await page.evaluate(() => {
     window.__persistentProfilePhoto = document.querySelector('.student-thumb[data-student-id="2026/MAL/001"]');
   });
@@ -660,8 +813,8 @@ try {
     naturalWidth: window.__persistentProfilePhoto?.naturalWidth,
     inactiveLabel: document.querySelector('.inactive-group-count').textContent,
   }));
-  if (!persistentPhotoState.sameNode || !persistentPhotoState.complete || persistentPhotoState.naturalWidth === 0 || persistentPhotoState.inactiveLabel !== 'Nonaktif (4)' || profilePhotoRequests !== loadedPhotoRequests) {
-    throw new Error(`Profile photos did not persist through search: ${JSON.stringify({ ...persistentPhotoState, loadedPhotoRequests, profilePhotoRequests })}`);
+  if (!persistentPhotoState.sameNode || !persistentPhotoState.complete || persistentPhotoState.naturalWidth === 0 || persistentPhotoState.inactiveLabel !== 'Nonaktif (4)' || photoRequestsFor('2026/MAL/002') !== photoRequestsBeforeUpload.untouched) {
+    throw new Error(`Profile photos did not persist through search: ${JSON.stringify({ ...persistentPhotoState, profilePhotoRequests, untouchedPhotoRequests: photoRequestsFor('2026/MAL/002'), expectedUntouchedPhotoRequests: photoRequestsBeforeUpload.untouched })}`);
   }
   const expandedShell = await page.evaluate(() => {
     const nav = document.getElementById('app-nav').getBoundingClientRect();

@@ -222,6 +222,11 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
         progressBar.style.width = '100%';
         progressWrap.setAttribute('aria-valuenow', '100');
 
+        const uploadedPhoto = {
+          studentId: currentStudentId,
+          image: data.image,
+        };
+
         // Update the in-memory student data immediately with the private app URL
         if (data.image) {
           const student = findStudent(currentStudentId);
@@ -232,9 +237,9 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
 
         showToast('Foto berhasil diunggah! ✓', 'success');
 
-        // Close modal and re-render the current student list to show new photo
+        // Close the modal, then update the uploaded student's photo in place.
         setTimeout(() => {
-          close({ onClosed: onUploaded });
+          close({ onClosed: () => onUploaded(uploadedPhoto) });
         }, 600);
       } else {
         throw new Error(data.message || 'Gagal mengunggah foto');
