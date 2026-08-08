@@ -18,13 +18,120 @@ let cancelProfileInteraction = () => {};
 // ============================================================
 // Photo Upload Manager
 // ============================================================
+function createProfilePhotoPlaceholder(className) {
+  const placeholder = document.createElement('div');
+  placeholder.className = className;
+  placeholder.style.display = 'none';
+  const icon = document.createElement('re-icon');
+  icon.setAttribute('icon', 'user');
+  icon.setAttribute('decorative', '');
+  icon.setAttribute('weight', 'filled');
+  placeholder.appendChild(icon);
+  return placeholder;
+}
+
+function updateProfilePhotoFrame(frame, { image, studentId, imageClass, placeholderClass, alt, width, height }) {
+  if (!frame || !image) return;
+
+  let spinner = frame.querySelector('.profile-photo-spinner');
+  if (!spinner) {
+    spinner = document.createElement('app-spinner');
+    spinner.className = 'app-spinner profile-photo-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    frame.prepend(spinner);
+  }
+
+  let placeholder = frame.querySelector(`.${placeholderClass}`);
+  if (!placeholder) {
+    placeholder = createProfilePhotoPlaceholder(placeholderClass);
+    frame.appendChild(placeholder);
+  }
+
+  let imageElement = frame.querySelector(`.${imageClass}`);
+  if (!imageElement) {
+    imageElement = document.createElement('img');
+    imageElement.className = imageClass;
+    frame.insertBefore(imageElement, placeholder);
+  }
+
+  imageElement.alt = alt;
+  imageElement.width = width;
+  imageElement.height = height;
+  imageElement.loading = 'lazy';
+  imageElement.decoding = 'async';
+  imageElement.setAttribute('data-student-id', studentId);
+  imageElement.onload = () => {
+    imageElement.classList.add('loaded');
+    imageElement.style.removeProperty('display');
+    spinner.style.display = 'none';
+    placeholder.style.display = 'none';
+    frame.setAttribute('aria-busy', 'false');
+  };
+  imageElement.onerror = () => {
+    imageElement.classList.remove('loaded');
+    imageElement.style.display = 'none';
+    spinner.style.display = 'none';
+    placeholder.style.display = 'flex';
+    frame.setAttribute('aria-busy', 'false');
+  };
+
+  frame.setAttribute('aria-busy', 'true');
+  spinner.style.removeProperty('display');
+  imageElement.classList.remove('loaded');
+  imageElement.style.removeProperty('display');
+  placeholder.style.display = 'none';
+  imageElement.src = image;
+}
+
+function updateProfilePhoto(studentId, image) {
+  if (!studentId || !image) return;
+
+  const targetId = String(studentId);
+  const item = [...document.querySelectorAll('.student-accordion-item')]
+    .find(candidate => candidate.dataset.profileId === targetId);
+  if (!item) return;
+
+  const student = allStudents.find(candidate => String(candidate.studentId) === targetId);
+  const studentName = student?.name || item.querySelector('.student-name-text')?.textContent || 'Katekumen';
+  const header = item.querySelector('.student-accordion-header');
+  let thumbFrame = header?.querySelector('.student-thumb-frame');
+  if (!thumbFrame) {
+    const thumbPlaceholder = header?.querySelector('.student-thumb-placeholder');
+    if (thumbPlaceholder) {
+      const icon = thumbPlaceholder.querySelector('re-icon');
+      thumbPlaceholder.className = 'student-photo-frame student-thumb-frame';
+      const replacementPlaceholder = createProfilePhotoPlaceholder('student-thumb-placeholder');
+      if (icon) replacementPlaceholder.replaceChildren(icon);
+      thumbPlaceholder.replaceChildren(replacementPlaceholder);
+      thumbFrame = thumbPlaceholder;
+    }
+  }
+
+  updateProfilePhotoFrame(thumbFrame, {
+    image,
+    studentId: targetId,
+    imageClass: 'student-thumb',
+    placeholderClass: 'student-thumb-placeholder',
+    alt: studentName,
+    width: 40,
+    height: 40,
+  });
+
+  updateProfilePhotoFrame(item.querySelector('.student-photo-large-frame'), {
+    image,
+    studentId: targetId,
+    imageClass: 'student-photo-large',
+    placeholderClass: 'student-photo-placeholder',
+    alt: `Foto ${studentName}`,
+    width: 120,
+    height: 150,
+  });
+}
+
 const PhotoUploader = createProfilePhotoUploader({
   getToken: getProfileToken,
   findStudent: studentId => allStudents.find(student => student.studentId === studentId),
-  onUploaded: () => {
-    renderStudents(allStudents);
-    filterStudents();
-  },
+  onUploaded: ({ studentId, image } = {}) => updateProfilePhoto(studentId, image),
 });
 
 // ============================================================
