@@ -7,23 +7,20 @@ Execution update: 2026-07-14
 
 ## Executive summary
 
-The audited cleanup has been executed without changing public routes, payloads,
-storage keys, Sheet contracts, authentication behavior, onboarding behavior, or
-the current design. The repository now has no tracked dependency output, one
-deterministic CI workflow, local upload-route parity, redacted local logging,
-paginated photo enrichment, focused upload coverage, and refreshed operational
-documentation. The automated suite now contains 36 passing tests.
+The resolved findings were removed from this report. The current checkout keeps
+three findings: F-08, F-12, and F-14. F-13 is also solved in the current profile
+filter because it hides existing rows instead of rebuilding the complete DOM.
 
-No P0 issue was found. Two P1 issues should be fixed first. The remaining work
-can be shipped incrementally without changing public routes, payloads, storage
-keys, Sheet contracts, authentication behavior, or the current design.
+No P0 or P1 issue remains. Two P2 findings and one P3 finding remain. The
+remaining work does not require a route, payload, storage-key, Sheet-contract,
+authentication, onboarding, or design change.
 
 | Priority | Count | Meaning |
 | --- | ---: | --- |
 | P0 | 0 | Immediate outage, data-loss, or critical security risk |
-| P1 | 2 | High-impact correctness or sensitive-data risk |
-| P2 | 8 | Confirmed maintainability, reliability, or scaling debt |
-| P3 | 5 | Low-risk hygiene or evidence-gathering work |
+| P1 | 0 | High-impact correctness or sensitive-data risk |
+| P2 | 2 | Confirmed maintainability, reliability, or scaling debt |
+| P3 | 1 | Low-risk hygiene or evidence-gathering work |
 
 ## Scope and method
 
@@ -34,14 +31,11 @@ an intentional archive. Existing untracked/generated paths (`plans/`,
 `storybook-static/`, and `tsconfig.tsbuildinfo`) and the user's modified
 `classcode.json` were excluded from cleanup conclusions.
 
-### Changes incorporated in this revision
+### Cleanup status
 
-- `app.js` now applies a global local-server rate limiter, exports the Express
-  app for tests, and only listens when run directly.
-- `test/app-security.test.js` adds coverage for rate limiting and safe
-  format-string logging. It does not redact the request body, so F-02 remains.
-- Package metadata is now version 2.6.3-c and `classcode.json` contains five
-  additional class labels. Neither change alters the dependency conclusions.
+The current checkout confirms F-01–F-07, F-09–F-11, F-13, and F-15 as solved.
+F-08 remains partial. F-12 and F-14 remain because later code changes made
+their documentation conclusions incomplete.
 
 Evidence came from:
 
@@ -69,156 +63,26 @@ runtime or production-data check, and **low** is a hypothesis only.
 | Tooling | `scripts/check-profile-combobox.js`, `scripts/check-scan-history-ui.js`, and `scripts/clasp-push-all.js` are explicit npm-script entry points. |
 | Verification | `test/*.test.js` runs through Vitest; one GitHub Actions workflow installs with `npm ci`, syntax-checks runtime JavaScript, and runs tests. |
 
-## Dependency status
-
-`npm audit` reports **0** vulnerabilities across 195 installed packages. Live
-npm registry checks report no deprecation message for any direct dependency.
-An available version is not the same as a deprecation, so major upgrades are
-not recommended merely because they exist.
-
-| Dependency | Installed | Latest observed | Classification |
-| --- | ---: | ---: | --- |
-| `@supabase/supabase-js` | 2.89.0 | 2.110.4 | Used; update separately with API/storage regression tests |
-| `@vercel/analytics` | 1.6.1 | 2.0.1 | Confirmed unused |
-| `@vercel/speed-insights` | 1.2.0 | 2.0.0 | Confirmed unused |
-| `cookie-parser` | resolved from `^1.4.6` | 1.4.7 | Used by local server |
-| `dotenv` | 16.6.1 | 17.4.2 | Used; major update deferred |
-| `express` | 4.22.2 | 5.2.1 | Used; major update deferred |
-| `express-rate-limit` | 8.5.2 | 8.5.2 | Used |
-| `jsonwebtoken` | 9.0.2 | 9.0.3 | Used |
-| `playwright` | 1.60.0 | 1.61.1 | Used only by smoke-test scripts; should be development-only |
-| `vitest` | 4.1.9 | 4.1.10 | Used as a development dependency |
-
-The `depcheck` reference to a missing `storybook` package came only from the
-excluded untracked `storybook-static/` output and is not an application issue.
-
 ## Findings and execution status
 
-Evidence and line references below describe the audited baseline. The execution
-outcome is recorded here so the original diagnosis remains reviewable.
+The findings below are the remaining items after the solved findings were
+removed. The validation block records the original 2026-07-14 execution.
 
 | Finding | Outcome |
 | --- | --- |
-| F-01 | Resolved: the Express server now exposes `POST /api/upload-photo`; both a focused test and local HTTP probe reach the handler. |
-| F-02 | Resolved: local logging records method and URL only; tests prove request bodies are not passed to the logger. |
-| F-03 | Resolved: all 246 tracked `node_modules` files were removed from the Git index, the ignore rule remains, and clean `npm ci` succeeds. |
-| F-04 | Resolved: both unused Vercel telemetry packages were removed and the lockfile regenerated. |
-| F-05 | Resolved: Playwright is now a development dependency. |
-| F-06 | Resolved: the duplicate workflow was removed after confirming the branch has no required protection check with that name. |
-| F-07 | Resolved: `npm run build` now syntax-checks runtime, Apps Script, tooling, and test JavaScript without adding a bundler. |
-| F-08 | Partially resolved: profile upload behavior was extracted to `public/profile-uploader.js` behind explicit callbacks. Queue/history/scanner extraction remains intentionally incremental because combining those migrations would increase behavioral risk. |
-| F-09 | Resolved: `_gas-utils.js` centralizes script-map validation and upstream JSON parsing while endpoint-specific responses remain unchanged. |
-| F-10 | Resolved: storage listing now paginates, with a multi-page unit test. |
-| F-11 | Resolved: multipart coverage now includes valid binary parsing, absent and quoted boundaries, missing inputs, MIME rejection, and request-size enforcement. |
-| F-12 | Resolved as documentation: the two-sided compatibility secret and ordered removal procedure are documented; the fallback remains unchanged by design. |
-| F-13 | Deferred by design: this medium-confidence performance candidate requires representative class-size measurements before changing rendering behavior. |
-| F-14 | Resolved for touched boundaries: concise contracts now cover the student endpoint, upload controller, and scan-queue retry/persistence invariants. |
-| F-15 | Resolved: README, static fallbacks, package metadata, and project guidance now agree on v2.6.3-c and the authenticated private-photo proxy. |
-
-### F-01 — Local development omits the photo-upload route
-
-- **Severity:** P1
-- **Confidence:** High
-- **Evidence:** `public/profile.js:174-180` posts to `/api/upload-photo`.
-  `app.js:93-169` registers the other application API handlers but never
-  registers `api/upload-photo.js`.
-- **Affected behavior:** Photo uploads work as an automatic Vercel function but
-  return the static fallback/404 behavior when the profile is exercised through
-  `npm start`. Local testing therefore cannot validate production route parity.
-- **Recommendation:** Register `POST /api/upload-photo` in `app.js` using the
-  existing handler and JSON error shape. Add a local route smoke check before
-  changing the handler itself.
-
-### F-02 — Local request logging includes login secrets and tokens
-
-- **Severity:** P1
-- **Confidence:** High
-- **Evidence:** `app.js:35-39` logs every request body. Login sends the shared
-  secret in the request body (`public/script.js:270-275`), and authenticated
-  operations may contain student identifiers. `test/app-security.test.js:20-32`
-  explicitly expects the body argument; the test prevents format-string
-  interpretation but does not test redaction.
-- **Affected behavior:** Local terminal output and captured logs can retain
-  credentials or personal identifiers. This is a development-only path, but it
-  weakens the same trust boundary used to validate production behavior.
-- **Recommendation:** Log method and path only, or explicitly redact `secret`,
-  authorization values, and student data. Do not introduce a logging package.
-
-### F-03 — Ignored dependency files are still tracked
-
-- **Severity:** P2
-- **Confidence:** High
-- **Evidence:** `.gitignore:2` ignores `node_modules/`, but
-  `git ls-files node_modules` returns 246 tracked files (1.7 MB, 246 of 342
-  tracked paths).
-- **Affected behavior:** Dependency installation can dirty the working tree,
-  stale package contents can survive lockfile changes, and reviews contain
-  generated third-party code.
-- **Recommendation:** Remove all tracked `node_modules` paths from the Git index,
-  retain the ignore rule, and prove reproducibility with a clean `npm ci`.
-
-### F-04 — Two production dependencies have no runtime references
-
-- **Severity:** P2
-- **Confidence:** High
-- **Evidence:** `package.json:20-21` declares `@vercel/analytics` and
-  `@vercel/speed-insights`. `depcheck` identifies both as unused, and tracked
-  application code contains no import, require, script tag, or initialization
-  for either package.
-- **Affected behavior:** Installs and deploy bundles include dependencies that
-  provide no analytics or speed-insight behavior.
-- **Recommendation:** Remove both declarations and regenerate the lockfile.
-  If telemetry is wanted later, add one package together with explicit browser
-  initialization and a verification event.
-
-### F-05 — Playwright is classified as a production dependency
-
-- **Severity:** P3
-- **Confidence:** High
-- **Evidence:** `package.json:27` places Playwright in `dependencies`; its only
-  tracked imports are `scripts/check-profile-combobox.js:2` and
-  `scripts/check-scan-history-ui.js:2`.
-- **Affected behavior:** Production installs resolve browser-test tooling that
-  is not needed by the serverless application.
-- **Recommendation:** Move Playwright to `devDependencies`; keep both smoke-test
-  scripts and their npm commands unchanged.
-
-### F-06 — CI runs the same job twice with inconsistent installation
-
-- **Severity:** P2
-- **Confidence:** High
-- **Evidence:** `.github/workflows/node.js.yml:6-31` and
-  `.github/workflows/test.yml:3-34` share the same triggers, Node 24 matrix,
-  build command, and test command. One uses `npm ci`; the other uses
-  `npm install`.
-- **Affected behavior:** Every push and pull request performs duplicate work,
-  while the two jobs do not prove exactly the same dependency state.
-- **Recommendation:** Keep one named workflow using `npm ci`, build/check, and
-  tests. Remove the duplicate workflow only after confirming branch-protection
-  rules do not require its old check name.
-
-### F-07 — The build check is a no-op
-
-- **Severity:** P3
-- **Confidence:** High
-- **Evidence:** `package.json:11` defines build as an `echo`, while both CI
-  workflows present it as a build check.
-- **Affected behavior:** A green “build” step proves no syntax, import, or route
-  validity and can create false confidence.
-- **Recommendation:** Either rename it to make the no-build architecture
-  explicit or replace it with dependency-free `node --check` coverage for
-  tracked runtime JavaScript. Do not add a bundler solely for this check.
+| F-08 | Partially resolved: queue, history, and scanner behavior now live in `public/scan-queue.js`, `public/scan-history.js`, and `public/scanner.js`. `public/profile.js` still combines class and student list behavior. |
+| F-12 | Not current: the code now requires `GAS_SECRET_KEY`, but README still documents a removed default fallback. |
+| F-14 | Partially resolved: the student endpoint and scan queue have concise comments, but the upload controller contract remains implicit. |
 
 ### F-08 — Core frontend modules combine too many responsibilities
 
 - **Severity:** P2
 - **Confidence:** High
-- **Evidence:** `public/script.js` is 1,286 lines; `ScanQueue` spans
-  `public/script.js:317-881` and owns persistence, deduplication, retries,
-  authentication expiry, networking, status transitions, timers, and rendering.
-  `public/profile.js` is 611 lines and combines uploads, class/student fetching,
-  filtering, accordion rendering, and page initialization. The quality scan
-  scores these files 0 and 52 respectively because of long, complex functions.
+- **Evidence:** `public/script.js` is 1,267 lines; `ScanQueue` still owns
+  persistence, deduplication, retries, authentication expiry, networking, status
+  transitions, timers, and rendering. `public/profile-uploader.js` now owns the
+  upload flow, but `public/profile.js` is 868 lines and still combines class and
+  student fetching, filtering, accordion rendering, and page initialization.
 - **Affected behavior:** Small changes to scanning, history, or profile UI have
   broad regression surfaces and depend on implicit script ordering/globals.
 - **Recommendation:** Extract along existing boundaries, one behavior at a time:
@@ -226,110 +90,31 @@ outcome is recorded here so the original diagnosis remains reviewable.
   list rendering. Preserve plain JavaScript and existing browser globals until
   each consumer is migrated and smoke-tested.
 
-### F-09 — Backend handlers duplicate configuration and GAS response handling
+### F-12 — GAS secret requirements are stale in the deployment documentation
 
 - **Severity:** P2
 - **Confidence:** High
-- **Evidence:** `api/absensi.js:27-40` and `api/students.js:34-48` independently
-  parse `VERCEL_SCRIPT_MAP_JSON`; `api/absensi.js:119-130` and
-  `api/students.js:66-77` independently read, parse, log, and translate GAS
-  responses. The quality scan also reports long/high-complexity handlers in
-  `absensi.js`, `students.js`, `upload-photo.js`, and `init-bucket.js`.
-- **Affected behavior:** Configuration and upstream-error behavior can drift
-  between endpoints, making deployment failures harder to diagnose consistently.
-- **Recommendation:** Add one small internal helper for script-map lookup and one
-  for JSON response parsing. Keep endpoint-specific status codes and user-facing
-  messages in each handler; do not introduce a handler framework.
-
-### F-10 — Student photo enrichment has a 200-object ceiling
-
-- **Severity:** P2
-- **Confidence:** High
-- **Evidence:** `api/students.js:84-86` requests a single storage page with
-  `limit: 200`, then `api/students.js:88-105` enriches students only from those
-  returned objects.
-- **Affected behavior:** Classes/buckets with more than 200 photo objects can
-  show valid students without photos depending on which objects appear in the
-  first page.
-- **Recommendation:** Record the current bucket sizes first. If any bucket can
-  exceed 200 objects, paginate the listing or fetch only the required names.
-  Add a test with more than one page before changing the query.
-
-### F-11 — Multipart parsing is bespoke and lacks direct tests
-
-- **Severity:** P2
-- **Confidence:** High
-- **Evidence:** `api/upload-photo.js:14-58` implements multipart parsing by
-  manually scanning boundary buffers; `api/upload-photo.js:97-143` combines
-  stream-size enforcement with parser and field validation. There is no
-  `test/upload-photo.test.js`.
-- **Affected behavior:** Boundary quoting, malformed headers, repeated fields,
-  stream errors, and near-limit payloads can regress without detection on a
-  security-sensitive upload path.
-- **Recommendation:** Keep the dependency-free parser for now, but add focused
-  tests for valid upload parsing, malformed boundary, missing file/student ID,
-  MIME rejection, and size limits before refactoring it.
-
-### F-12 — GAS compatibility-secret behavior is an undocumented deployment invariant
-
-- **Severity:** P2
-- **Confidence:** High
-- **Evidence:** `api/absensi.js:90`, `api/students.js:50`,
-  `apps-script/Code.js:11-14`, and `apps-script/Code.js:175-178` all fall back to
-  `default_development_secret`.
-- **Affected behavior:** Removing the fallback on only one side breaks attendance
-  and profile loading; leaving it indefinitely can hide incomplete environment
-  configuration.
-- **Recommendation:** Document the two-sided compatibility contract and an
-  ordered deployment/removal procedure. Do not remove or rename the fallback
-  until every deployed Apps Script and Vercel environment is coordinated.
-
-### F-13 — Profile filtering rebuilds the complete visible DOM on every keystroke
-
-- **Severity:** P3
-- **Confidence:** Medium
-- **Evidence:** `public/profile.js:305-551` clears and recreates the student list,
-  and `public/profile.js:553-561` invokes that full renderer for every input
-  event registered at `public/profile.js:607-610`.
-- **Affected behavior:** Large classes may experience input lag, image reloads,
-  and lost accordion state. The current class sizes were not available, so this
-  is a measured-performance candidate rather than a proven user-visible defect.
-- **Recommendation:** Measure input/render time with realistic class sizes.
-  Optimize only if it breaches an agreed threshold; first options are a short
-  debounce and preserving/reusing existing rows, not a new UI framework.
+- **Evidence:** `api/absensi.js` and `api/students.js` reject missing
+  `GAS_SECRET_KEY`, and `apps-script/Code.js` rejects a missing
+  `GAS_SECRET_KEY` Script Property. `README.md:118-123` still says both sides
+  fall back to `default_development_secret`.
+- **Affected behavior:** Operators can follow an obsolete setup and removal
+  procedure. A missing secret now causes attendance or profile requests to fail.
+- **Recommendation:** Update the README to state that both environments require
+  the same configured secret. Do not reintroduce the removed fallback.
 
 ### F-14 — Critical contracts are documented unevenly
 
 - **Severity:** P3
 - **Confidence:** High
-- **Evidence:** `api/_supabase-utils.js:1-20` and
-  `api/init-bucket.js:5-27` document their contracts well, while the complete
-  `/api/students` flow (`api/students.js:5-113`) and queue retry/state behavior
-  (`public/script.js:317-881`) have no top-level contract describing inputs,
-  state transitions, failure classes, and persistence invariants. Conversely,
-  `apps-script/Code.js:43-102` contains several speculative/redundant narration
-  comments around straightforward statements.
-- **Affected behavior:** Important operational behavior must be reconstructed
-  from branches, while extra narration makes the truly consequential comments
-  harder to find.
-- **Recommendation:** Add concise contract comments only at trust boundaries and
-  complex state machines. Remove speculative or line-by-line narration during
-  the related refactor; do not comment self-explanatory code.
-
-### F-15 — Repository documentation has release and architecture drift
-
-- **Severity:** P3
-- **Confidence:** High
-- **Evidence:** `README.md:1` reports v2.4.5, the static UI fallbacks at
-  `public/index.html:95` and `public/index.html:242` report v2.6.1, and
-  `package.json:3` is 2.6.3-c. `README.md:21`, `README.md:45`, and the project
-  guidance still describe signed image URLs, while the current implementation
-  uses the authenticated same-origin `/api/photo` proxy.
-- **Affected behavior:** Operators and contributors can follow stale deployment
-  or troubleshooting assumptions even though runtime behavior is correct.
-- **Recommendation:** Update the README only when the corresponding cleanup is
-  implemented; make `package.json` the version source of truth and document the
-  private photo proxy accurately.
+- **Evidence:** `api/students.js:6-8` documents the roster output and
+  `public/script.js:360-366` documents queue persistence and retry classes. The
+  upload parser has a local parser comment, but the upload controller has no
+  concise contract for authentication, limits, storage, and failure responses.
+- **Affected behavior:** Operators must reconstruct upload behavior from several
+  branches and helper calls.
+- **Recommendation:** Add one concise contract comment at the upload controller
+  boundary. Keep line-by-line comments out of self-explanatory code.
 
 ## Dead-code conclusion
 
@@ -341,49 +126,13 @@ externally invoked. The onboarding implementation is intentionally disabled by
 `public/onboarding.js:2-5` and retained for future releases, so it is deliberate
 dormant code rather than accidental dead code.
 
-The only confirmed unused runtime declarations are the two package dependencies
-in F-04. Any future source deletion should require a zero-reference result plus
-the relevant API/browser smoke check.
+Any future source deletion should require a zero-reference result plus the
+relevant API or browser smoke check.
 
-## Phased cleanup roadmap
+## Remaining cleanup roadmap
 
-### Phase 1 — Repository hygiene
-
-1. Remove tracked `node_modules` content and verify a clean `npm ci`.
-2. Consolidate CI into one deterministic workflow after checking required check
-   names in branch protection.
-3. Replace or rename the no-op build check.
-
-### Phase 2 — Dependency cleanup
-
-1. Remove `@vercel/analytics` and `@vercel/speed-insights`.
-2. Move Playwright to `devDependencies`.
-3. Regenerate and review `package-lock.json`; do not batch unrelated major
-   upgrades into this change.
-
-### Phase 3 — Correctness and dead paths
-
-1. Add local `/api/upload-photo` parity and redact local request logging.
-2. Add upload-parser tests and local route smoke coverage.
-3. Re-run reference mapping, then remove only newly proven dead code.
-
-### Phase 4 — Maintainability
-
-1. Extract queue/history/scanner responsibilities from `public/script.js` in
-   separate commits with the scan-history smoke test after each extraction.
-2. Separate profile upload behavior from list rendering/filtering, preserving
-   DOM structure, selectors, and accessibility behavior.
-3. Centralize only the duplicated script-map and GAS-response helpers used by
-   multiple backend handlers.
-
-### Phase 5 — Documentation and measured efficiency
-
-1. Document authentication sources, GAS compatibility, bucket naming,
-   multipart limits, queue state transitions, and Apps Script cache behavior.
-2. Measure bucket sizes and profile render latency before implementing storage
-   pagination or DOM reuse.
-3. Refresh the README and remove redundant comments while the related code is
-   already being touched.
+1. Update the README to match the required `GAS_SECRET_KEY` behavior.
+2. Add one concise contract comment at the upload controller boundary.
 
 ## Verification gate for cleanup work
 
@@ -404,7 +153,7 @@ Browser acceptance must preserve login, topic selection, queue retry/offline
 behavior, profile loading and photo upload, dashboard redirect, and the disabled
 onboarding state.
 
-## Current validation result
+## 2026-07-14 validation result
 
 - `npm audit`: 0 vulnerabilities.
 - Direct dependency deprecation lookup: none marked deprecated.

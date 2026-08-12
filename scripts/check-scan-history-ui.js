@@ -3,6 +3,7 @@ import { chromium } from 'playwright';
 
 const port = 6600 + process.pid % 300;
 const baseUrl = `http://127.0.0.1:${port}`;
+const testToken = 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjQxMDI0NDQ4MDB9.';
 const server = spawn(process.execPath, ['app.js'], {
   cwd: process.cwd(),
   env: { ...process.env, PORT: String(port) },
@@ -38,9 +39,9 @@ try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
+  await context.addCookies([{ name: 'auth_token', value: testToken, domain: '127.0.0.1', path: '/' }]);
   await context.addInitScript(() => {
-    sessionStorage.setItem('authToken', 'preview');
+    sessionStorage.setItem('authToken', 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjQxMDI0NDQ4MDB9.');
     localStorage.setItem('hasSeenOnboardingV2', 'true');
     localStorage.setItem('selectedWeek', '0');
     localStorage.setItem('selectedTopicName', 'Pembukaan Kelas');
@@ -439,7 +440,7 @@ try {
 
   await page.evaluate(() => {
     scanQueue.queue = [];
-    scanQueue.render();
+    scanQueue.save();
   });
   if (await page.locator('.segmented-progress-bar').getAttribute('aria-busy') !== 'false' || await page.locator('.segmented-progress-bar').evaluate(bar => bar.classList.contains('is-loading'))) {
     throw new Error('Progress bar loading state persisted after the queue emptied');

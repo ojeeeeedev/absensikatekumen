@@ -19,6 +19,7 @@ if (requiredColorDeclarations.some(declaration => !colorSource.includes(declarat
 
 const port = 5600 + process.pid % 1000;
 const baseUrl = `http://127.0.0.1:${port}`;
+const testToken = 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjQxMDI0NDQ4MDB9.';
 const server = spawn(process.execPath, ['app.js'], {
   cwd: process.cwd(),
   env: { ...process.env, PORT: String(port) },
@@ -60,9 +61,9 @@ try {
   const browserType = process.env.PLAYWRIGHT_BROWSER === 'webkit' ? webkit : chromium;
   browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
+  await context.addCookies([{ name: 'auth_token', value: testToken, domain: '127.0.0.1', path: '/' }]);
   await context.addInitScript(() => {
-    sessionStorage.setItem('authToken', 'preview');
+    sessionStorage.setItem('authToken', 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjQxMDI0NDQ4MDB9.');
     localStorage.setItem('hasSeenOnboardingV2', 'true');
     const addEventListener = EventTarget.prototype.addEventListener;
     window.__profileScrollListeners = 0;
