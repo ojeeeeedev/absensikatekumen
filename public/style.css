@@ -2284,9 +2284,9 @@ a:focus-visible,
   border-top: 1px solid var(--border-glass);
   padding-top: 16px;
   display: grid;
-  grid-template-columns: 82px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
-  gap: 12px 8px;
+  gap: 12px;
 }
 
 .detail-item {
@@ -2296,6 +2296,7 @@ a:focus-visible,
 .detail-label {
   display: grid;
   grid-template-columns: 1.1rem 1.8rem 0.4rem;
+  width: max-content;
   align-items: center;
   column-gap: 5px;
   font-size: 0.8rem;
