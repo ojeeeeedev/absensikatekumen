@@ -14,7 +14,6 @@ build/
 *.log
 coverage/
 storybook-static/
-tsconfig.tsbuildinfo
 plans/
 
 # OS specific
@@ -31,4 +30,3 @@ Thumbs.db
 
 # Superpowers Brainstorming
 .superpowers/
-
