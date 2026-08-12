@@ -34,7 +34,9 @@ describe('/api/absensi', () => {
     const res = createMockResponse();
     await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: 'shared-secret' } }), res);
     expect(res.statusCode).toBe(200);
-    expect(jwt.verify(res.body.token, JWT_SECRET, { algorithms: ['HS256'] })).toMatchObject({ authorized: true });
+    const payload = jwt.verify(res.body.token, JWT_SECRET, { algorithms: ['HS256'] });
+    expect(payload).toMatchObject({ authorized: true });
+    expect(payload.exp - payload.iat).toBe(3600);
   });
 
   it('fails closed when AUTH_SECRET is missing', async () => {

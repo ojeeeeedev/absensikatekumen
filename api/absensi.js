@@ -55,7 +55,7 @@ export default async function handler(req, res) {
           const token = jwt.sign(
             { authorized: true }, // payload
             JWT_SECRET,
-            { expiresIn: '8h' } // Token expires in 8 hours
+            { expiresIn: '1h' }
           );
           return res.status(200).json({ status: 'ok', token });
         } else {
