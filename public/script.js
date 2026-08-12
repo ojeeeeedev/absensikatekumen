@@ -330,7 +330,7 @@ window.handleLogin = async function() {
         setTimeout(() => {
           sessionStorage.setItem('authToken', data.token);
           // Set the cookie for server-side middleware and profile page access
-          document.cookie = `auth_token=${data.token}; path=/; max-age=28800; SameSite=Lax`;
+          document.cookie = `auth_token=${data.token}; path=/; max-age=3600; SameSite=Lax`;
           loginLoader.style.display = 'none';
           
           initializeApp();
@@ -504,9 +504,7 @@ class ScanQueue {
           pendingItem.status = 'pending';
           this.isProcessing = false;
           this.save();
-          sessionStorage.removeItem('authToken');
-          // Clear the auth_token cookie
-          document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          window.expireSession?.();
           if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
           triggerVisualFlash('error');
           if (typeof setAppState === 'function') setAppState(0);
@@ -1115,10 +1113,10 @@ window.onload = async () => {
 
   const cookieToken = getCookie('auth_token');
   const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
-  if (sessionToken) {
+  if (sessionToken && !window.isSessionTokenExpired?.(sessionToken)) {
     sessionStorage.setItem('authToken', sessionToken);
     // Sync the auth_token cookie with the sessionStorage token
-    document.cookie = `auth_token=${sessionToken}; path=/; max-age=28800; SameSite=Lax`;
+    document.cookie = `auth_token=${sessionToken}; path=/; max-age=3600; SameSite=Lax`;
     
     initializeApp();
     const savedWeek = localStorage.getItem('selectedWeek');
@@ -1131,6 +1129,7 @@ window.onload = async () => {
     
     await window.navigateToAppView(viewFromPath(), { historyMode: 'replace', focus: false });
   } else {
+    if (sessionToken) window.expireSession?.();
     await setAppState(0); // Authentication screen
   }
 }

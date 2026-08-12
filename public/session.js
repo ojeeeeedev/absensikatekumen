@@ -1,11 +1,32 @@
 // Centralized Session & Activity Management
 (function() {
+  function isSessionTokenExpired(token) {
+    try {
+      const encodedPayload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(encodedPayload.padEnd(Math.ceil(encodedPayload.length / 4) * 4, '=')));
+      return !Number.isFinite(payload.exp) || payload.exp <= Date.now() / 1000;
+    } catch {
+      return true;
+    }
+  }
+
+  window.isSessionTokenExpired = isSessionTokenExpired;
+
+  window.expireSession = function() {
+    document.cookie = 'auth_token=; path=/; max-age=0; SameSite=Lax';
+    sessionStorage.removeItem('authToken');
+    localStorage.setItem('logoutTimestamp', Date.now().toString());
+    const errorBox = document.getElementById('login-error-box');
+    if (errorBox) {
+      errorBox.textContent = 'Sesi Habis. Silakan login kembali.';
+      errorBox.style.display = 'block';
+    }
+  };
+
   // Expose handleLogout globally
   window.handleLogout = function(e) {
     if (e) e.preventDefault();
-    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-    sessionStorage.removeItem('authToken');
-    localStorage.setItem('logoutTimestamp', Date.now().toString());
+    window.expireSession();
     window.location.href = '/';
   };
 
