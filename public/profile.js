@@ -190,11 +190,7 @@ async function loadStudents(classCode) {
   if (loader) loader.style.display = 'flex';
   
   try {
-    const res = await fetch(`/api/students?classCode=${classCode}`, {
-      headers: {
-        'Authorization': `Bearer ${getProfileToken()}`
-      }
-    });
+    const res = await fetch(`/api/students?classCode=${classCode}`);
     const data = await res.json();
     if (loadId !== studentLoadId) return;
     if (data.status === 'ok') {

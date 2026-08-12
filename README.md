@@ -110,10 +110,14 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_supabase_anon_key
 VERCEL_SCRIPT_MAP_JSON={"SAB":"https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"}
 GAS_SECRET_KEY=replace_with_the_same_secret_used_by_apps_script
+CRON_SECRET=replace_with_a_random_secret_of_at_least_16_characters
 DASHBOARD_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=sharing
 ```
 
 _Note: `VERCEL_SCRIPT_MAP_JSON` maps class codes (e.g., "SAB") to their respective Google Apps Script URLs._
+
+Vercel sends `CRON_SECRET` to the daily cache refresh endpoint. Use a random
+value with at least 16 characters.
 
 `GAS_SECRET_KEY` is a two-sided compatibility contract: Vercel sends it and
 each deployed Apps Script reads the same Script Property. Both sides currently

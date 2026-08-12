@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
+import { setCdnCacheHeaders, STUDENT_ROSTERS_TAG, studentRosterTag } from './_cache-utils.js';
 import { getScriptMap, readJsonResponse } from './_gas-utils.js';
 import { PHOTO_MIME_TYPES, bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
@@ -20,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    verifyJwt(req);
+    verifyJwt(req, { allowCookie: true });
   } catch (err) {
     return res.status(401).json({ status: "error", message: "Akses ditolak: Token tidak valid" });
   }
@@ -58,6 +59,11 @@ export default async function handler(req, res) {
   const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
   try {
+    const filesPromise = supabase
+      ? listAllFiles(supabase, bucketNameForClass(normalizedClassCode))
+        .catch(error => ({ data: null, error }))
+      : null;
+
     const gasResponse = await fetch(scriptURL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -83,7 +89,7 @@ export default async function handler(req, res) {
     }));
 
     if (supabase && students.length > 0) {
-      const { data: files, error } = await listAllFiles(supabase, bucketNameForClass(normalizedClassCode));
+      const { data: files, error } = await filesPromise;
       if (error) {
         for (const student of students) {
           if (storageBaseNameForStudent(student.studentId)) student.image = photoUrlForStudent(student.studentId);
@@ -100,6 +106,7 @@ export default async function handler(req, res) {
       }
     }
 
+    setCdnCacheHeaders(res, [STUDENT_ROSTERS_TAG, studentRosterTag(normalizedClassCode)]);
     return res.status(200).json({ status: "ok", students });
   } catch (err) {
     console.error("API Error in /api/students:", err);

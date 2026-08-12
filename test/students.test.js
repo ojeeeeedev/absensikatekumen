@@ -26,6 +26,14 @@ describe('/api/students', () => {
     configure(); const res = createMockResponse();
     await handler(createMockRequest({ method: 'GET', query: { classCode: 'SAB' } }), res);
     expect(res.statusCode).toBe(401);
+    expect(res.headers['Vercel-CDN-Cache-Control']).toBeUndefined();
+  });
+  it('accepts the existing login cookie', async () => {
+    configure();
+    global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'ok', students: [] })) });
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'GET', headers: { cookie: `auth_token=${token()}` }, query: { classCode: 'SAB' } }), res);
+    expect(res.statusCode).toBe(200);
   });
   it('rejects malformed class codes', async () => {
     configure(); const res = createMockResponse();
@@ -52,6 +60,25 @@ describe('/api/students', () => {
     }]);
     expect(list).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(GAS_URL, expect.any(Object));
+    expect(res.headers['Cache-Control']).toBe('public, max-age=0, must-revalidate');
+    expect(res.headers['Vercel-CDN-Cache-Control']).toBe('public, s-maxage=31536000');
+    expect(res.headers['Vercel-Cache-Tag']).toBe('student-rosters,student-roster-sab');
+  });
+  it('starts the photo listing before the GAS request completes', async () => {
+    configure();
+    process.env.SUPABASE_URL = 'https://storage.example';
+    process.env.SUPABASE_KEY = 'storage-key';
+    list.mockResolvedValue({ data: [], error: null });
+    let resolveGas;
+    global.fetch = vi.fn(() => new Promise(resolve => { resolveGas = resolve; }));
+    const res = createMockResponse();
+
+    const responsePromise = handler(createMockRequest({ method: 'GET', headers: { cookie: `auth_token=${token()}` }, query: { classCode: 'SAB' } }), res);
+    expect(list).toHaveBeenCalledTimes(1);
+    resolveGas({ text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'ok', students: [] })) });
+    await responsePromise;
+
+    expect(res.statusCode).toBe(200);
   });
   it('returns 502 for non-JSON GAS responses', async () => {
     configure(); global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue('not json') }); const res = createMockResponse();

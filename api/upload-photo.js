@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
+import { invalidateByTag } from '@vercel/functions';
 import { verifyJwt } from './_auth.js';
+import { studentPhotoTag, studentRosterTag } from './_cache-utils.js';
 import { bucketNameForClass, classCodeFromStudentId, ensureBucketExists, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
 // Max file size: 5MB
@@ -182,6 +184,12 @@ export default async function handler(req, res) {
     if (uploadError) {
       console.error('[upload-photo] Supabase upload error:', uploadError);
       return res.status(500).json({ status: 'error', message: `Gagal mengunggah foto: ${uploadError.message}` });
+    }
+
+    try {
+      await invalidateByTag([studentRosterTag(classCode), studentPhotoTag(studentId)]);
+    } catch (cacheError) {
+      console.error('[upload-photo] Cache invalidation failed:', cacheError);
     }
 
     return res.status(200).json({
