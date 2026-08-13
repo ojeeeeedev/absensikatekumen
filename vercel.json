@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/refresh-cache",
-      "schedule": "0 17 * * *"
+      "schedule": "0 17 * * 3"
     }
   ],
   "redirects": [

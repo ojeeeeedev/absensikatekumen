@@ -116,7 +116,7 @@ DASHBOARD_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=shar
 
 _Note: `VERCEL_SCRIPT_MAP_JSON` maps class codes (e.g., "SAB") to their respective Google Apps Script URLs._
 
-Vercel sends `CRON_SECRET` to the daily cache refresh endpoint. Use a random
+Vercel sends `CRON_SECRET` to the weekly cache refresh endpoint. Use a random
 value with at least 16 characters.
 
 `GAS_SECRET_KEY` is a two-sided compatibility contract: Vercel sends it and
