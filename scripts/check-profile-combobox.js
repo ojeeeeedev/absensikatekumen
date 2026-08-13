@@ -445,12 +445,19 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
   studentResponseDelays = { SAB: 120 };
   const duplicateRequestStart = profileRosterRequests;
-  await page.evaluate(() => {
+  const duplicateLoadState = await page.evaluate(() => {
     const selector = document.getElementById('class-selector');
+    const list = document.getElementById('students-list');
     selector.value = 'SAB';
     selector.dispatchEvent(new Event('change', { bubbles: true }));
+    const marker = document.createElement('span');
+    list.append(marker);
     selector.dispatchEvent(new Event('change', { bubbles: true }));
+    return { firstLoadStatePreserved: marker.isConnected };
   });
+  if (!duplicateLoadState.firstLoadStatePreserved) {
+    throw new Error(`Same-class selection restarted the active load: ${JSON.stringify(duplicateLoadState)}`);
+  }
   await page.waitForFunction(() => document.querySelector('.student-id-text')?.textContent.startsWith('2026/SAB/'));
   if (profileRosterRequests !== duplicateRequestStart + 1) {
     throw new Error(`Same-class selection sent duplicate roster requests: ${profileRosterRequests - duplicateRequestStart}`);

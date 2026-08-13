@@ -140,6 +140,7 @@ const PhotoUploader = createProfilePhotoUploader({
 
 let classCombobox;
 let studentLoadId = 0;
+let activeStudentLoadClass = '';
 const studentRequests = new Map();
 
 async function loadClasses() {
@@ -164,6 +165,8 @@ async function loadClasses() {
 }
 
 async function loadStudents(classCode) {
+  if (classCode === activeStudentLoadClass && studentRequests.has(classCode)) return;
+  activeStudentLoadClass = classCode;
   const loadId = ++studentLoadId;
   const listContainer = document.getElementById('students-list');
   const loader = document.getElementById('students-loader');
@@ -216,6 +219,7 @@ async function loadStudents(classCode) {
     showToast("Gagal mengambil data katekumen", "error");
   } finally {
     if (loadId === studentLoadId) {
+      activeStudentLoadClass = '';
       if (loader) loader.style.display = 'none';
       if (listContainer) {
         listContainer.style.removeProperty('display');
