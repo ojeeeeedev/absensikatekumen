@@ -44,28 +44,28 @@ function doPost(e) {
       return buildResponse_({ status: "error", message: "Sheet 'Presensi' not found" });
     }
 
-    // --- OPTIMIZATION START: Cache Handling ---
-    const cache = CacheService.getScriptCache();
-    // Try to retrieve the student map from cache
+    // The cache improves lookup speed but must not control attendance availability.
+    let cache = null;
     let studentMap = null;
-    const cachedData = cache.get("STUDENT_MAP_V1"); 
-    
-    if (cachedData) {
-      studentMap = JSON.parse(cachedData);
-    } else {
-      // CACHE MISS: Build the map from scratch (Expensive operation, done once every 6h)
+    try {
+      cache = CacheService.getScriptCache();
+      const cachedData = cache.get("STUDENT_MAP_V1");
+      if (cachedData) studentMap = JSON.parse(cachedData);
+      if (!studentMap || typeof studentMap !== "object" || Array.isArray(studentMap)) studentMap = null;
+    } catch (e) {
+      console.log("Cache read failed: " + e.toString());
+    }
+
+    if (!studentMap) {
       studentMap = buildStudentMap_(ss, sheet);
-      try {
-        // Cache for 6 hours (21600 seconds)
-        // Note: Cache limit is 100KB. If map is huge, this might fail or need chunking.
-        // For < 500 students, this is usually fine.
-        cache.put("STUDENT_MAP_V1", JSON.stringify(studentMap), 21600); 
-      } catch (e) {
-        // If cache fails (e.g. too big), we just continue without caching
-        console.log("Cache put failed: " + e.toString());
+      if (cache) {
+        try {
+          cache.put("STUDENT_MAP_V1", JSON.stringify(studentMap), 21600);
+        } catch (e) {
+          console.log("Cache write failed: " + e.toString());
+        }
       }
     }
-    // --- OPTIMIZATION END ---
 
     // 3. Determine Column based on Week (Must read header to be safe)
     // Optimization: We could cache headers too, but they might change.

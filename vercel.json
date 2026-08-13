@@ -1,11 +1,5 @@
 {
   "cleanUrls": true,
-  "crons": [
-    {
-      "path": "/api/refresh-cache",
-      "schedule": "0 17 * * 3"
-    }
-  ],
   "redirects": [
     {
       "source": "/profile.html",

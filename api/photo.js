@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
-import { setCdnCacheHeaders, STUDENT_PHOTOS_TAG, studentPhotoTag } from './_cache-utils.js';
 import {
   PHOTO_MIME_TYPES,
   bucketNameForClass,
@@ -68,7 +67,7 @@ export default async function handler(req, res) {
     }
 
     res.setHeader('Content-Type', PHOTO_MIME_TYPES[ext] || 'application/octet-stream');
-    setCdnCacheHeaders(res, [STUDENT_PHOTOS_TAG, studentPhotoTag(studentId)]);
+    res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (req.method === 'HEAD') return res.status(200).end();
 

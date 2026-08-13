@@ -60,9 +60,9 @@ describe('/api/students', () => {
     }]);
     expect(list).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(GAS_URL, expect.any(Object));
-    expect(res.headers['Cache-Control']).toBe('public, max-age=0, must-revalidate');
-    expect(res.headers['Vercel-CDN-Cache-Control']).toBe('public, s-maxage=31536000');
-    expect(res.headers['Vercel-Cache-Tag']).toBe('student-rosters,student-roster-sab');
+    expect(res.headers['Cache-Control']).toBe('private, no-store');
+    expect(res.headers['Vercel-CDN-Cache-Control']).toBeUndefined();
+    expect(res.headers['Vercel-Cache-Tag']).toBeUndefined();
   });
   it('starts the photo listing before the GAS request completes', async () => {
     configure();

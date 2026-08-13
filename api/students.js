@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
-import { setCdnCacheHeaders, STUDENT_ROSTERS_TAG, studentRosterTag } from './_cache-utils.js';
 import { getScriptMap, readJsonResponse } from './_gas-utils.js';
 import { PHOTO_MIME_TYPES, bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
@@ -106,7 +105,7 @@ export default async function handler(req, res) {
       }
     }
 
-    setCdnCacheHeaders(res, [STUDENT_ROSTERS_TAG, studentRosterTag(normalizedClassCode)]);
+    res.setHeader('Cache-Control', 'private, no-store');
     return res.status(200).json({ status: "ok", students });
   } catch (err) {
     console.error("API Error in /api/students:", err);

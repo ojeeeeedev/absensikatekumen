@@ -18,6 +18,10 @@ const app = express();
 const requestLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
+  skip: (req) => {
+    const isPhotoRead = req.path === '/api/photo' && ['GET', 'HEAD'].includes(req.method);
+    return isPhotoRead || (!req.path.startsWith('/api/') && req.path !== '/dashboard');
+  },
   message: {
     status: "error",
     message: "Too many requests, please try again later."

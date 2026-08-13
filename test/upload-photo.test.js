@@ -15,8 +15,6 @@ const storage = {
   })),
 };
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn(() => ({ storage })) }));
-const { invalidateByTag } = vi.hoisted(() => ({ invalidateByTag: vi.fn() }));
-vi.mock('@vercel/functions', () => ({ invalidateByTag }));
 
 import handler, { parseMultipart } from '../api/upload-photo.js';
 
@@ -70,7 +68,6 @@ describe('/api/upload-photo multipart validation', () => {
     process.env.JWT_SECRET = JWT_SECRET;
     process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_KEY = 'service-key';
-    invalidateByTag.mockResolvedValue(undefined);
   }
 
   it('parses a valid student field and file without altering file bytes', () => {
@@ -164,10 +161,6 @@ describe('/api/upload-photo multipart validation', () => {
     expect(res.body.status).toBe('ok');
     expect(res.body.image).toMatch(/^\/api\/photo\?studentId=/);
     expect(storage.createBucket).toHaveBeenCalledWith('pasfoto-sab', expect.any(Object));
-    expect(invalidateByTag).toHaveBeenCalledWith([
-      'student-roster-sab',
-      'student-photo-2025-sab-001',
-    ]);
   });
 
   it('keeps the existing photo when the replacement upload fails', async () => {
@@ -186,16 +179,4 @@ describe('/api/upload-photo multipart validation', () => {
     log.mockRestore();
   });
 
-  it('keeps the successful upload when cache invalidation fails', async () => {
-    configureEnvironment();
-    invalidateByTag.mockRejectedValue(new Error('cache unavailable'));
-    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const req = streamRequest(multipartBody({ studentId: '2025/SAB/001', file: Buffer.from([0xff, 0xd8, 0xff]) }));
-    const res = createMockResponse();
-
-    await handler(req, res);
-
-    expect(res.statusCode).toBe(200);
-    expect(log).toHaveBeenCalledWith('[upload-photo] Cache invalidation failed:', expect.any(Error));
-  });
 });

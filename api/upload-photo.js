@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { invalidateByTag } from '@vercel/functions';
 import { verifyJwt } from './_auth.js';
-import { studentPhotoTag, studentRosterTag } from './_cache-utils.js';
 import { bucketNameForClass, classCodeFromStudentId, ensureBucketExists, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
 // Max file size: 5MB
@@ -182,12 +180,6 @@ export default async function handler(req, res) {
 
     if (toDelete.length > 0) {
       await supabase.storage.from(bucketName).remove(toDelete);
-    }
-
-    try {
-      await invalidateByTag([studentRosterTag(classCode), studentPhotoTag(studentId)]);
-    } catch (cacheError) {
-      console.error('[upload-photo] Cache invalidation failed:', cacheError);
     }
 
     return res.status(200).json({
