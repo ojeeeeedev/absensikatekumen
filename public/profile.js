@@ -140,6 +140,7 @@ const PhotoUploader = createProfilePhotoUploader({
 
 let classCombobox;
 let studentLoadId = 0;
+const studentRequests = new Map();
 
 async function loadClasses() {
   try {
@@ -190,8 +191,16 @@ async function loadStudents(classCode) {
   if (loader) loader.style.display = 'flex';
   
   try {
-    const res = await fetch(`/api/students?classCode=${classCode}`);
-    const data = await res.json();
+    let studentRequest = studentRequests.get(classCode);
+    if (!studentRequest) {
+      studentRequest = fetch(`/api/students?classCode=${classCode}`)
+        .then(res => res.json())
+        .finally(() => {
+          if (studentRequests.get(classCode) === studentRequest) studentRequests.delete(classCode);
+        });
+      studentRequests.set(classCode, studentRequest);
+    }
+    const data = await studentRequest;
     if (loadId !== studentLoadId) return;
     if (data.status === 'ok') {
       allStudents = data.students;
