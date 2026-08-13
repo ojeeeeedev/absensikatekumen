@@ -2,11 +2,14 @@ import { once } from 'node:events';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import app from '../app.js';
 
+const originalJwtSecret = process.env.JWT_SECRET;
+
 describe('local server security middleware', () => {
   let server;
   let baseUrl;
 
   beforeAll(async () => {
+    process.env.JWT_SECRET = 'app-security-test-secret';
     server = app.listen(0, '127.0.0.1');
     await once(server, 'listening');
     baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -15,6 +18,8 @@ describe('local server security middleware', () => {
   afterAll(async () => {
     server.close();
     await once(server, 'close');
+    if (originalJwtSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalJwtSecret;
   });
 
   it('keeps request data out of logs, exposes uploads, and limits bursts', async () => {
