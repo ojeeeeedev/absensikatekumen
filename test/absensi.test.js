@@ -39,6 +39,19 @@ describe('/api/absensi', () => {
     expect(payload.exp - payload.iat).toBe(3600);
   });
 
+  it('does not load attendance services during login', async () => {
+    configure();
+    delete process.env.VERCEL_SCRIPT_MAP_JSON;
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_KEY = 'service-key';
+    const res = createMockResponse();
+
+    await handler(createMockRequest({ method: 'POST', body: { action: 'login', secret: 'shared-secret' } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it('fails closed when AUTH_SECRET is missing', async () => {
     configure();
     delete process.env.AUTH_SECRET;

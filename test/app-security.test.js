@@ -2,11 +2,14 @@ import { once } from 'node:events';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import app from '../app.js';
 
+const originalJwtSecret = process.env.JWT_SECRET;
+
 describe('local server security middleware', () => {
   let server;
   let baseUrl;
 
   beforeAll(async () => {
+    process.env.JWT_SECRET = 'app-security-test-secret';
     server = app.listen(0, '127.0.0.1');
     await once(server, 'listening');
     baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -15,6 +18,8 @@ describe('local server security middleware', () => {
   afterAll(async () => {
     server.close();
     await once(server, 'close');
+    if (originalJwtSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalJwtSecret;
   });
 
   it('keeps request data out of logs, exposes uploads, and limits bursts', async () => {
@@ -30,7 +35,7 @@ describe('local server security middleware', () => {
       expect(log).toHaveBeenCalledWith(
         '[local-dev]',
         'GET',
-        '/api/version?probe=%25s',
+        '/api/version',
       );
 
       const allowedResponses = await Promise.all(
@@ -43,6 +48,20 @@ describe('local server security middleware', () => {
       expect(limitedResponse.headers.get('ratelimit-limit')).toBe('100');
       expect(limitedResponse.headers.get('retry-after')).toBe('60');
       await expect(limitedResponse.json()).resolves.toMatchObject({ status: 'error' });
+
+      const staticResponse = await fetch(`${baseUrl}/theme.js`);
+      expect(staticResponse.status).toBe(200);
+      expect(staticResponse.headers.get('ratelimit-limit')).toBeNull();
+
+      const photoResponse = await fetch(`${baseUrl}/api/photo?studentId=2025%2FSAB%2F001`);
+      expect(photoResponse.status).toBe(401);
+      expect(photoResponse.headers.get('ratelimit-limit')).toBeNull();
+
+      const photoHeadResponse = await fetch(`${baseUrl}/api/photo?studentId=2025%2FSAB%2F001`, { method: 'HEAD' });
+      expect(photoHeadResponse.status).toBe(401);
+      expect(photoHeadResponse.headers.get('ratelimit-limit')).toBeNull();
+
+      expect((await fetch(`${baseUrl}/api/version`)).status).toBe(429);
     } finally {
       log.mockRestore();
     }

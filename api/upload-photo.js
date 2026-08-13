@@ -151,24 +151,9 @@ export default async function handler(req, res) {
     // --- Ensure the bucket exists; create it if not (idempotent) ---
     await ensureBucketExists(supabase, bucketName);
 
-    // Delete any existing photos for this student (all extensions)
     const { data: existingFiles } = await supabase.storage
       .from(bucketName)
       .list('', { search: baseFilename });
-
-    if (existingFiles && existingFiles.length > 0) {
-      const toDelete = existingFiles
-        .filter(f => {
-          const nameParts = f.name.split('.');
-          nameParts.pop();
-          return nameParts.join('.') === baseFilename;
-        })
-        .map(f => f.name);
-
-      if (toDelete.length > 0) {
-        await supabase.storage.from(bucketName).remove(toDelete);
-      }
-    }
 
     // Upload the new photo
     const { error: uploadError } = await supabase.storage
@@ -182,6 +167,19 @@ export default async function handler(req, res) {
     if (uploadError) {
       console.error('[upload-photo] Supabase upload error:', uploadError);
       return res.status(500).json({ status: 'error', message: `Gagal mengunggah foto: ${uploadError.message}` });
+    }
+
+    // Remove only obsolete formats after the replacement is safely stored.
+    const toDelete = (existingFiles || [])
+      .filter(f => {
+        const nameParts = f.name.split('.');
+        nameParts.pop();
+        return f.name !== targetFilename && nameParts.join('.') === baseFilename;
+      })
+      .map(f => f.name);
+
+    if (toDelete.length > 0) {
+      await supabase.storage.from(bucketName).remove(toDelete);
     }
 
     return res.status(200).json({

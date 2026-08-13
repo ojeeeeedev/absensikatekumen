@@ -41,6 +41,7 @@ describe('/api/photo', () => {
     await handler(req, res);
 
     expect(res.statusCode).toBe(401);
+    expect(res.headers['Vercel-CDN-Cache-Control']).toBeUndefined();
   });
 
   it('rejects malformed student IDs', async () => {
@@ -83,6 +84,8 @@ describe('/api/photo', () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers['Content-Type']).toBe('image/jpeg');
     expect(res.headers['Cache-Control']).toBe('private, no-store');
+    expect(res.headers['Vercel-CDN-Cache-Control']).toBeUndefined();
+    expect(res.headers['Vercel-Cache-Tag']).toBeUndefined();
     expect(Buffer.isBuffer(res.body)).toBe(true);
     expect(res.body.toString()).toBe('photo-bytes');
   });

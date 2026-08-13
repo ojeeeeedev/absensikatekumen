@@ -140,6 +140,8 @@ const PhotoUploader = createProfilePhotoUploader({
 
 let classCombobox;
 let studentLoadId = 0;
+let activeStudentLoadClass = '';
+const studentRequests = new Map();
 
 async function loadClasses() {
   try {
@@ -163,6 +165,8 @@ async function loadClasses() {
 }
 
 async function loadStudents(classCode) {
+  if (classCode === activeStudentLoadClass && studentRequests.has(classCode)) return;
+  activeStudentLoadClass = classCode;
   const loadId = ++studentLoadId;
   const listContainer = document.getElementById('students-list');
   const loader = document.getElementById('students-loader');
@@ -190,12 +194,16 @@ async function loadStudents(classCode) {
   if (loader) loader.style.display = 'flex';
   
   try {
-    const res = await fetch(`/api/students?classCode=${classCode}`, {
-      headers: {
-        'Authorization': `Bearer ${getProfileToken()}`
-      }
-    });
-    const data = await res.json();
+    let studentRequest = studentRequests.get(classCode);
+    if (!studentRequest) {
+      studentRequest = fetch(`/api/students?classCode=${classCode}`)
+        .then(res => res.json())
+        .finally(() => {
+          if (studentRequests.get(classCode) === studentRequest) studentRequests.delete(classCode);
+        });
+      studentRequests.set(classCode, studentRequest);
+    }
+    const data = await studentRequest;
     if (loadId !== studentLoadId) return;
     if (data.status === 'ok') {
       allStudents = data.students;
@@ -211,6 +219,7 @@ async function loadStudents(classCode) {
     showToast("Gagal mengambil data katekumen", "error");
   } finally {
     if (loadId === studentLoadId) {
+      activeStudentLoadClass = '';
       if (loader) loader.style.display = 'none';
       if (listContainer) {
         listContainer.style.removeProperty('display');

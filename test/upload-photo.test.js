@@ -3,12 +3,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { createMockResponse } from './helpers.js';
 
+const list = vi.fn().mockResolvedValue({ data: [], error: null });
+const remove = vi.fn().mockResolvedValue({ error: null });
+const upload = vi.fn().mockResolvedValue({ error: null });
 const storage = {
   createBucket: vi.fn().mockResolvedValue({ error: null }),
   from: vi.fn(() => ({
-    list: vi.fn().mockResolvedValue({ data: [], error: null }),
-    remove: vi.fn().mockResolvedValue({ error: null }),
-    upload: vi.fn().mockResolvedValue({ error: null }),
+    list,
+    remove,
+    upload,
   })),
 };
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn(() => ({ storage })) }));
@@ -56,6 +59,9 @@ describe('/api/upload-photo multipart validation', () => {
     process.env.SUPABASE_URL = originalSupabaseUrl;
     process.env.SUPABASE_KEY = originalSupabaseKey;
     vi.clearAllMocks();
+    list.mockResolvedValue({ data: [], error: null });
+    remove.mockResolvedValue({ error: null });
+    upload.mockResolvedValue({ error: null });
   });
 
   function configureEnvironment() {
@@ -156,4 +162,21 @@ describe('/api/upload-photo multipart validation', () => {
     expect(res.body.image).toMatch(/^\/api\/photo\?studentId=/);
     expect(storage.createBucket).toHaveBeenCalledWith('pasfoto-sab', expect.any(Object));
   });
+
+  it('keeps the existing photo when the replacement upload fails', async () => {
+    configureEnvironment();
+    list.mockResolvedValue({ data: [{ name: '2025-SAB-001.png' }], error: null });
+    upload.mockResolvedValue({ error: { message: 'upload failed' } });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const req = streamRequest(multipartBody({ studentId: '2025/SAB/001', file: Buffer.from('photo') }));
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(500);
+    expect(list).toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+    log.mockRestore();
+  });
+
 });

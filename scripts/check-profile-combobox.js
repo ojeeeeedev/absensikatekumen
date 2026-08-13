@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import jwt from 'jsonwebtoken';
 import { chromium, webkit } from 'playwright';
 
 const colorSource = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
@@ -19,9 +20,11 @@ if (requiredColorDeclarations.some(declaration => !colorSource.includes(declarat
 
 const port = 5600 + process.pid % 1000;
 const baseUrl = `http://127.0.0.1:${port}`;
+const jwtSecret = 'profile-browser-test-secret';
+const authToken = jwt.sign({ authorized: true }, jwtSecret, { expiresIn: '1h' });
 const server = spawn(process.execPath, ['app.js'], {
   cwd: process.cwd(),
-  env: { ...process.env, PORT: String(port) },
+  env: { ...process.env, JWT_SECRET: jwtSecret, PORT: String(port) },
   stdio: 'ignore'
 });
 
@@ -60,9 +63,9 @@ try {
   const browserType = process.env.PLAYWRIGHT_BROWSER === 'webkit' ? webkit : chromium;
   browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
-  await context.addInitScript(() => {
-    sessionStorage.setItem('authToken', 'preview');
+  await context.addCookies([{ name: 'auth_token', value: authToken, domain: '127.0.0.1', path: '/' }]);
+  await context.addInitScript(token => {
+    sessionStorage.setItem('authToken', token);
     localStorage.setItem('hasSeenOnboardingV2', 'true');
     const addEventListener = EventTarget.prototype.addEventListener;
     window.__profileScrollListeners = 0;
@@ -70,11 +73,15 @@ try {
       if (type === 'scroll' && this instanceof Element && this.id === 'profile-view') window.__profileScrollListeners += 1;
       return addEventListener.call(this, type, listener, options);
     };
-  });
+  }, authToken);
   const page = await context.newPage();
   const profileConsoleErrors = [];
   page.on('pageerror', error => profileConsoleErrors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') profileConsoleErrors.push(message.text()); });
+  page.on('console', message => {
+    if (message.type() !== 'error') return;
+    const source = message.location().url;
+    profileConsoleErrors.push(source ? `${message.text()} (${source})` : message.text());
+  });
   let releaseProfilePhoto;
   let profilePhotoRequests = 0;
   const profilePhotoRequestUrls = [];
@@ -436,6 +443,26 @@ try {
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
   if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
+  studentResponseDelays = { SAB: 120 };
+  const duplicateRequestStart = profileRosterRequests;
+  const duplicateLoadState = await page.evaluate(() => {
+    const selector = document.getElementById('class-selector');
+    const list = document.getElementById('students-list');
+    selector.value = 'SAB';
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+    const marker = document.createElement('span');
+    list.append(marker);
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+    return { firstLoadStatePreserved: marker.isConnected };
+  });
+  if (!duplicateLoadState.firstLoadStatePreserved) {
+    throw new Error(`Same-class selection restarted the active load: ${JSON.stringify(duplicateLoadState)}`);
+  }
+  await page.waitForFunction(() => document.querySelector('.student-id-text')?.textContent.startsWith('2026/SAB/'));
+  if (profileRosterRequests !== duplicateRequestStart + 1) {
+    throw new Error(`Same-class selection sent duplicate roster requests: ${profileRosterRequests - duplicateRequestStart}`);
+  }
+  console.log('profile same-class request deduplication ok');
   studentResponseDelays = { SAB: 120, MAL: 60 };
   const switchingState = await page.evaluate(() => {
     const selector = document.getElementById('class-selector');
