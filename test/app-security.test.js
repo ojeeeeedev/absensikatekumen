@@ -30,7 +30,7 @@ describe('local server security middleware', () => {
       expect(log).toHaveBeenCalledWith(
         '[local-dev]',
         'GET',
-        '/api/version?probe=%25s',
+        '/api/version',
       );
 
       const allowedResponses = await Promise.all(

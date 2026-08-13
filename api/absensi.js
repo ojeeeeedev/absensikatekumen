@@ -18,23 +18,6 @@ export default async function handler(req, res) {
   // --- Authentication Secrets ---
   const SHARED_SECRET = process.env.AUTH_SECRET;
   const JWT_SECRET = process.env.JWT_SECRET;
-  
-  // --- Supabase Configuration ---
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_KEY;
-  const supabase = (SUPABASE_URL && SUPABASE_KEY)
-    ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-
-  // --- Mapping for your sheets (loaded from environment variable) ---
-  let SCRIPT_MAP;
-  try {
-    SCRIPT_MAP = getScriptMap();
-  } catch (e) {
-    console.error("Error parsing VERCEL_SCRIPT_MAP_JSON:", e);
-    // Return a generic server error to the client
-    return res.status(500).json({ status: "error", message: "Server parsing configuration error." });
-  }
-  // --- End SCRIPT_MAP loading ---
 
   // ============================================================
   // 2️⃣ HANDLE POST  →  Save absensi or Login
@@ -78,6 +61,14 @@ export default async function handler(req, res) {
         return res.status(400).json({ status: "error", message: "Format studentId tidak valid" });
       }
 
+      let SCRIPT_MAP;
+      try {
+        SCRIPT_MAP = getScriptMap();
+      } catch (e) {
+        console.error("Error parsing VERCEL_SCRIPT_MAP_JSON:", e);
+        return res.status(500).json({ status: "error", message: "Server parsing configuration error." });
+      }
+
       const scriptURL = SCRIPT_MAP[classCode];
       if (!scriptURL) {
         return res.status(400).json({
@@ -90,6 +81,11 @@ export default async function handler(req, res) {
       if (!GAS_SECRET_KEY) {
         return res.status(500).json({ status: "error", message: "Server GAS authentication is not configured" });
       }
+
+      const SUPABASE_URL = process.env.SUPABASE_URL;
+      const SUPABASE_KEY = process.env.SUPABASE_KEY;
+      const supabase = (SUPABASE_URL && SUPABASE_KEY)
+        ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
       // --- OPTIMIZATION: Parallelize GAS fetch and Supabase Image preparation ---
       const bucketName = bucketNameForClass(classCode);

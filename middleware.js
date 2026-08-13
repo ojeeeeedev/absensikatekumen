@@ -1,4 +1,5 @@
 import { verifyJwt } from './api/_auth.js';
+import { next } from '@vercel/functions';
 
 export const config = {
   matcher: ['/dashboard', '/api/students', '/api/photo'],
@@ -36,4 +37,6 @@ export default function middleware(req) {
     const internalPath = process.env.DASHBOARD_PATH || '/api/dashboard';
     return Response.rewrite(new URL(internalPath, req.url));
   }
+
+  return next();
 }

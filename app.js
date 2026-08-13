@@ -34,7 +34,7 @@ app.use(cookieParser());
 
 // Log routing context only; request bodies can contain passwords and student data.
 app.use((req, res, next) => {
-  console.log('[local-dev]', req.method, req.url);
+  console.log('[local-dev]', req.method, req.path);
   next();
 });
 

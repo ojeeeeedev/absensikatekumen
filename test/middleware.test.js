@@ -23,12 +23,15 @@ describe('routing middleware cache protection', () => {
     });
   });
 
-  it('allows a valid login cookie before the CDN cache', () => {
+  it('continues valid requests to the API handler', () => {
     process.env.JWT_SECRET = JWT_SECRET;
     const token = jwt.sign({ authorized: true }, JWT_SECRET, { expiresIn: '1h' });
 
-    expect(middleware(request('/api/students?classCode=SAB', token))).toBeUndefined();
-    expect(middleware(request('/api/photo?studentId=2025%2FSAB%2F001', token))).toBeUndefined();
+    const students = middleware(request('/api/students?classCode=SAB', token));
+    const photo = middleware(request('/api/photo?studentId=2025%2FSAB%2F001', token));
+
+    expect(students.headers.get('x-middleware-next')).toBe('1');
+    expect(photo.headers.get('x-middleware-next')).toBe('1');
   });
 
   it('rejects missing and expired login cookies', async () => {
