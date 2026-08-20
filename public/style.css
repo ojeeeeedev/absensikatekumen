@@ -146,7 +146,7 @@
   --shadow-lg: 0 20px 48px rgba(20, 20, 19, 0.16);
 
   --bg-body: var(--background);
-  --bg-glass: #ffffff;
+  --bg-glass: var(--card);
   --bg-card: color-mix(in srgb, var(--slate-2) 58%, transparent);
   --border-glass: var(--border);
   --text-primary: var(--foreground);
@@ -301,7 +301,7 @@ re-icon {
 
   --bg-body: var(--background);
   --bg-glass: var(--card);
-  --bg-card: var(--slate-2);
+  --bg-card: var(--card);
   --border-glass: var(--border);
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
