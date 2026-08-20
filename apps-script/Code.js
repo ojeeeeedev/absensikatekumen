@@ -1,10 +1,10 @@
-const PROFILE_CACHE_VERSION_ = 1;
+const PROFILE_CACHE_VERSION_ = 2;
 const PROFILE_CACHE_FRESH_SECONDS_ = 60;
 const PROFILE_CACHE_STALE_SECONDS_ = 21600;
 const PROFILE_CACHE_MAX_BYTES_ = 90000;
 const PROFILE_CACHE_KEYS_ = {
-  names: { fresh: "PROFILE_NAMES_V1", stale: "PROFILE_NAMES_STALE_V1" },
-  full: { fresh: "PROFILE_FULL_V1", stale: "PROFILE_FULL_STALE_V1" },
+  names: { fresh: "PROFILE_NAMES_V2", stale: "PROFILE_NAMES_STALE_V2" },
+  full: { fresh: "PROFILE_FULL_V2", stale: "PROFILE_FULL_STALE_V2" },
 };
 
 function doPost(e) {
@@ -173,7 +173,7 @@ function isValidProfileStudents_(students, view) {
     if (!student || typeof student !== "object") return false;
     if (typeof student.studentId !== "string" || !student.studentId.trim()) return false;
     if (typeof student.name !== "string") return false;
-    if (view === "names") return true;
+    if (view === "names") return typeof student.inactive === "boolean";
     return ["dob", "kelasKi", "katekisKk"].every(function(field) {
       return typeof student[field] === "string";
     });
@@ -232,7 +232,17 @@ function profileResult_(envelope, source) {
 
 function namesFromStudents_(students) {
   return students.map(function(student) {
-    return { studentId: student.studentId, name: student.name };
+    return {
+      studentId: student.studentId,
+      name: student.name,
+      inactive: isProfileStudentInactive_(student),
+    };
+  });
+}
+
+function isProfileStudentInactive_(student) {
+  return [student.kelasKi, student.katekisKk].some(function(value) {
+    return String(value || "").trim().toLowerCase() === "inactive";
   });
 }
 
@@ -286,7 +296,21 @@ function readStudentNamesFromSheets_(ss) {
     studentMap[id.toLowerCase()] = {
       studentId: id,
       name: String(presensiData[i][1] || "").trim(),
+      inactive: false,
     };
+  }
+
+  const sheetSiswa = ss.getSheetByName("Data Siswa");
+  if (sheetSiswa) {
+    const siswaData = sheetSiswa.getDataRange().getValues();
+    for (let i = 1; i < siswaData.length; i++) {
+      const id = String(siswaData[i][11] || "").trim().toLowerCase();
+      if (!studentMap[id]) continue;
+      studentMap[id].inactive = isProfileStudentInactive_({
+        kelasKi: siswaData[i][17],
+        katekisKk: siswaData[i][18],
+      });
+    }
   }
 
   return Object.values(studentMap);
@@ -341,6 +365,10 @@ function doGet(e) {
     const cache = CacheService.getScriptCache();
     [
       "STUDENT_MAP_V1",
+      "PROFILE_NAMES_V1",
+      "PROFILE_NAMES_STALE_V1",
+      "PROFILE_FULL_V1",
+      "PROFILE_FULL_STALE_V1",
       PROFILE_CACHE_KEYS_.names.fresh,
       PROFILE_CACHE_KEYS_.names.stale,
       PROFILE_CACHE_KEYS_.full.fresh,

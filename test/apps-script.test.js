@@ -87,13 +87,21 @@ describe('Apps Script GAS secret contract', () => {
   it('rejects a wrong GAS secret without writing attendance', () => { const { doPost, statusCell } = load(); const result = JSON.parse(doPost(event({ api_secret: 'wrong' })).getContent()); expect(result).toMatchObject({ status: 'error', message: 'Unauthorized: Invalid API secret' }); expect(statusCell.setValue).not.toHaveBeenCalled(); });
   it('rejects doPost when the Script Property is absent without sheet mutation', () => { state.secret = undefined; const { doPost, statusCell, cache } = load(); const result = JSON.parse(doPost(event()).getContent()); expect(result.status).toBe('error'); expect(result.message).toMatch(/Unauthorized/); expect(statusCell.setValue).not.toHaveBeenCalled(); expect(cache.put).not.toHaveBeenCalled(); });
   it('rejects doPost when both the Script Property and incoming secret are absent', () => { state.secret = undefined; const { doPost, statusCell, cache } = load(); const result = JSON.parse(doPost(event({ api_secret: undefined })).getContent()); expect(result.status).toBe('error'); expect(statusCell.setValue).not.toHaveBeenCalled(); expect(cache.put).not.toHaveBeenCalled(); });
-  it('returns only names and IDs for the staged roster view', () => {
+  it('returns names, IDs, and stable grouping for the staged roster view', () => {
     const { doPost } = load();
     const result = JSON.parse(doPost(event({ action: 'getStudentNames', week: undefined })).getContent());
-    expect(result).toMatchObject({ status: 'ok', students: [{ studentId: '1/SAB/2', name: 'Ada' }], meta: { rosterSource: 'sheet' } });
+    expect(result).toMatchObject({ status: 'ok', students: [{ studentId: '1/SAB/2', name: 'Ada', inactive: false }], meta: { rosterSource: 'sheet' } });
+  });
+  it('marks inactive students before the names roster is rendered', () => {
+    const studentRow = Array(19).fill('');
+    studentRow[11] = '1/SAB/2';
+    studentRow[17] = 'inactive';
+    state.dataSiswaRows = [Array(19).fill(''), studentRow];
+    const result = JSON.parse(load().doPost(event({ action: 'getStudentNames', week: undefined })).getContent());
+    expect(result.students).toEqual([{ studentId: '1/SAB/2', name: 'Ada', inactive: true }]);
   });
   it('serves a fresh names cache without reading Sheets', () => {
-    state.cacheValues.set('PROFILE_NAMES_V1', JSON.stringify({ version: 1, cachedAt: new Date().toISOString(), students: [{ studentId: '1/SAB/2', name: 'Ada' }] }));
+    state.cacheValues.set('PROFILE_NAMES_V2', JSON.stringify({ version: 2, cachedAt: new Date().toISOString(), students: [{ studentId: '1/SAB/2', name: 'Ada', inactive: false }] }));
     const { doPost, sheet } = load();
     const result = JSON.parse(doPost(event({ action: 'getStudentNames', week: undefined })).getContent());
     expect(result.meta.rosterSource).toBe('cache');
@@ -104,8 +112,8 @@ describe('Apps Script GAS secret contract', () => {
     const result = JSON.parse(doPost(event({ action: 'getStudentNames', week: undefined })).getContent());
     expect(result.meta.rosterSource).toBe('sheet');
     expect(cache.put.mock.calls.map(([key, , ttl]) => [key, ttl])).toEqual([
-      ['PROFILE_NAMES_V1', 60],
-      ['PROFILE_NAMES_STALE_V1', 21600],
+      ['PROFILE_NAMES_V2', 60],
+      ['PROFILE_NAMES_STALE_V2', 21600],
     ]);
   });
   it.each([
@@ -118,25 +126,25 @@ describe('Apps Script GAS secret contract', () => {
     expect(result).toMatchObject({ status: 'ok', meta: { rosterSource: 'sheet' } });
   });
   it('derives names from a valid fresh full cache without reading Sheets', () => {
-    state.cacheValues.set('PROFILE_FULL_V1', JSON.stringify({ version: 1, cachedAt: new Date().toISOString(), students: [{ studentId: '1/SAB/2', name: 'Ada', dob: '', kelasKi: '', katekisKk: '' }] }));
+    state.cacheValues.set('PROFILE_FULL_V2', JSON.stringify({ version: 2, cachedAt: new Date().toISOString(), students: [{ studentId: '1/SAB/2', name: 'Ada', dob: '', kelasKi: '', katekisKk: '' }] }));
     const { doPost, sheet } = load();
     const result = JSON.parse(doPost(event({ action: 'getStudentNames', week: undefined })).getContent());
-    expect(result).toMatchObject({ status: 'ok', students: [{ studentId: '1/SAB/2', name: 'Ada' }], meta: { rosterSource: 'cache' } });
+    expect(result).toMatchObject({ status: 'ok', students: [{ studentId: '1/SAB/2', name: 'Ada', inactive: false }], meta: { rosterSource: 'cache' } });
     expect(sheet.getDataRange).not.toHaveBeenCalled();
   });
   it('uses a valid stale names cache only after a Sheet failure', () => {
     state.sheetReadError = true;
-    state.cacheValues.set('PROFILE_NAMES_STALE_V1', JSON.stringify({ version: 1, cachedAt: new Date().toISOString(), students: [{ studentId: '1/SAB/2', name: 'Ada' }] }));
+    state.cacheValues.set('PROFILE_NAMES_STALE_V2', JSON.stringify({ version: 2, cachedAt: new Date().toISOString(), students: [{ studentId: '1/SAB/2', name: 'Ada', inactive: false }] }));
     const result = JSON.parse(load().doPost(event({ action: 'getStudentNames', week: undefined })).getContent());
     expect(result).toMatchObject({ status: 'ok', meta: { rosterSource: 'stale-cache' } });
   });
   it.each([
     ['malformed', '{bad json'],
-    ['wrong version', JSON.stringify({ version: 2, cachedAt: new Date().toISOString(), students: [] })],
-    ['expired', JSON.stringify({ version: 1, cachedAt: new Date(Date.now() - 21601 * 1000).toISOString(), students: [] })],
+    ['wrong version', JSON.stringify({ version: 1, cachedAt: new Date().toISOString(), students: [] })],
+    ['expired', JSON.stringify({ version: 2, cachedAt: new Date(Date.now() - 21601 * 1000).toISOString(), students: [] })],
   ])('rejects a %s fallback when Sheets also fails', (_name, value) => {
     state.sheetReadError = true;
-    state.cacheValues.set('PROFILE_NAMES_STALE_V1', value);
+    state.cacheValues.set('PROFILE_NAMES_STALE_V2', value);
     const result = JSON.parse(load().doPost(event({ action: 'getStudentNames', week: undefined })).getContent());
     expect(result.status).toBe('error');
   });
@@ -153,12 +161,12 @@ describe('Apps Script GAS secret contract', () => {
     expect(result.meta.rosterSource).toBe('sheet');
     expect(sheet.getDataRange).toHaveBeenCalledTimes(1);
     expect(cache.put.mock.calls.map(([key]) => key)).toEqual([
-      'PROFILE_FULL_V1', 'PROFILE_FULL_STALE_V1', 'PROFILE_NAMES_V1', 'PROFILE_NAMES_STALE_V1',
+      'PROFILE_FULL_V2', 'PROFILE_FULL_STALE_V2', 'PROFILE_NAMES_V2', 'PROFILE_NAMES_STALE_V2',
     ]);
   });
   it('uses a valid stale full cache after a full-roster Sheet failure', () => {
     state.sheetReadError = true;
-    state.cacheValues.set('PROFILE_FULL_STALE_V1', JSON.stringify({ version: 1, cachedAt: new Date().toISOString(), students: [{ studentId: '1/SAB/2', name: 'Ada', dob: '', kelasKi: '', katekisKk: '' }] }));
+    state.cacheValues.set('PROFILE_FULL_STALE_V2', JSON.stringify({ version: 2, cachedAt: new Date().toISOString(), students: [{ studentId: '1/SAB/2', name: 'Ada', dob: '', kelasKi: '', katekisKk: '' }] }));
     const result = JSON.parse(load().doPost(event({ action: 'getStudentList', week: undefined })).getContent());
     expect(result).toMatchObject({ status: 'ok', meta: { rosterSource: 'stale-cache' } });
   });
@@ -167,7 +175,9 @@ describe('Apps Script GAS secret contract', () => {
     const result = JSON.parse(doGet({ parameter: { action: 'clear_cache', api_secret: 'gas-secret' } }).getContent());
     expect(result.status).toBe('ok');
     expect(cache.remove.mock.calls.map(([key]) => key)).toEqual([
-      'STUDENT_MAP_V1', 'PROFILE_NAMES_V1', 'PROFILE_NAMES_STALE_V1', 'PROFILE_FULL_V1', 'PROFILE_FULL_STALE_V1',
+      'STUDENT_MAP_V1',
+      'PROFILE_NAMES_V1', 'PROFILE_NAMES_STALE_V1', 'PROFILE_FULL_V1', 'PROFILE_FULL_STALE_V1',
+      'PROFILE_NAMES_V2', 'PROFILE_NAMES_STALE_V2', 'PROFILE_FULL_V2', 'PROFILE_FULL_STALE_V2',
     ]);
   });
   it('rejects clear_cache when the Script Property is absent without cache mutation', () => { state.secret = ''; const { doGet, cache } = load(); const result = JSON.parse(doGet({ parameter: { action: 'clear_cache', api_secret: 'gas-secret' } }).getContent()); expect(result.status).toBe('error'); expect(result.message).toMatch(/Unauthorized/); expect(cache.remove).not.toHaveBeenCalled(); });

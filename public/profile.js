@@ -275,6 +275,7 @@ async function loadClasses() {
 async function loadStudents(classCode) {
   const normalizedClassCode = normalizeClassCode(classCode);
   if (normalizedClassCode === activeStudentLoadClass && studentRequests.has(normalizedClassCode)) return;
+  const freshFullRoster = getCachedStudentResponse(normalizedClassCode, 'full', STUDENT_CACHE_FRESH_MS);
   activeStudentLoadClass = normalizedClassCode;
   const loadId = ++studentLoadId;
   const listContainer = document.getElementById('students-list');
@@ -301,6 +302,19 @@ async function loadStudents(classCode) {
     listContainer.setAttribute('aria-busy', 'true');
   }
   if (loader) loader.style.display = 'flex';
+
+  if (freshFullRoster) {
+    allStudents = freshFullRoster.students.map(student => ({ ...student, detailsLoaded: true }));
+    if (infoBar) infoBar.style.display = 'flex';
+    renderStudents(allStudents);
+    filterStudents();
+    showStudentList();
+    if (freshFullRoster.meta?.rosterSource === 'stale-cache') {
+      showToast('Menampilkan data tersimpan. Data terbaru belum dapat dimuat.', 'warning');
+    }
+    activeStudentLoadClass = '';
+    return;
+  }
 
   const request = getStudentRequests(normalizedClassCode);
   let staleWarningShown = false;
@@ -376,6 +390,7 @@ function escapeHTML(str) {
 
 function isInactive(student) {
   if (!student) return false;
+  if (student.inactive === true) return true;
   const ki = String(student.kelasKi || '').trim().toLowerCase();
   const kk = String(student.katekisKk || '').trim().toLowerCase();
   return ki === 'inactive' || kk === 'inactive';
@@ -462,8 +477,17 @@ function reconcileStudentGrouping() {
     (isInactive(student) ? inactiveItems : activeItems).push(item);
   });
 
-  activeItems.forEach(item => listContainer.insertBefore(item, groupWrapper));
-  inactiveItems.forEach(item => groupInner.appendChild(item));
+  let activeCursor = listContainer.firstElementChild;
+  activeItems.forEach(item => {
+    if (item !== activeCursor) listContainer.insertBefore(item, activeCursor || groupWrapper);
+    activeCursor = item.nextElementSibling;
+  });
+
+  let inactiveCursor = groupInner.firstElementChild;
+  inactiveItems.forEach(item => {
+    if (item !== inactiveCursor) groupInner.insertBefore(item, inactiveCursor);
+    inactiveCursor = item.nextElementSibling;
+  });
 
   groupWrapper.hidden = inactiveItems.length === 0;
   const groupHeader = groupWrapper.querySelector('.inactive-group-header');
@@ -488,7 +512,9 @@ function mergeStudentEnrichment(enrichedStudents) {
   const byId = new Map(enrichedStudents.map(student => [String(student.studentId), student]));
   allStudents = allStudents.map(student => {
     const enrichment = byId.get(String(student.studentId));
-    return enrichment ? { ...student, ...enrichment, detailsLoaded: true } : student;
+    return enrichment
+      ? { ...student, ...enrichment, inactive: isInactive(enrichment), detailsLoaded: true }
+      : student;
   });
 
   allStudents.forEach(student => {

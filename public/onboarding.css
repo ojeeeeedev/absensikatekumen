@@ -104,7 +104,7 @@
 }
 
 .row-accordion:hover {
-  background: var(--bg-hover);
+  background: var(--interactive-hover);
   border-color: var(--ring);
 }
 

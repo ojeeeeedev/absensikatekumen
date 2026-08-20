@@ -45,7 +45,7 @@ describe('/api/students', () => {
     configure();
     global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({
       status: 'ok',
-      students: [{ studentId: '1/SAB/2', name: 'Ada', dob: 'hidden', phone: '081234567890' }],
+      students: [{ studentId: '1/SAB/2', name: 'Ada', inactive: true, dob: 'hidden', phone: '081234567890' }],
       meta: { rosterSource: 'cache', cachedAt: '2026-08-20T00:00:00.000Z' },
     })) });
     process.env.SUPABASE_URL = 'https://storage.example';
@@ -57,7 +57,7 @@ describe('/api/students', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({
       status: 'ok',
-      students: [{ studentId: '1/SAB/2', name: 'Ada' }],
+      students: [{ studentId: '1/SAB/2', name: 'Ada', inactive: true }],
       meta: { rosterSource: 'cache', cachedAt: '2026-08-20T00:00:00.000Z' },
     });
     expect(list).not.toHaveBeenCalled();

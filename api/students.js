@@ -101,7 +101,7 @@ export default async function handler(req, res) {
       const meta = rosterMeta(data.meta);
       return res.status(200).json({
         status: "ok",
-        students: data.students.map(({ studentId, name }) => ({ studentId, name })),
+        students: data.students.map(({ studentId, name, inactive }) => ({ studentId, name, inactive: inactive === true })),
         ...(meta && { meta }),
       });
     }

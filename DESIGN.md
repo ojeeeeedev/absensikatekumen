@@ -51,7 +51,7 @@ Required semantic color tokens:
 - `border`, `input`, `ring`
 - `chart-1` through `chart-5`
 
-Compatibility aliases may remain for existing code, but they must map to semantic tokens: `--bg-body`, `--bg-glass`, `--bg-card`, `--border-glass`, `--text-primary`, `--text-secondary`, `--accent`, `--accent-hover`, `--accent-glow`, and status tokens.
+Compatibility aliases may remain for existing code, but they must map to semantic tokens: `--bg-body`, `--bg-glass`, `--bg-card`, `--border-glass`, `--text-primary`, `--text-secondary`, `--accent`, `--accent-hover`, `--accent-glow`, `--interactive-hover`, and status tokens.
 
 Radius:
 - `--radius-sm`: 8px.

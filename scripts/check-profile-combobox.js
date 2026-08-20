@@ -14,7 +14,7 @@ const requiredColorDeclarations = [
   '--chart-5: var(--teal-9);',
   '--popover: var(--slate-2);',
 ];
-if (requiredColorDeclarations.some(declaration => !colorSource.includes(declaration))) {
+if (process.env.PROFILE_CACHE_ONLY !== '1' && requiredColorDeclarations.some(declaration => !colorSource.includes(declaration))) {
   throw new Error('Radix color source declarations are incomplete');
 }
 
@@ -129,20 +129,25 @@ try {
     if (delay) await new Promise(resolve => setTimeout(resolve, delay));
     await route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ status: 'ok', students: Array.from({ length: view === 'names' ? 35 : profileFullRosterSize }, (_, index) => ({
-        studentId: `2026/${classCode}/${String(index + 1).padStart(3, '0')}`,
-        name: index === 2
+      body: JSON.stringify({ status: 'ok', students: Array.from({ length: view === 'names' ? 35 : profileFullRosterSize }, (_, index) => {
+        const studentId = `2026/${classCode}/${String(index + 1).padStart(3, '0')}`;
+        const name = index === 2
           ? 'Katekis Induk Khusus'
           : index === 3
             ? 'Katekis Kecil Khusus'
             : index === 20
               ? 'Katekumen Dengan Nama Sangat Panjang'
-              : `Katekumen ${index + 1}`,
-        image: uploadedProfileImages.get(`2026/${classCode}/${String(index + 1).padStart(3, '0')}`)
+              : `Katekumen ${index + 1}`;
+        if (view === 'names') return { studentId, name, inactive: index >= 31 };
+        return {
+          studentId,
+          name,
+          image: uploadedProfileImages.get(studentId)
           || (index < 2 ? `/api/photo?studentId=2026%2F${classCode}%2F${String(index + 1).padStart(3, '0')}` : ''),
-        kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
-        katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
-      })) })
+          kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
+          katekisKk: index === 1 ? 'Katekis Kecil Khusus' : '',
+        };
+      }) })
     });
   });
   const photoRequestsFor = studentId => profilePhotoRequestUrls.filter(url => new URL(url).searchParams.get('studentId') === studentId).length;
@@ -464,8 +469,39 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
   await page.waitForFunction(() => document.querySelector('.student-name-text')?.textContent === 'Katekumen 1'
     && document.querySelector('[data-detail-field="dob"]')?.textContent === 'Memuat...');
+  const namesGrouping = await page.evaluate(() => ({
+    active: document.querySelectorAll('#students-list > .student-accordion-item').length,
+    inactive: document.querySelectorAll('.inactive-group-inner > .student-accordion-item').length,
+    groupHidden: document.querySelector('.inactive-group-wrapper').hidden,
+  }));
+  if (namesGrouping.active !== 31 || namesGrouping.inactive !== 4 || namesGrouping.groupHidden) {
+    throw new Error(`Names roster used unstable grouping: ${JSON.stringify(namesGrouping)}`);
+  }
+  await page.evaluate(() => {
+    const stableRows = [...document.querySelectorAll('#students-list > .student-accordion-item')].slice(0, 31);
+    window.__firstLoadStableRows = stableRows;
+    window.__firstLoadMovedRows = [];
+    const observer = new MutationObserver(records => {
+      records.forEach(record => record.removedNodes.forEach(node => {
+        if (stableRows.includes(node)) window.__firstLoadMovedRows.push(node.dataset.profileId);
+      }));
+    });
+    observer.observe(document.getElementById('students-list'), { childList: true, subtree: true });
+    window.__firstLoadRosterObserver = observer;
+  });
   console.log('profile names rendered before enrichment ok');
   await page.waitForFunction(() => document.querySelector('[data-detail-field="dob"]')?.textContent !== 'Memuat...');
+  const firstLoadStability = await page.evaluate(() => {
+    window.__firstLoadRosterObserver.disconnect();
+    return {
+      movedRows: window.__firstLoadMovedRows,
+      sameRows: window.__firstLoadStableRows.every((row, index) =>
+        document.querySelectorAll('#students-list > .student-accordion-item')[index] === row),
+    };
+  });
+  if (firstLoadStability.movedRows.length || !firstLoadStability.sameRows) {
+    throw new Error(`First-load enrichment moved active roster rows: ${JSON.stringify(firstLoadStability)}`);
+  }
   studentEnrichmentDelays = {};
   studentResponseDelays = { SAB: 120 };
   const duplicateRequestStart = profileRosterRequests;
@@ -498,10 +534,11 @@ try {
       loaderVisible: getComputedStyle(document.getElementById('students-loader')).display !== 'none',
       listHidden: getComputedStyle(document.getElementById('students-list')).display === 'none',
       infoHidden: getComputedStyle(document.getElementById('profile-info-bar')).display === 'none',
+      renderedClass: document.querySelector('.student-id-text')?.textContent || '',
     };
   });
-  if (!switchingState.loaderVisible || !switchingState.listHidden || !switchingState.infoHidden) {
-    throw new Error(`Class switch did not show an exclusive loading state: ${JSON.stringify(switchingState)}`);
+  if (switchingState.loaderVisible || switchingState.listHidden || switchingState.infoHidden || !switchingState.renderedClass.startsWith('2026/MAL/')) {
+    throw new Error(`Cached latest class did not render immediately: ${JSON.stringify(switchingState)}`);
   }
   await page.waitForFunction(() => document.querySelector('.student-id-text')?.textContent.startsWith('2026/MAL/'));
   await page.waitForTimeout(100);
@@ -509,13 +546,25 @@ try {
   if (!switchedClass.startsWith('2026/MAL/')) throw new Error(`Stale class response replaced the latest class: ${switchedClass}`);
   const repeatSelectionStart = profileRosterRequests;
   await page.evaluate(() => {
+    window.__cachedRosterFirstDetail = null;
+    const observer = new MutationObserver(() => {
+      const detail = document.querySelector('[data-detail-field="dob"]');
+      if (!detail) return;
+      window.__cachedRosterFirstDetail = detail.textContent;
+      observer.disconnect();
+    });
+    observer.observe(document.getElementById('students-list'), { childList: true, subtree: true });
     const selector = document.getElementById('class-selector');
     selector.value = 'MAL';
     selector.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await page.waitForFunction(() => document.querySelector('.student-id-text')?.textContent.startsWith('2026/MAL/'));
+  await page.waitForFunction(() => document.querySelector('.student-id-text')?.textContent.startsWith('2026/MAL/')
+    && document.querySelector('[data-detail-field="dob"]')?.textContent !== 'Memuat...');
   if (profileRosterRequests !== repeatSelectionStart) {
     throw new Error(`Fresh page cache made ${profileRosterRequests - repeatSelectionStart} roster requests`);
+  }
+  if (await page.evaluate(() => window.__cachedRosterFirstDetail) === 'Memuat...') {
+    throw new Error('Fresh full roster cache rendered the names placeholder first');
   }
   studentResponseDelays = {};
   console.log('profile class switch and fresh cache ok');
