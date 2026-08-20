@@ -26,6 +26,7 @@ describe('/api/students', () => {
     configure(); const res = createMockResponse();
     await handler(createMockRequest({ method: 'GET', query: { classCode: 'SAB' } }), res);
     expect(res.statusCode).toBe(401);
+    expect(res.headers['Cache-Control']).toBe('private, no-store');
     expect(res.headers['Vercel-CDN-Cache-Control']).toBeUndefined();
   });
   it('accepts the existing login cookie', async () => {
@@ -40,6 +41,35 @@ describe('/api/students', () => {
     await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'bad-class' } }), res);
     expect(res.statusCode).toBe(400);
   });
+  it('returns names without creating a Supabase client', async () => {
+    configure();
+    global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({
+      status: 'ok',
+      students: [{ studentId: '1/SAB/2', name: 'Ada', dob: 'hidden', phone: '081234567890' }],
+      meta: { rosterSource: 'cache', cachedAt: '2026-08-20T00:00:00.000Z' },
+    })) });
+    process.env.SUPABASE_URL = 'https://storage.example';
+    process.env.SUPABASE_KEY = 'storage-key';
+    const res = createMockResponse();
+
+    await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'SAB', view: 'names' } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      status: 'ok',
+      students: [{ studentId: '1/SAB/2', name: 'Ada' }],
+      meta: { rosterSource: 'cache', cachedAt: '2026-08-20T00:00:00.000Z' },
+    });
+    expect(list).not.toHaveBeenCalled();
+    expect(res.headers['Cache-Control']).toBe('private, no-store');
+  });
+
+  it('rejects an unknown roster view', async () => {
+    configure();
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'SAB', view: 'unknown' } }), res);
+    expect(res.statusCode).toBe(400);
+  });
   it('rejects unmapped class codes without calling GAS', async () => {
     configure(); global.fetch = vi.fn(); const res = createMockResponse();
     await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'TOM' } }), res);
@@ -50,14 +80,19 @@ describe('/api/students', () => {
     process.env.SUPABASE_URL = 'https://storage.example';
     process.env.SUPABASE_KEY = 'storage-key';
     list.mockResolvedValue({ data: [{ name: '1-SAB-2.jpg' }], error: null });
-    global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'ok', students: [{ studentId: '1/SAB/2' }] })) });
+    global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'ok', students: [{ studentId: '1/SAB/2', name: 'Ada', dob: '', kelasKi: '', katekisKk: '', phone: '081234567890' }] })) });
     const res = createMockResponse();
     await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'sab' } }), res);
     expect(res.statusCode).toBe(200);
     expect(res.body.students).toEqual([{
       studentId: '1/SAB/2',
+      name: 'Ada',
+      dob: '',
+      kelasKi: '',
+      katekisKk: '',
       image: '/api/photo?studentId=1%2FSAB%2F2&filename=1-SAB-2.jpg',
     }]);
+    expect(res.body.students[0]).not.toHaveProperty('phone');
     expect(list).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(GAS_URL, expect.any(Object));
     expect(res.headers['Cache-Control']).toBe('private, no-store');

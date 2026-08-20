@@ -29,18 +29,18 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
-  --slate-1: #fcfcfd;
-  --slate-2: #f9f9fb;
-  --slate-3: #f0f0f3;
-  --slate-4: #e8e8ec;
-  --slate-5: #e0e1e6;
-  --slate-6: #d9d9e0;
-  --slate-7: #cdced6;
-  --slate-8: #b9bbc6;
-  --slate-9: #8b8d98;
-  --slate-10: #80838d;
-  --slate-11: #60646c;
-  --slate-12: #1c2024;
+  --slate-1: #faf9f5;
+  --slate-2: #ffffff;
+  --slate-3: #ffffff;
+  --slate-4: #e8e5de;
+  --slate-5: #e1ddd5;
+  --slate-6: #d9d5cc;
+  --slate-7: #cec8bd;
+  --slate-8: #b9b2a6;
+  --slate-9: #8b867e;
+  --slate-10: #817c74;
+  --slate-11: #625f59;
+  --slate-12: #141413;
 
   --marian-1: #f8fafd;
   --marian-2: #f1f6ff;
@@ -141,12 +141,12 @@
   --overlay-sheet: #0000008c;
   --camera-inset-shadow: inset 0 4px 12px #00000033;
   --topic-r: var(--purple-11);
-  --shadow-sm: 0 2px 8px rgba(15, 18, 25, 0.06);
-  --shadow-md: 0 12px 32px rgba(15, 18, 25, 0.08);
-  --shadow-lg: 0 20px 48px rgba(15, 18, 25, 0.16);
+  --shadow-sm: 0 2px 8px rgba(20, 20, 19, 0.06);
+  --shadow-md: 0 12px 32px rgba(20, 20, 19, 0.08);
+  --shadow-lg: 0 20px 48px rgba(20, 20, 19, 0.16);
 
   --bg-body: var(--background);
-  --bg-glass: var(--card);
+  --bg-glass: #ffffff;
   --bg-card: color-mix(in srgb, var(--slate-2) 58%, transparent);
   --border-glass: var(--border);
   --text-primary: var(--foreground);

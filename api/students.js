@@ -3,6 +3,14 @@ import { verifyJwt } from './_auth.js';
 import { getScriptMap, readJsonResponse } from './_gas-utils.js';
 import { PHOTO_MIME_TYPES, bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
 
+function rosterMeta(meta) {
+  if (!meta || !['sheet', 'cache', 'stale-cache'].includes(meta.rosterSource)) return undefined;
+  const cachedAt = typeof meta.cachedAt === 'string' && Number.isFinite(Date.parse(meta.cachedAt))
+    ? meta.cachedAt
+    : null;
+  return { rosterSource: meta.rosterSource, cachedAt };
+}
+
 /**
  * Returns the GAS student roster with authenticated same-origin photo URLs.
  */
@@ -10,6 +18,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader('Cache-Control', 'private, no-store');
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -26,8 +35,12 @@ export default async function handler(req, res) {
   }
 
   const { classCode } = req.query;
+  const view = String(req.query?.view || 'full').trim().toLowerCase();
   if (!classCode) {
     return res.status(400).json({ status: "error", message: "Parameter classCode diperlukan" });
+  }
+  if (!['full', 'names'].includes(view)) {
+    return res.status(400).json({ status: "error", message: "Parameter view tidak valid" });
   }
 
   const normalizedClassCode = String(classCode).trim().toUpperCase();
@@ -55,7 +68,9 @@ export default async function handler(req, res) {
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_KEY;
-  const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  const supabase = view === 'full' && SUPABASE_URL && SUPABASE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null;
 
   try {
     const filesPromise = supabase
@@ -67,7 +82,7 @@ export default async function handler(req, res) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        action: "getStudentList",
+        action: view === 'names' ? "getStudentNames" : "getStudentList",
         api_secret: GAS_SECRET_KEY
       })
     });
@@ -78,12 +93,25 @@ export default async function handler(req, res) {
       return res.status(502).json({ status: "error", message: "GAS returned invalid JSON" });
     }
 
-    if (data.status !== "ok" || !data.students) {
+    if (data.status !== "ok" || !Array.isArray(data.students)) {
       return res.status(502).json({ status: "error", message: data.message || "Failed to fetch students from sheet" });
     }
 
-    const students = data.students.map(student => ({
-      ...student,
+    if (view === 'names') {
+      const meta = rosterMeta(data.meta);
+      return res.status(200).json({
+        status: "ok",
+        students: data.students.map(({ studentId, name }) => ({ studentId, name })),
+        ...(meta && { meta }),
+      });
+    }
+
+    const students = data.students.map(({ studentId, name, dob, kelasKi, katekisKk }) => ({
+      studentId,
+      name,
+      dob,
+      kelasKi,
+      katekisKk,
       image: '',
     }));
 
@@ -105,8 +133,8 @@ export default async function handler(req, res) {
       }
     }
 
-    res.setHeader('Cache-Control', 'private, no-store');
-    return res.status(200).json({ status: "ok", students });
+    const meta = rosterMeta(data.meta);
+    return res.status(200).json({ status: "ok", students, ...(meta && { meta }) });
   } catch (err) {
     console.error("API Error in /api/students:", err);
     return res.status(500).json({ status: "error", message: err.message });

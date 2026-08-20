@@ -5,8 +5,8 @@ import { chromium, webkit } from 'playwright';
 
 const colorSource = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
 const requiredColorDeclarations = [
-  '--slate-1: #fcfcfd;',
-  '--slate-12: #1c2024;',
+  '--slate-1: #faf9f5;',
+  '--slate-12: #141413;',
   '--slate-1: #111113;',
   '--slate-12: #edeef0;',
   '--marian-9: #1d3f8f;',
@@ -105,14 +105,31 @@ try {
     body: JSON.stringify({ status: 'ok', classes: profileClasses })
   }));
   let studentResponseDelays = {};
+  let studentEnrichmentDelays = {};
   let profileRosterRequests = 0;
+  let profileRosterFailure = false;
+  let profileFullRosterSize = 35;
+  const uploadedProfileImages = new Map();
   await page.route('**/api/students?*', async route => {
     profileRosterRequests += 1;
-    const classCode = new URL(route.request().url()).searchParams.get('classCode');
-    if (studentResponseDelays[classCode]) await new Promise(resolve => setTimeout(resolve, studentResponseDelays[classCode]));
+    const requestUrl = new URL(route.request().url());
+    const classCode = requestUrl.searchParams.get('classCode');
+    const view = requestUrl.searchParams.get('view');
+    if (profileRosterFailure) {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'error', message: 'temporary roster failure' }),
+      });
+      return;
+    }
+    const delay = view === 'names'
+      ? studentResponseDelays[classCode]
+      : studentEnrichmentDelays[classCode] ?? studentResponseDelays[classCode];
+    if (delay) await new Promise(resolve => setTimeout(resolve, delay));
     await route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ status: 'ok', students: Array.from({ length: 35 }, (_, index) => ({
+      body: JSON.stringify({ status: 'ok', students: Array.from({ length: view === 'names' ? 35 : profileFullRosterSize }, (_, index) => ({
         studentId: `2026/${classCode}/${String(index + 1).padStart(3, '0')}`,
         name: index === 2
           ? 'Katekis Induk Khusus'
@@ -121,7 +138,8 @@ try {
             : index === 20
               ? 'Katekumen Dengan Nama Sangat Panjang'
               : `Katekumen ${index + 1}`,
-        image: index < 2 ? `/api/photo?studentId=2026%2F${classCode}%2F${String(index + 1).padStart(3, '0')}` : '',
+        image: uploadedProfileImages.get(`2026/${classCode}/${String(index + 1).padStart(3, '0')}`)
+          || (index < 2 ? `/api/photo?studentId=2026%2F${classCode}%2F${String(index + 1).padStart(3, '0')}` : ''),
         kelasKi: index === 0 ? 'Katekis Induk Khusus' : index < 31 ? 'active' : 'inactive',
         katekisKk: index === 1 ? 'Katekis Kecil Khusus' : ''
       })) })
@@ -425,6 +443,7 @@ try {
   }
   const options = await page.locator('#class-combobox-options [role="option"]').allTextContents();
   if (options.length !== 1 || !options[0].includes('Malam')) throw new Error('Class filtering failed');
+  studentEnrichmentDelays = { MAL: 240 };
   await page.locator('#class-combobox-search').press('ArrowDown');
   await page.keyboard.press('Enter');
   const classExitState = await page.locator('#class-combobox-popover').evaluate(popover => ({
@@ -443,6 +462,11 @@ try {
   if (await page.locator('#class-combobox-trigger').getAttribute('aria-expanded') !== 'false') throw new Error('Combobox did not close');
   if (await page.locator('#class-combobox-trigger').evaluate(trigger => getComputedStyle(trigger, '::after').animationName) !== 'none') throw new Error('Selected class trigger is still glowing');
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
+  await page.waitForFunction(() => document.querySelector('.student-name-text')?.textContent === 'Katekumen 1'
+    && document.querySelector('[data-detail-field="dob"]')?.textContent === 'Memuat...');
+  console.log('profile names rendered before enrichment ok');
+  await page.waitForFunction(() => document.querySelector('[data-detail-field="dob"]')?.textContent !== 'Memuat...');
+  studentEnrichmentDelays = {};
   studentResponseDelays = { SAB: 120 };
   const duplicateRequestStart = profileRosterRequests;
   const duplicateLoadState = await page.evaluate(() => {
@@ -459,8 +483,8 @@ try {
     throw new Error(`Same-class selection restarted the active load: ${JSON.stringify(duplicateLoadState)}`);
   }
   await page.waitForFunction(() => document.querySelector('.student-id-text')?.textContent.startsWith('2026/SAB/'));
-  if (profileRosterRequests !== duplicateRequestStart + 1) {
-    throw new Error(`Same-class selection sent duplicate roster requests: ${profileRosterRequests - duplicateRequestStart}`);
+  if (profileRosterRequests !== duplicateRequestStart + 2) {
+    throw new Error(`Same-class selection sent duplicate staged roster requests: ${profileRosterRequests - duplicateRequestStart}`);
   }
   console.log('profile same-class request deduplication ok');
   studentResponseDelays = { SAB: 120, MAL: 60 };
@@ -483,8 +507,18 @@ try {
   await page.waitForTimeout(100);
   const switchedClass = await page.locator('.student-id-text').first().textContent();
   if (!switchedClass.startsWith('2026/MAL/')) throw new Error(`Stale class response replaced the latest class: ${switchedClass}`);
+  const repeatSelectionStart = profileRosterRequests;
+  await page.evaluate(() => {
+    const selector = document.getElementById('class-selector');
+    selector.value = 'MAL';
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.querySelector('.student-id-text')?.textContent.startsWith('2026/MAL/'));
+  if (profileRosterRequests !== repeatSelectionStart) {
+    throw new Error(`Fresh page cache made ${profileRosterRequests - repeatSelectionStart} roster requests`);
+  }
   studentResponseDelays = {};
-  console.log('profile class switch race ok');
+  console.log('profile class switch and fresh cache ok');
   const reachLinks = await page.locator('.profile-reach-link').evaluateAll(links => links.map(link => ({
     href: link.getAttribute('href'),
     target: link.target,
@@ -740,6 +774,7 @@ try {
   if (profileRosterRequests !== rosterRequestsBeforeUpload || photoRequestsFor('2026/MAL/002') !== photoRequestsBeforeUpload.untouched || photoRequestsFor('2026/MAL/001') <= photoRequestsBeforeUpload.target) {
     throw new Error(`Photo replacement fetched the roster or untouched photos: ${JSON.stringify({ profileRosterRequests, rosterRequestsBeforeUpload, photoRequestsBeforeUpload, targetPhotoRequests: photoRequestsFor('2026/MAL/001'), untouchedPhotoRequests: photoRequestsFor('2026/MAL/002') })}`);
   }
+  uploadedProfileImages.set('2026/MAL/001', uploadedPhotoUrl);
 
   await page.locator('#search-input').fill('');
   await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item:not([hidden])').length === 35);
@@ -799,6 +834,22 @@ try {
   if (profileRosterRequests !== rosterRequestsBeforeUpload || photoRequestsFor('2026/MAL/002') !== photoRequestsBeforeUpload.untouched || photoRequestsFor('2026/MAL/003') < 1) {
     throw new Error(`First profile photo upload fetched the roster or untouched photos: ${JSON.stringify({ profileRosterRequests, rosterRequestsBeforeUpload, untouchedPhotoRequests: photoRequestsFor('2026/MAL/002'), expectedUntouchedPhotoRequests: photoRequestsBeforeUpload.untouched, emptyTargetPhotoRequests: photoRequestsFor('2026/MAL/003') })}`);
   }
+  uploadedProfileImages.set('2026/MAL/003', uploadedPhotoUrl);
+  const postUploadRosterStart = profileRosterRequests;
+  await page.evaluate(() => {
+    const selector = document.getElementById('class-selector');
+    selector.value = 'MAL';
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35
+    && document.querySelector('.student-id-text')?.textContent.startsWith('2026/MAL/'));
+  if (profileRosterRequests !== postUploadRosterStart + 2) {
+    throw new Error(`Photo upload did not invalidate the selected roster cache: ${profileRosterRequests - postUploadRosterStart}`);
+  }
+  await page.waitForFunction(() => document.querySelector('.student-thumb[data-student-id="2026/MAL/001"]')
+    ?.getAttribute('src')?.includes('uploaded=1'));
+  await page.waitForTimeout(30);
+  photoRequestsBeforeUpload.untouched = photoRequestsFor('2026/MAL/002');
 
   await page.evaluate(() => {
     window.__persistentProfilePhoto = document.querySelector('.student-thumb[data-student-id="2026/MAL/001"]');
@@ -843,6 +894,77 @@ try {
   if (!persistentPhotoState.sameNode || !persistentPhotoState.complete || persistentPhotoState.naturalWidth === 0 || persistentPhotoState.inactiveLabel !== 'Nonaktif (4)' || photoRequestsFor('2026/MAL/002') !== photoRequestsBeforeUpload.untouched) {
     throw new Error(`Profile photos did not persist through search: ${JSON.stringify({ ...persistentPhotoState, profilePhotoRequests, untouchedPhotoRequests: photoRequestsFor('2026/MAL/002'), expectedUntouchedPhotoRequests: photoRequestsBeforeUpload.untouched })}`);
   }
+  const refreshRequestStart = profileRosterRequests;
+  await page.evaluate(() => {
+    window.__profileRealDateNow = Date.now;
+    window.__profileClockOffset = 61000;
+    Date.now = () => window.__profileRealDateNow() + window.__profileClockOffset;
+    const selector = document.getElementById('class-selector');
+    selector.value = 'MAL';
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
+  await page.waitForTimeout(30);
+  if (profileRosterRequests !== refreshRequestStart + 2) {
+    throw new Error(`Expired page cache made ${profileRosterRequests - refreshRequestStart} roster requests`);
+  }
+
+  profileRosterFailure = true;
+  await page.evaluate(() => {
+    window.__profileClockOffset = 122000;
+    document.getElementById('class-selector').dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => [...document.querySelectorAll('.toast-message')]
+    .some(element => element.textContent === 'Menampilkan data tersimpan. Data terbaru belum dapat dimuat.'));
+  if (await page.locator('.student-accordion-item').count() !== 35) {
+    throw new Error('Valid six-hour page fallback did not render the roster');
+  }
+  await page.waitForTimeout(30);
+
+  await page.evaluate(() => {
+    window.__profileClockOffset = 6 * 60 * 60 * 1000 + 62000;
+    document.getElementById('class-selector').dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => [...document.querySelectorAll('.toast-message')]
+    .some(element => element.textContent === 'Gagal mengambil data katekumen'));
+  if (await page.locator('.student-accordion-item').count() !== 0) {
+    throw new Error('Page cache older than six hours was accepted');
+  }
+
+  profileRosterFailure = false;
+  profileFullRosterSize = 34;
+  await page.evaluate(() => {
+    const selector = document.getElementById('class-selector');
+    selector.value = 'K1';
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 34);
+
+  profileRosterFailure = true;
+  const logoutRequestStart = profileRosterRequests;
+  await page.evaluate(() => {
+    window.expireSession();
+    document.getElementById('class-selector').dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForTimeout(30);
+  if (profileRosterRequests !== logoutRequestStart + 2 || await page.locator('.student-accordion-item').count() !== 0) {
+    throw new Error('Session expiry did not clear the page roster cache');
+  }
+  if (process.env.PROFILE_CACHE_ONLY === '1') {
+    console.log('profile roster cache smoke ok');
+    break accordionCheck;
+  }
+  profileRosterFailure = false;
+  profileFullRosterSize = 35;
+  await context.addCookies([{ name: 'auth_token', value: authToken, domain: '127.0.0.1', path: '/' }]);
+  await page.evaluate(token => {
+    Date.now = window.__profileRealDateNow;
+    sessionStorage.setItem('authToken', token);
+    const selector = document.getElementById('class-selector');
+    selector.value = 'MAL';
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+  }, authToken);
+  await page.waitForFunction(() => document.querySelectorAll('.student-accordion-item').length === 35);
   const expandedShell = await page.evaluate(() => {
     const nav = document.getElementById('app-nav').getBoundingClientRect();
     const container = document.getElementById('app-container').getBoundingClientRect();

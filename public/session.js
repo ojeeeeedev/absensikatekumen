@@ -13,6 +13,7 @@
   window.isSessionTokenExpired = isSessionTokenExpired;
 
   window.expireSession = function() {
+    window.clearProfileStudentCache?.();
     document.cookie = 'auth_token=; path=/; max-age=0; SameSite=Lax';
     sessionStorage.removeItem('authToken');
     localStorage.setItem('logoutTimestamp', Date.now().toString());
