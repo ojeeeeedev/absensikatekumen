@@ -29,18 +29,18 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
-  --slate-1: #fcfcfd;
-  --slate-2: #f9f9fb;
-  --slate-3: #f0f0f3;
-  --slate-4: #e8e8ec;
-  --slate-5: #e0e1e6;
-  --slate-6: #d9d9e0;
-  --slate-7: #cdced6;
-  --slate-8: #b9bbc6;
-  --slate-9: #8b8d98;
-  --slate-10: #80838d;
-  --slate-11: #60646c;
-  --slate-12: #1c2024;
+  --slate-1: #faf9f5;
+  --slate-2: #ffffff;
+  --slate-3: #ffffff;
+  --slate-4: #e8e5de;
+  --slate-5: #e1ddd5;
+  --slate-6: #d9d5cc;
+  --slate-7: #cec8bd;
+  --slate-8: #b9b2a6;
+  --slate-9: #8b867e;
+  --slate-10: #817c74;
+  --slate-11: #625f59;
+  --slate-12: #141413;
 
   --marian-1: #f8fafd;
   --marian-2: #f1f6ff;
@@ -141,9 +141,9 @@
   --overlay-sheet: #0000008c;
   --camera-inset-shadow: inset 0 4px 12px #00000033;
   --topic-r: var(--purple-11);
-  --shadow-sm: 0 2px 8px rgba(15, 18, 25, 0.06);
-  --shadow-md: 0 12px 32px rgba(15, 18, 25, 0.08);
-  --shadow-lg: 0 20px 48px rgba(15, 18, 25, 0.16);
+  --shadow-sm: 0 2px 8px rgba(20, 20, 19, 0.06);
+  --shadow-md: 0 12px 32px rgba(20, 20, 19, 0.08);
+  --shadow-lg: 0 20px 48px rgba(20, 20, 19, 0.16);
 
   --bg-body: var(--background);
   --bg-glass: var(--card);
@@ -153,6 +153,7 @@
   --text-secondary: var(--muted-foreground);
   --accent-hover: var(--marian-10);
   --accent-glow: color-mix(in srgb, var(--marian-9) 24%, transparent);
+  --interactive-hover: var(--marian-3);
   --shadow: var(--shadow-md);
 
   /* Status Colors */
@@ -185,9 +186,9 @@ re-icon {
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --slate-1: #111113;
-  --slate-2: #18191b;
-  --slate-3: #212225;
+  --slate-1: #181818;
+  --slate-2: #242424;
+  --slate-3: #242424;
   --slate-4: #272a2d;
   --slate-5: #2e3135;
   --slate-6: #363a3f;
@@ -195,8 +196,8 @@ re-icon {
   --slate-8: #5a6169;
   --slate-9: #696e77;
   --slate-10: #777b84;
-  --slate-11: #b0b4ba;
-  --slate-12: #edeef0;
+  --slate-11: #959595;
+  --slate-12: #ffffff;
 
   --marian-1: #0a111e;
   --marian-2: #101828;
@@ -264,7 +265,7 @@ re-icon {
 
   --background: var(--slate-1);
   --foreground: var(--slate-12);
-  --card: color-mix(in srgb, var(--slate-2) 82%, transparent);
+  --card: var(--slate-2);
   --card-foreground: var(--foreground);
   --popover: var(--slate-2);
   --popover-foreground: var(--foreground);
@@ -300,13 +301,14 @@ re-icon {
 
   --bg-body: var(--background);
   --bg-glass: var(--card);
-  --bg-card: color-mix(in srgb, var(--slate-2) 58%, transparent);
+  --bg-card: var(--card);
   --border-glass: var(--border);
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
   --accent: var(--primary);
   --accent-hover: var(--marian-10);
   --accent-glow: color-mix(in srgb, var(--marian-9) 24%, transparent);
+  --interactive-hover: var(--marian-3);
   --shadow: var(--shadow-md);
 
   --status-success-bg: var(--green-3);
@@ -701,7 +703,7 @@ button:disabled,
   transition: transform 0.2s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 .topic-selector-btn-large:hover {
-  background: var(--slate-4);
+  background: var(--interactive-hover);
   border-color: var(--marian-8);
   transform: translateY(-2px);
 }
@@ -733,7 +735,7 @@ button:disabled,
 }
 .active-topic-bar:hover {
   border-color: var(--marian-8);
-  background-color: var(--slate-4);
+  background-color: var(--interactive-hover);
 }
 .active-topic-bar:active {
   transform: scale(0.98);
@@ -1805,7 +1807,7 @@ a:focus-visible,
 
 .search-combobox-option:hover,
 .search-combobox-option:focus-visible {
-  background: var(--slate-4);
+  background: var(--interactive-hover);
   outline: none;
 }
 
@@ -2205,9 +2207,10 @@ a:focus-visible,
 }
 
 .student-accordion-body {
+  --profile-content-bg: color-mix(in srgb, var(--bg-hover) 70%, var(--secondary));
   display: grid;
   grid-template-rows: 0fr;
-  background: var(--bg-hover);
+  background: var(--profile-content-bg);
   visibility: hidden;
   border-top: 0px solid transparent;
   transition: grid-template-rows 290ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0ms linear 290ms;
@@ -2216,7 +2219,7 @@ a:focus-visible,
 .student-accordion-body.expanded {
   grid-template-rows: 1fr;
   visibility: visible;
-  background: linear-gradient(to bottom, transparent 60px, var(--bg-hover) 60px);
+  background: linear-gradient(to bottom, transparent 60px, var(--profile-content-bg) 60px);
   border-top: 0;
   transition: grid-template-rows 420ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0ms linear;
 }
@@ -2224,7 +2227,7 @@ a:focus-visible,
 .student-accordion-body.closing {
   grid-template-rows: 0fr;
   visibility: visible;
-  background: linear-gradient(to bottom, transparent 60px, var(--bg-hover) 60px);
+  background: linear-gradient(to bottom, transparent 60px, var(--profile-content-bg) 60px);
   border-top: 0;
   transition: grid-template-rows 290ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0ms linear 290ms;
 }
@@ -2479,7 +2482,7 @@ a:focus-visible,
   margin-top: 4px;
 }
 .inactive-group-header:hover {
-  background: var(--slate-4);
+  background: var(--interactive-hover);
   border-color: var(--slate-8);
 }
 .inactive-group-header .inactive-group-arrow {
@@ -2683,7 +2686,7 @@ body[data-active-view="profile"] .nav-tabs::before {
 
 .nav-item:hover {
   color: var(--text-primary);
-  background: var(--slate-4);
+  background: var(--interactive-hover);
   border-color: var(--slate-8);
   transform: translateY(-1px);
 }

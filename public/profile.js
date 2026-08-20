@@ -90,6 +90,7 @@ function updateProfilePhoto(studentId, image) {
   const item = [...document.querySelectorAll('.student-accordion-item')]
     .find(candidate => candidate.dataset.profileId === targetId);
   if (!item) return;
+  item.dataset.photoUrl = image;
 
   const student = allStudents.find(candidate => String(candidate.studentId) === targetId);
   const studentName = student?.name || item.querySelector('.student-name-text')?.textContent || 'Katekumen';
@@ -105,6 +106,14 @@ function updateProfilePhoto(studentId, image) {
       thumbPlaceholder.replaceChildren(replacementPlaceholder);
       thumbFrame = thumbPlaceholder;
     }
+  }
+
+  if (thumbFrame?.classList.contains('student-thumb-placeholder')) {
+    thumbFrame.classList.remove('student-thumb-placeholder');
+    const icon = thumbFrame.querySelector('re-icon');
+    const placeholder = createProfilePhotoPlaceholder('student-thumb-placeholder');
+    if (icon) placeholder.replaceChildren(icon);
+    thumbFrame.replaceChildren(placeholder);
   }
 
   updateProfilePhotoFrame(thumbFrame, {
@@ -131,7 +140,10 @@ function updateProfilePhoto(studentId, image) {
 const PhotoUploader = createProfilePhotoUploader({
   getToken: getProfileToken,
   findStudent: studentId => allStudents.find(student => student.studentId === studentId),
-  onUploaded: ({ studentId, image } = {}) => updateProfilePhoto(studentId, image),
+  onUploaded: ({ studentId, image } = {}) => {
+    invalidateSelectedStudentCache();
+    updateProfilePhoto(studentId, image);
+  },
 });
 
 // ============================================================
@@ -142,6 +154,102 @@ let classCombobox;
 let studentLoadId = 0;
 let activeStudentLoadClass = '';
 const studentRequests = new Map();
+const studentDataCache = new Map();
+let studentCacheRevision = 0;
+const STUDENT_CACHE_FRESH_MS = 60 * 1000;
+const STUDENT_CACHE_STALE_MS = 6 * 60 * 60 * 1000;
+
+function normalizeClassCode(classCode) {
+  return String(classCode || '').trim().toUpperCase();
+}
+
+function getCachedStudentResponse(classCode, view, maxAge) {
+  const cached = studentDataCache.get(normalizeClassCode(classCode))?.[view];
+  const age = cached ? Date.now() - cached.storedAt : -1;
+  if (!cached || age < 0 || age > maxAge) return null;
+  return cached.data;
+}
+
+function rememberStudentResponse(classCode, view, data) {
+  if (!isStudentResponseValid(data)) return;
+  const key = normalizeClassCode(classCode);
+  const entry = studentDataCache.get(key) || {};
+  entry[view] = { data, storedAt: Date.now() };
+  studentDataCache.set(key, entry);
+}
+
+function invalidateSelectedStudentCache() {
+  studentDataCache.delete(normalizeClassCode(document.getElementById('class-selector')?.value));
+}
+
+window.clearProfileStudentCache = function clearProfileStudentCache() {
+  studentCacheRevision += 1;
+  studentLoadId += 1;
+  studentDataCache.clear();
+  studentRequests.clear();
+  activeStudentLoadClass = '';
+};
+
+function getStudentRequest(classCode, view = '') {
+  const cacheView = view || 'full';
+  const cached = getCachedStudentResponse(classCode, cacheView, STUDENT_CACHE_FRESH_MS);
+  if (cached) return Promise.resolve(cached);
+  const params = new URLSearchParams({ classCode });
+  const revision = studentCacheRevision;
+  if (view) params.set('view', view);
+  return fetch(`/api/students?${params.toString()}`)
+    .then(response => response.json())
+    .then(data => {
+      if (revision === studentCacheRevision) rememberStudentResponse(classCode, cacheView, data);
+      return data;
+    });
+}
+
+function getStudentRequests(classCode) {
+  const key = normalizeClassCode(classCode);
+  let request = studentRequests.get(key);
+  if (request) return request;
+
+  request = {
+    names: getStudentRequest(key, 'names'),
+    full: getStudentRequest(key),
+  };
+  studentRequests.set(key, request);
+  Promise.allSettled([request.names, request.full]).finally(() => {
+    if (studentRequests.get(key) === request) studentRequests.delete(key);
+  });
+  return request;
+}
+
+function isStudentResponseValid(data) {
+  return data?.status === 'ok' && Array.isArray(data.students);
+}
+
+async function resolveStudentResponse(request, classCode, view) {
+  let requestError;
+  try {
+    const data = await request;
+    if (isStudentResponseValid(data)) {
+      return { data, stale: data.meta?.rosterSource === 'stale-cache' };
+    }
+  } catch (error) {
+    requestError = error;
+  }
+  const fallback = getCachedStudentResponse(classCode, view, STUDENT_CACHE_STALE_MS);
+  if (fallback) return { data: fallback, stale: true };
+  if (requestError) console.error(`Error refreshing ${view} student data:`, requestError);
+  throw new Error(`${view} student request failed`);
+}
+
+function showStudentList() {
+  const listContainer = document.getElementById('students-list');
+  const loader = document.getElementById('students-loader');
+  if (loader) loader.style.display = 'none';
+  if (listContainer) {
+    listContainer.style.removeProperty('display');
+    listContainer.setAttribute('aria-busy', 'false');
+  }
+}
 
 async function loadClasses() {
   try {
@@ -165,8 +273,10 @@ async function loadClasses() {
 }
 
 async function loadStudents(classCode) {
-  if (classCode === activeStudentLoadClass && studentRequests.has(classCode)) return;
-  activeStudentLoadClass = classCode;
+  const normalizedClassCode = normalizeClassCode(classCode);
+  if (normalizedClassCode === activeStudentLoadClass && studentRequests.has(normalizedClassCode)) return;
+  const freshFullRoster = getCachedStudentResponse(normalizedClassCode, 'full', STUDENT_CACHE_FRESH_MS);
+  activeStudentLoadClass = normalizedClassCode;
   const loadId = ++studentLoadId;
   const listContainer = document.getElementById('students-list');
   const loader = document.getElementById('students-loader');
@@ -192,38 +302,77 @@ async function loadStudents(classCode) {
     listContainer.setAttribute('aria-busy', 'true');
   }
   if (loader) loader.style.display = 'flex';
-  
-  try {
-    let studentRequest = studentRequests.get(classCode);
-    if (!studentRequest) {
-      studentRequest = fetch(`/api/students?classCode=${classCode}`)
-        .then(res => res.json())
-        .finally(() => {
-          if (studentRequests.get(classCode) === studentRequest) studentRequests.delete(classCode);
-        });
-      studentRequests.set(classCode, studentRequest);
+
+  if (freshFullRoster) {
+    allStudents = freshFullRoster.students.map(student => ({ ...student, detailsLoaded: true }));
+    if (infoBar) infoBar.style.display = 'flex';
+    renderStudents(allStudents);
+    filterStudents();
+    showStudentList();
+    if (freshFullRoster.meta?.rosterSource === 'stale-cache') {
+      showToast('Menampilkan data tersimpan. Data terbaru belum dapat dimuat.', 'warning');
     }
-    const data = await studentRequest;
+    activeStudentLoadClass = '';
+    return;
+  }
+
+  const request = getStudentRequests(normalizedClassCode);
+  let staleWarningShown = false;
+  const showStaleWarning = () => {
+    if (staleWarningShown) return;
+    staleWarningShown = true;
+    showToast('Menampilkan data tersimpan. Data terbaru belum dapat dimuat.', 'warning');
+  };
+
+  try {
+    const namesResult = await resolveStudentResponse(request.names, normalizedClassCode, 'names');
+    const data = namesResult.data;
     if (loadId !== studentLoadId) return;
-    if (data.status === 'ok') {
-      allStudents = data.students;
+    if (namesResult.stale) showStaleWarning();
+
+    allStudents = data.students.map(student => ({ ...student, image: '', detailsLoaded: false }));
+    if (infoBar) infoBar.style.display = 'flex';
+    renderStudents(allStudents);
+    filterStudents();
+    showStudentList();
+
+    resolveStudentResponse(request.full, normalizedClassCode, 'full')
+      .then(result => {
+        if (loadId !== studentLoadId) return;
+        if (result.stale) showStaleWarning();
+        mergeStudentEnrichment(result.data.students);
+        filterStudents();
+      })
+      .catch(error => {
+        if (loadId !== studentLoadId) return;
+        console.error('Error loading student details:', error);
+        showToast('Gagal memuat detail katekumen', 'error');
+      })
+      .finally(() => {
+        if (loadId === studentLoadId) activeStudentLoadClass = '';
+      });
+    return;
+  } catch (e) {
+    if (loadId !== studentLoadId) return;
+    try {
+      const fallbackResult = await resolveStudentResponse(request.full, normalizedClassCode, 'full');
+      if (fallbackResult.stale) showStaleWarning();
+      allStudents = fallbackResult.data.students.map(student => ({ ...student, detailsLoaded: true }));
       if (infoBar) infoBar.style.display = 'flex';
       renderStudents(allStudents);
       filterStudents();
-    } else {
-      showToast(data.message || "Gagal memuat data", "error");
-    }
-  } catch (e) {
-    if (loadId !== studentLoadId) return;
-    console.error("Error loading students:", e);
-    showToast("Gagal mengambil data katekumen", "error");
-  } finally {
-    if (loadId === studentLoadId) {
-      activeStudentLoadClass = '';
-      if (loader) loader.style.display = 'none';
-      if (listContainer) {
-        listContainer.style.removeProperty('display');
-        listContainer.setAttribute('aria-busy', 'false');
+      showStudentList();
+    } catch (fallbackError) {
+      console.error('Error loading students:', fallbackError);
+      showToast('Gagal mengambil data katekumen', 'error');
+    } finally {
+      if (loadId === studentLoadId) {
+        activeStudentLoadClass = '';
+        if (loader) loader.style.display = 'none';
+        if (listContainer) {
+          listContainer.style.removeProperty('display');
+          listContainer.setAttribute('aria-busy', 'false');
+        }
       }
     }
   }
@@ -241,18 +390,189 @@ function escapeHTML(str) {
 
 function isInactive(student) {
   if (!student) return false;
+  if (student.inactive === true) return true;
   const ki = String(student.kelasKi || '').trim().toLowerCase();
   const kk = String(student.katekisKk || '').trim().toLowerCase();
   return ki === 'inactive' || kk === 'inactive';
 }
 
-function renderStudents(students) {
-  const listContainer = document.getElementById('students-list');
+function updateStudentSummary(students) {
   const summaryContainer = document.getElementById('students-summary');
-  
   const summaryActiveText = document.getElementById('summary-active-text');
   const summaryInactiveText = document.getElementById('summary-inactive-text');
-  
+  const selector = document.getElementById('class-selector');
+  const hasDetails = students.every(student => student.detailsLoaded !== false);
+
+  if (!summaryContainer || !summaryActiveText || !summaryInactiveText || !selector?.value || !hasDetails) {
+    if (summaryContainer) summaryContainer.style.display = 'none';
+    return;
+  }
+
+  const activeCount = students.filter(student => !isInactive(student)).length;
+  const inactiveCount = students.length - activeCount;
+  summaryContainer.style.display = 'flex';
+  summaryActiveText.textContent = String(activeCount);
+  summaryInactiveText.textContent = String(inactiveCount);
+  summaryActiveText.parentElement.setAttribute('aria-label', `${activeCount} katekumen aktif`);
+  summaryInactiveText.parentElement.setAttribute('aria-label', `${inactiveCount} katekumen nonaktif`);
+}
+
+function markStudentPhotoMissing(frame) {
+  if (!frame) return;
+  frame.querySelector('.student-thumb, .student-photo-large')?.remove();
+  const spinner = frame.querySelector('.profile-photo-spinner');
+  const placeholder = frame.classList.contains('student-thumb-placeholder')
+    ? frame
+    : frame.querySelector('.student-thumb-placeholder, .student-photo-placeholder');
+  if (spinner) spinner.style.display = 'none';
+  if (placeholder) {
+    if (placeholder === frame) placeholder.style.removeProperty('display');
+    else placeholder.style.display = 'flex';
+  }
+  frame.setAttribute('aria-busy', 'false');
+}
+
+function updateStudentThumbnail(item, student) {
+  const frame = item.querySelector('.student-thumb-frame');
+  item.dataset.photoUrl = student.image || '';
+  if (!frame) return;
+
+  if (!student.image) {
+    markStudentPhotoMissing(frame);
+    return;
+  }
+
+  if (frame.classList.contains('student-thumb-placeholder')) {
+    frame.classList.remove('student-thumb-placeholder');
+    const icon = frame.querySelector('re-icon');
+    const placeholder = createProfilePhotoPlaceholder('student-thumb-placeholder');
+    if (icon) placeholder.replaceChildren(icon);
+    frame.replaceChildren(placeholder);
+  }
+
+  updateProfilePhotoFrame(frame, {
+    image: student.image,
+    studentId: student.studentId,
+    imageClass: 'student-thumb',
+    placeholderClass: 'student-thumb-placeholder',
+    alt: student.name,
+    width: 40,
+    height: 40,
+  });
+}
+
+function reconcileStudentGrouping() {
+  const listContainer = document.getElementById('students-list');
+  const groupWrapper = listContainer?.querySelector('.inactive-group-wrapper');
+  const groupInner = groupWrapper?.querySelector('.inactive-group-inner');
+  if (!listContainer || !groupWrapper || !groupInner) return;
+
+  const itemsById = new Map([...listContainer.querySelectorAll('.student-accordion-item')]
+    .map(item => [item.dataset.profileId, item]));
+  const activeItems = [];
+  const inactiveItems = [];
+  allStudents.forEach(student => {
+    const item = itemsById.get(String(student.studentId));
+    if (!item) return;
+    (isInactive(student) ? inactiveItems : activeItems).push(item);
+  });
+
+  let activeCursor = listContainer.firstElementChild;
+  activeItems.forEach(item => {
+    if (item !== activeCursor) listContainer.insertBefore(item, activeCursor || groupWrapper);
+    activeCursor = item.nextElementSibling;
+  });
+
+  let inactiveCursor = groupInner.firstElementChild;
+  inactiveItems.forEach(item => {
+    if (item !== inactiveCursor) groupInner.insertBefore(item, inactiveCursor);
+    inactiveCursor = item.nextElementSibling;
+  });
+
+  groupWrapper.hidden = inactiveItems.length === 0;
+  const groupHeader = groupWrapper.querySelector('.inactive-group-header');
+  const groupCount = groupWrapper.querySelector('.inactive-group-count');
+  if (groupCount) groupCount.textContent = `Nonaktif (${inactiveItems.length})`;
+  if (!inactiveItems.length) {
+    groupHeader?.classList.remove('open');
+    groupWrapper.querySelector('.inactive-group-body')?.classList.remove('open');
+    groupHeader?.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function mergeStudentEnrichment(enrichedStudents) {
+  const currentIds = allStudents.map(student => String(student.studentId));
+  const enrichedIds = enrichedStudents.map(student => String(student.studentId));
+  if (currentIds.length !== enrichedIds.length || currentIds.some(id => !enrichedIds.includes(id))) {
+    allStudents = enrichedStudents.map(student => ({ ...student, detailsLoaded: true }));
+    renderStudents(allStudents);
+    return;
+  }
+
+  const byId = new Map(enrichedStudents.map(student => [String(student.studentId), student]));
+  allStudents = allStudents.map(student => {
+    const enrichment = byId.get(String(student.studentId));
+    return enrichment
+      ? { ...student, ...enrichment, inactive: isInactive(enrichment), detailsLoaded: true }
+      : student;
+  });
+
+  allStudents.forEach(student => {
+    const item = [...document.querySelectorAll('.student-accordion-item')]
+      .find(candidate => candidate.dataset.profileId === String(student.studentId));
+    if (!item) return;
+
+    const header = item.querySelector('.student-accordion-header');
+    const headerRight = header?.querySelector('.header-right');
+    const nameElement = header?.querySelector('.student-name-text');
+    const inactive = isInactive(student);
+    item.classList.toggle('inactive', inactive);
+    item.dataset.searchName = String(student.name || '').toLowerCase();
+    item.dataset.searchId = String(student.studentId || '').toLowerCase();
+    item.dataset.searchKi = String(student.kelasKi || '').toLowerCase();
+    item.dataset.searchKk = String(student.katekisKk || '').toLowerCase();
+    if (nameElement) nameElement.textContent = student.name || '';
+    if (header) header.setAttribute('aria-label', `${student.name || 'Katekumen'}, ${student.studentId || 'tanpa ID'}`);
+
+    let inactiveBadge = headerRight?.querySelector('[data-inactive-badge]');
+    if (inactive && headerRight && !inactiveBadge) {
+      inactiveBadge = document.createElement('span');
+      inactiveBadge.className = 'inactive-badge';
+      inactiveBadge.dataset.inactiveBadge = 'true';
+      inactiveBadge.textContent = 'Nonaktif';
+      headerRight.prepend(inactiveBadge);
+    } else if (!inactive) {
+      inactiveBadge?.remove();
+    }
+
+    const body = item.querySelector('.student-accordion-body');
+    const detailValues = body ? new Map([...body.querySelectorAll('[data-detail-field]')]
+      .map(element => [element.dataset.detailField, element])) : new Map();
+    const values = { dob: student.dob, kelasKi: student.kelasKi, katekisKk: student.katekisKk };
+    Object.entries(values).forEach(([field, value]) => {
+      const element = detailValues.get(field);
+      if (element) element.textContent = value || '-';
+    });
+    body?.setAttribute('aria-busy', 'false');
+
+    updateStudentThumbnail(item, student);
+    const largeFrame = body?.querySelector('.student-photo-large-frame');
+    if (largeFrame) {
+      largeFrame.setAttribute('aria-label', student.image ? `Ganti foto ${student.name}` : `Tambah foto ${student.name}`);
+      if (student.image) {
+        largeFrame.setAttribute('aria-busy', largeFrame.querySelector('.student-photo-large') ? 'false' : 'true');
+      } else {
+        markStudentPhotoMissing(largeFrame);
+      }
+    }
+  });
+
+  reconcileStudentGrouping();
+  updateStudentSummary(allStudents);
+}
+
+function renderStudents(students) {
+  const listContainer = document.getElementById('students-list');
   if (!listContainer) return;
   cancelProfileInteraction();
   listContainer.innerHTML = '';
@@ -261,30 +581,7 @@ function renderStudents(students) {
   const activeList = students.filter(s => !isInactive(s));
   const inactiveList = students.filter(s => isInactive(s));
   
-  // Update count summary badges
-  if (summaryContainer && summaryActiveText && summaryInactiveText) {
-    const selector = document.getElementById('class-selector');
-    const classCode = selector ? selector.value : '';
-    
-    if (classCode) {
-      summaryContainer.style.display = 'flex';
-      
-      // Calculate active/inactive counts from full class list (allStudents) instead of filtered students list
-      const activeAll = allStudents.filter(s => !isInactive(s));
-      const inactiveAll = allStudents.filter(s => isInactive(s));
-      
-      const currentActive = activeAll.length;
-      const currentInactive = inactiveAll.length;
-
-      summaryActiveText.textContent = String(currentActive);
-      summaryInactiveText.textContent = String(currentInactive);
-      summaryActiveText.parentElement.setAttribute('aria-label', `${currentActive} katekumen aktif`);
-      summaryInactiveText.parentElement.setAttribute('aria-label', `${currentInactive} katekumen nonaktif`);
-    } else {
-      summaryContainer.style.display = 'none';
-    }
-  }
-  
+  updateStudentSummary(students);
   activeProfileId = null;
   let interactionRevision = 0;
   const profileRefs = new Map();
@@ -425,11 +722,11 @@ function renderStudents(students) {
 
     const photoHtml = hasPhoto
       ? `<div class="student-photo-frame student-thumb-frame" aria-busy="true">
-           <app-spinner class="app-spinner profile-photo-spinner" aria-hidden="true"></app-spinner>
-           <img class="student-thumb" src="${escapeHTML(displayImgUrl)}" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" width="40" height="40" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'; this.parentElement.setAttribute('aria-busy', 'false');" onerror="this.style.display='none'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex'; this.parentElement.setAttribute('aria-busy', 'false');">
-           <div class="student-thumb-placeholder" style="display: none;"><re-icon icon="user" decorative weight="filled"></re-icon></div>
-         </div>`
-      : `<div class="student-thumb-placeholder"><re-icon icon="user" decorative weight="filled"></re-icon></div>`;
+         <app-spinner class="app-spinner profile-photo-spinner" aria-hidden="true"${hasPhoto ? '' : ' style="display: none;"'}></app-spinner>
+         <img class="student-thumb" src="${escapeHTML(displayImgUrl)}" data-student-id="${escapeHTML(student.studentId || '')}" alt="${escapeHTML(student.name)}" width="40" height="40" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'; this.parentElement.setAttribute('aria-busy', 'false');" onerror="this.style.display='none'; this.previousElementSibling.style.display='none'; this.nextElementSibling.style.display='flex'; this.parentElement.setAttribute('aria-busy', 'false');">
+         <div class="student-thumb-placeholder" style="display: ${hasPhoto ? 'none' : 'flex'};"><re-icon icon="user" decorative weight="filled"></re-icon></div>
+       </div>`
+      : `<div class="student-photo-frame student-thumb-frame student-thumb-placeholder" aria-busy="${student.detailsLoaded === false ? 'true' : 'false'}"><re-icon icon="user" decorative weight="filled"></re-icon></div>`;
 
     const inactiveBadge = studentInactive
       ? `<span class="inactive-badge">Nonaktif</span>`
@@ -446,7 +743,7 @@ function renderStudents(students) {
         </div>
       </div>
       <div class="header-right">
-        ${inactiveBadge}
+        ${inactiveBadge ? inactiveBadge.replace('class="inactive-badge"', 'class="inactive-badge" data-inactive-badge="true"') : ''}
         <re-icon icon="chevron-down" class="expand-arrow" decorative weight="filled"></re-icon>
       </div>
     `;
@@ -457,6 +754,7 @@ function renderStudents(students) {
     body.setAttribute('role', 'region');
     body.setAttribute('aria-labelledby', header.id || (header.id = `student-accordion-header-${index + totalOffset}`));
     body.setAttribute('aria-hidden', 'true');
+    body.setAttribute('aria-busy', student.detailsLoaded === false ? 'true' : 'false');
     body.inert = true;
 
     const photoReplaceControl = `
@@ -479,8 +777,15 @@ function renderStudents(students) {
            ${photoReplaceControl}
          </div>`;
 
-    const katekisKiVal = student.kelasKi ? escapeHTML(student.kelasKi) : `<span class="text-na">N/A</span>`;
-    const katekisKkVal = student.katekisKk ? escapeHTML(student.katekisKk) : `<span class="text-na">N/A</span>`;
+    const detailPending = student.detailsLoaded === false;
+    const pendingValue = '<span class="text-na">Memuat...</span>';
+    const dobVal = detailPending ? pendingValue : escapeHTML(student.dob) || '-';
+    const katekisKiVal = detailPending
+      ? pendingValue
+      : student.kelasKi ? escapeHTML(student.kelasKi) : `<span class="text-na">N/A</span>`;
+    const katekisKkVal = detailPending
+      ? pendingValue
+      : student.katekisKk ? escapeHTML(student.katekisKk) : `<span class="text-na">N/A</span>`;
 
     body.innerHTML = `
       <div class="student-accordion-clip">
@@ -492,19 +797,19 @@ function renderStudents(students) {
               <span class="detail-label">
                 <re-icon icon="calendar-mark" class="detail-icon-inline" decorative weight="filled"></re-icon><span>TTL</span><span class="detail-colon">:</span>
               </span>
-              <span class="detail-value">${escapeHTML(student.dob) || '-'}</span>
+              <span class="detail-value" data-detail-field="dob">${dobVal}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
                 <re-icon icon="users2" class="detail-icon-inline" decorative weight="filled"></re-icon><span>KI</span><span class="detail-colon">:</span>
               </span>
-              <span class="detail-value">${katekisKiVal}</span>
+              <span class="detail-value" data-detail-field="kelasKi">${katekisKiVal}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
                 <re-icon icon="user" class="detail-icon-inline" decorative weight="filled"></re-icon><span>KK</span><span class="detail-colon">:</span>
               </span>
-              <span class="detail-value">${katekisKkVal}</span>
+              <span class="detail-value" data-detail-field="katekisKk">${katekisKkVal}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">
@@ -658,7 +963,20 @@ function renderStudents(students) {
         }
       };
 
-      const open = () => {
+    const open = () => {
+        const photoUrl = item.dataset.photoUrl;
+        const largePhotoFrame = body.querySelector('.student-photo-large-frame');
+        if (photoUrl && largePhotoFrame && !largePhotoFrame.querySelector('.student-photo-large')) {
+          updateProfilePhotoFrame(largePhotoFrame, {
+            image: photoUrl,
+            studentId: student.studentId,
+            imageClass: 'student-photo-large',
+            placeholderClass: 'student-photo-placeholder',
+            alt: `Foto ${student.name}`,
+            width: 120,
+            height: 150,
+          });
+        }
         body.classList.remove('collapsed', 'closing');
         body.classList.add('expanded');
         body.setAttribute('aria-hidden', 'false');
@@ -695,6 +1013,8 @@ function renderStudents(students) {
     };
 
     item.dataset.profileId = profileId;
+    item.dataset.photoUrl = displayImgUrl || '';
+    item.dataset.rosterIndex = String(index + totalOffset);
     profileRefs.set(profileId, { item, header, body });
     header.addEventListener('click', event => toggle(event));
     item.appendChild(header);
@@ -708,58 +1028,57 @@ function renderStudents(students) {
   });
 
   // Render inactive students inside a collapsible group (default: closed)
-  if (inactiveList.length > 0) {
-    const groupWrapper = document.createElement('div');
-    groupWrapper.className = 'inactive-group-wrapper';
+  const groupWrapper = document.createElement('div');
+  groupWrapper.className = 'inactive-group-wrapper';
+  groupWrapper.hidden = inactiveList.length === 0;
 
-    const groupHeader = document.createElement('div');
-    groupHeader.className = 'inactive-group-header';
-    groupHeader.setAttribute('role', 'button');
-    groupHeader.setAttribute('tabindex', '0');
-    groupHeader.setAttribute('aria-expanded', 'false');
-    groupHeader.innerHTML = `
-      <re-icon icon="user-off" decorative weight="filled"></re-icon>
-      <span class="inactive-group-count">Nonaktif (${inactiveList.length})</span>
-      <re-icon icon="chevron-down" class="inactive-group-arrow" decorative weight="filled"></re-icon>
-    `;
+  const groupHeader = document.createElement('div');
+  groupHeader.className = 'inactive-group-header';
+  groupHeader.setAttribute('role', 'button');
+  groupHeader.setAttribute('tabindex', '0');
+  groupHeader.setAttribute('aria-expanded', 'false');
+  groupHeader.innerHTML = `
+    <re-icon icon="user-off" decorative weight="filled"></re-icon>
+    <span class="inactive-group-count">Nonaktif (${inactiveList.length})</span>
+    <re-icon icon="chevron-down" class="inactive-group-arrow" decorative weight="filled"></re-icon>
+  `;
 
-    const groupBody = document.createElement('div');
-    groupBody.className = 'inactive-group-body';
+  const groupBody = document.createElement('div');
+  groupBody.className = 'inactive-group-body';
 
-    const groupInner = document.createElement('div');
-    groupInner.className = 'inactive-group-inner';
+  const groupInner = document.createElement('div');
+  groupInner.className = 'inactive-group-inner';
 
-    inactiveList.forEach((student, index) => {
-      groupInner.appendChild(buildStudentItem(student, index, activeList.length));
-    });
+  inactiveList.forEach((student, index) => {
+    groupInner.appendChild(buildStudentItem(student, index, activeList.length));
+  });
 
-    groupBody.appendChild(groupInner);
+  groupBody.appendChild(groupInner);
 
-    const toggleGroup = () => {
-      const isOpen = groupHeader.classList.contains('open');
-      if (isOpen) {
-        groupHeader.classList.remove('open');
-        groupBody.classList.remove('open');
-        groupHeader.setAttribute('aria-expanded', 'false');
-      } else {
-        groupHeader.classList.add('open');
-        groupBody.classList.add('open');
-        groupHeader.setAttribute('aria-expanded', 'true');
-      }
-    };
+  const toggleGroup = () => {
+    const isOpen = groupHeader.classList.contains('open');
+    if (isOpen) {
+      groupHeader.classList.remove('open');
+      groupBody.classList.remove('open');
+      groupHeader.setAttribute('aria-expanded', 'false');
+    } else {
+      groupHeader.classList.add('open');
+      groupBody.classList.add('open');
+      groupHeader.setAttribute('aria-expanded', 'true');
+    }
+  };
 
-    groupHeader.addEventListener('click', toggleGroup);
-    groupHeader.addEventListener('keydown', (e) => {
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        toggleGroup();
-      }
-    });
+  groupHeader.addEventListener('click', toggleGroup);
+  groupHeader.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      toggleGroup();
+    }
+  });
 
-    groupWrapper.appendChild(groupHeader);
-    groupWrapper.appendChild(groupBody);
-    listContainer.appendChild(groupWrapper);
-  }
+  groupWrapper.appendChild(groupHeader);
+  groupWrapper.appendChild(groupBody);
+  listContainer.appendChild(groupWrapper);
 
   const emptyState = document.createElement('div');
   emptyState.className = 'empty-state';
