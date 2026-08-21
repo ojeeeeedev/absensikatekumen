@@ -2219,9 +2219,14 @@ a:focus-visible,
 .student-accordion-body.expanded {
   grid-template-rows: 1fr;
   visibility: visible;
-  background: #fff;
+  background: linear-gradient(to bottom, transparent 60px, var(--profile-content-bg) 60px);
   border-top: 0;
   transition: grid-template-rows 420ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0ms linear;
+}
+
+[data-theme="light"] .student-accordion-body.expanded,
+:root:not([data-theme="dark"]) .student-accordion-body.expanded {
+  background: #fff;
 }
 
 .student-accordion-body.closing {
@@ -2573,7 +2578,7 @@ a:focus-visible,
   width: 40px;
   height: 40px;
   border-radius: var(--radius-sm);
-  background: var(--bg-hover);
+  background: var(--muted);
   border: 2px solid var(--border-glass);
   display: flex;
   align-items: center;
