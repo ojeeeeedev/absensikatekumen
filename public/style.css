@@ -2219,7 +2219,7 @@ a:focus-visible,
 .student-accordion-body.expanded {
   grid-template-rows: 1fr;
   visibility: visible;
-  background: linear-gradient(to bottom, transparent 60px, var(--profile-content-bg) 60px);
+  background: #fff;
   border-top: 0;
   transition: grid-template-rows 420ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0ms linear;
 }
@@ -2589,7 +2589,7 @@ a:focus-visible,
   width: 120px;
   height: 150px;
   border-radius: 12px;
-  background: var(--bg-hover);
+  background: #fff;
   border: 2px solid var(--border-glass);
   display: flex;
   align-items: center;
