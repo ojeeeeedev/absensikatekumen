@@ -2002,8 +2002,8 @@ a:focus-visible,
 
 .student-accordion-header.active .header-left {
   position: absolute;
-  inset: 0 48px;
-  justify-content: center;
+  inset: 0 48px 0 16px;
+  justify-content: flex-start;
   pointer-events: none;
 }
 
@@ -2016,10 +2016,13 @@ a:focus-visible,
   width: 100%;
   font-size: var(--expanded-name-size, 1.25rem);
   font-weight: 400;
-  text-align: center;
+  text-align: left;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .student-accordion-header.active :is(.student-meta, .student-name-text-wrapper) {
@@ -2594,7 +2597,7 @@ a:focus-visible,
   width: 120px;
   height: 150px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--muted);
   border: 2px solid var(--border-glass);
   display: flex;
   align-items: center;
