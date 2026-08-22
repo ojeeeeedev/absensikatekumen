@@ -737,7 +737,8 @@ button:disabled,
   border-color: var(--marian-8);
   background-color: var(--interactive-hover);
 }
-.active-topic-bar:active {
+.topic-selector-btn-large:active:not(:disabled),
+.active-topic-bar:active:not(:disabled) {
   transform: scale(0.98);
 }
 .topic-info {
@@ -874,12 +875,12 @@ button:disabled,
   display: flex; align-items: center; justify-content: space-between;
   min-width: 0;
   padding: 8px 52px 8px 14px; border-radius: 12px; background: var(--bg-body);
-  border: 1px solid var(--border-glass);
+  border: 2px solid var(--border-glass);
 }
-.queue-row.success { border-color: var(--green-7); }
-.queue-row.duplicate { border-color: var(--amber-7); }
-.queue-row.error { border-color: var(--red-7); }
-.queue-row.processing, .queue-row.pending { border-color: var(--marian-7); }
+.queue-row.success { border-color: var(--success); }
+.queue-row.duplicate { border-color: var(--warning); }
+.queue-row.error { border-color: var(--destructive); }
+.queue-row.processing, .queue-row.pending { border-color: var(--accent); }
 
 .student-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; overflow: hidden; }
 
@@ -1279,27 +1280,6 @@ a:focus-visible,
    UI ENHANCEMENTS: SCAN CARDS, DETAILED MODALS, FLOATING BTN
    ========================================= */
 
-/* Circular icon badge on scan card rows */
-.queue-row .status-badge {
-  position: absolute;
-  right: 12px;
-  bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-.queue-row .status-badge re-icon {
-  font-size: 1.15rem;
-}
-
-.status-spinner { width: 18px; height: 18px; }
-
 /* Scan history detail drawer */
 .student-modal {
   position: fixed;
@@ -1675,6 +1655,9 @@ a:focus-visible,
 .class-selector-control.has-selection::after,
 .needs-topic .class-selector-control.has-selection::after { animation: none; }
 
+.class-selector-control.has-selection,
+.class-selector-control.has-selection::after { box-shadow: none; }
+
 #topic-combobox-active {
   width: calc(100% - 2.5rem);
   margin-inline: auto;
@@ -1803,16 +1786,21 @@ a:focus-visible,
   font-size: 0.9rem;
   text-align: left;
   cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-out);
 }
+
+.search-combobox-option:active { transform: scale(0.98); }
 
 .search-combobox-option:hover,
 .search-combobox-option:focus-visible {
-  background: var(--interactive-hover);
+  background: var(--marian-4);
   outline: none;
 }
 
 .search-combobox-option[aria-selected="true"] {
-  background: var(--marian-3);
+  background: var(--marian-5);
   color: var(--marian-12);
 }
 
@@ -1831,12 +1819,12 @@ a:focus-visible,
 }
 
 .topic-combobox-popover .search-combobox-option > span:first-child {
-  flex: 0 0 3.5ch;
+  flex: 0 0 2ch;
   min-width: 0;
 }
 
 .topic-combobox-popover .search-combobox-option {
-  gap: 8px;
+  gap: 4px;
 }
 
 .topic-combobox-popover .topic-option-name {

@@ -803,23 +803,6 @@ class ScanQueue {
       studentInfo.appendChild(studentText);
       row.appendChild(studentInfo);
 
-      const statusBadge = document.createElement('span');
-      statusBadge.className = `status-badge ${item.status}`;
-      
-      const statusIconByStatus = {
-        success: 'check',
-        error: 'x-circle',
-        duplicate: 'refresh',
-        pending: 'timer'
-      };
-      const icon = item.status === 'processing'
-        ? Object.assign(document.createElement('app-spinner'), { className: 'app-spinner status-spinner' })
-        : window.createAppIcon(statusIconByStatus[item.status] || statusIconByStatus.pending);
-      if (item.status === 'processing') icon.setAttribute('aria-hidden', 'true');
-      
-      statusBadge.appendChild(icon);
-      row.appendChild(statusBadge);
-
       listContainer.appendChild(row);
     });
 

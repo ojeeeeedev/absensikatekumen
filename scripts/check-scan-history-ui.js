@@ -84,14 +84,14 @@ try {
       whiteSpace: nameStyle.whiteSpace,
     };
   });
-  if (compactCard.cardHeight !== 74 || compactCard.nameHeight > 18 || !compactCard.nameClipped || compactCard.overflow !== 'hidden' || compactCard.textOverflow !== 'ellipsis' || compactCard.whiteSpace !== 'nowrap') {
+  if (compactCard.cardHeight !== 76 || compactCard.nameHeight > 18 || !compactCard.nameClipped || compactCard.overflow !== 'hidden' || compactCard.textOverflow !== 'ellipsis' || compactCard.whiteSpace !== 'nowrap') {
     throw new Error(`History card is not compact with a clipped name: ${JSON.stringify(compactCard)}`);
   }
   const spinnerStates = await page.locator('#login-loader .app-spinner, .status-spinner').evaluateAll(spinners => spinners.map(spinner => ({
     color: getComputedStyle(spinner).color,
     stroke: getComputedStyle(spinner.shadowRoot.querySelector('svg')).stroke,
   })));
-  if (spinnerStates.length !== 2 || spinnerStates.some(spinner => spinner.color !== spinner.stroke) || await page.locator('#history-sync-spinner, .grid-column-scan-loader').count()) {
+  if (spinnerStates.length !== 1 || spinnerStates.some(spinner => spinner.color !== spinner.stroke) || await page.locator('#history-sync-spinner, .grid-column-scan-loader').count()) {
     throw new Error(`Scan spinners were not replaced: ${JSON.stringify(spinnerStates)}`);
   }
   const loadingProgress = await page.locator('.segmented-progress-bar').evaluate(bar => ({
@@ -119,8 +119,8 @@ try {
       alpha: context.getImageData(0, 0, 1, 1).data[3] / 255,
     };
   }));
-  if (cardBorders.some(border => border.widths.some(width => width !== '1px') || border.alpha !== 1) || new Set(cardBorders.map(border => border.color)).size !== cardBorders.length) {
-    throw new Error(`History cards do not have subtle 1px semantic borders: ${JSON.stringify(cardBorders)}`);
+  if (cardBorders.some(border => border.widths.some(width => width !== '2px') || border.alpha !== 1) || new Set(cardBorders.map(border => border.color)).size !== cardBorders.length) {
+    throw new Error(`History cards do not have 2px semantic borders: ${JSON.stringify(cardBorders)}`);
   }
   const semanticHistoryColors = await page.evaluate(() => {
     const resolve = value => {
@@ -132,10 +132,10 @@ try {
       return color;
     };
     const expected = {
-      success: resolve('var(--green-7)'),
-      duplicate: resolve('var(--amber-7)'),
-      error: resolve('var(--red-7)'),
-      processing: resolve('var(--marian-7)'),
+      success: resolve('var(--success)'),
+      duplicate: resolve('var(--warning)'),
+      error: resolve('var(--destructive)'),
+      processing: resolve('var(--accent)'),
     };
     const actual = Object.fromEntries([...document.querySelectorAll('.queue-row')].map(row => [
       [...row.classList].find(name => Object.hasOwn(expected, name)),
@@ -165,22 +165,17 @@ try {
     const hitTarget = button.getBoundingClientRect();
     const glyph = button.querySelector('span');
     const glyphRect = glyph.getBoundingClientRect();
-    const status = button.closest('.queue-row').querySelector('.status-badge').getBoundingClientRect();
     return {
       rightInset: Math.round(card.right - hitTarget.right),
       topInset: Math.round(hitTarget.top - card.top),
       hitWidth: hitTarget.width,
       glyphFontSize: getComputedStyle(glyph).fontSize,
       glyphBackground: getComputedStyle(glyph).backgroundColor,
-      statusRightInset: Math.round(card.right - status.right),
-      statusBottomInset: Math.round(card.bottom - status.bottom),
-      glyphAboveStatus: glyphRect.bottom < status.top,
-      rightEdgeDelta: Math.round(glyphRect.right - status.right),
       glyphRightInset: Math.round(card.right - glyphRect.right),
       glyphTopInset: Math.round(glyphRect.top - card.top),
     };
   });
-  if (dismissGeometry.rightInset !== 3 || dismissGeometry.topInset !== 1 || dismissGeometry.hitWidth !== 44 || dismissGeometry.glyphFontSize !== '16px' || dismissGeometry.glyphBackground !== 'rgba(0, 0, 0, 0)' || dismissGeometry.statusRightInset !== 13 || dismissGeometry.statusBottomInset !== 9 || !dismissGeometry.glyphAboveStatus || Math.abs(dismissGeometry.rightEdgeDelta) > 1 || dismissGeometry.glyphRightInset < 12 || dismissGeometry.glyphTopInset < 12) {
+  if (dismissGeometry.rightInset !== 4 || dismissGeometry.topInset !== 2 || dismissGeometry.hitWidth !== 44 || dismissGeometry.glyphFontSize !== '16px' || dismissGeometry.glyphBackground !== 'rgba(0, 0, 0, 0)' || dismissGeometry.glyphRightInset < 12 || dismissGeometry.glyphTopInset < 12) {
     throw new Error(`History card controls are not aligned vertically on the right: ${JSON.stringify(dismissGeometry)}`);
   }
 
