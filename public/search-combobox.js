@@ -47,6 +47,7 @@
     getLabel,
     getSearchText = getLabel,
     getOptionClass = () => '',
+    getOptionLabelParts = null,
     minSearchItems = 0
   }) {
     const root = document.getElementById(rootId);
@@ -102,8 +103,16 @@
         option.className = `search-combobox-option ${getOptionClass(item)}`.trim();
         option.setAttribute('role', 'option');
         option.setAttribute('aria-selected', String(selected));
-        option.innerHTML = '<span></span><span class="search-combobox-check" aria-hidden="true">✓</span>';
-        option.firstElementChild.textContent = getLabel(item);
+        const labelParts = getOptionLabelParts?.(item);
+        option.innerHTML = labelParts
+          ? '<span class="topic-option-number"></span><span class="topic-option-name"></span><span class="search-combobox-check" aria-hidden="true">✓</span>'
+          : '<span></span><span class="search-combobox-check" aria-hidden="true">✓</span>';
+        if (labelParts) {
+          option.querySelector('.topic-option-number').textContent = labelParts[0];
+          option.querySelector('.topic-option-name').textContent = labelParts[1];
+        } else {
+          option.firstElementChild.textContent = getLabel(item);
+        }
         option.addEventListener('click', () => choose(item));
         option.addEventListener('keydown', event => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

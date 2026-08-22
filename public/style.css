@@ -1831,10 +1831,13 @@ a:focus-visible,
 }
 
 .topic-combobox-popover .search-combobox-option > span:first-child {
+  flex: 0 0 3.5ch;
+  min-width: 0;
+}
+
+.topic-combobox-popover .topic-option-name {
   flex: 1 1 auto;
   min-width: 0;
-  padding-inline-start: 3.5ch;
-  text-indent: -3.5ch;
   overflow-wrap: anywhere;
 }
 
@@ -2010,7 +2013,7 @@ a:focus-visible,
 
 .student-accordion-header.active .header-left {
   position: absolute;
-  inset: 0 16px;
+  inset: 0 48px 0 16px;
   justify-content: flex-start;
   pointer-events: none;
 }

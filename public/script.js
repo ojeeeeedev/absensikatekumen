@@ -1074,6 +1074,7 @@ function initializeTopicComboboxes() {
       placeholder,
       getValue: item => item.week,
       getLabel: item => `${item.week}. ${item.name}`,
+      getOptionLabelParts: item => [`${item.week}.`, item.name],
       getSearchText: item => `${item.week} ${item.name}`,
       getOptionClass: item => {
         if (item.week.startsWith('R')) return 'topic-option-r';
