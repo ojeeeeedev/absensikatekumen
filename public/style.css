@@ -1835,6 +1835,10 @@ a:focus-visible,
   min-width: 0;
 }
 
+.topic-combobox-popover .search-combobox-option {
+  gap: 8px;
+}
+
 .topic-combobox-popover .topic-option-name {
   flex: 1 1 auto;
   min-width: 0;
