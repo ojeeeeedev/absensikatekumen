@@ -64,6 +64,7 @@ function updateNavButtons(listContainer, renderItemsLength) {
 
 
 let scannerStartPromise = null;
+let scannerStopPromise = null;
 const CAMERA_LOADER_HTML = '<app-spinner class="app-spinner spinner" aria-hidden="true"></app-spinner><span>Memuat Kamera...</span>';
 
 // --- STATE MANAGEMENT ---
@@ -681,16 +682,18 @@ class ScanQueue {
     this.healStaleProcessing();
     const now = Date.now();
     const pendingItems = this.queue.filter(item => item.status === 'pending');
-    if (pendingItems.length === 0) {
-      this.updateBanner();
-      return;
-    }
-
     // Oldest first, skipping items that are backing off.
     const pendingItem = [...pendingItems].reverse().find(item => !(item.nextAttemptAt > now));
     if (!pendingItem) {
-      const nextAt = Math.min(...pendingItems.map(item => item.nextAttemptAt));
-      this.scheduleProcess(nextAt - now);
+      // Nothing to send now. Wake up when a backed-off item is due, or when a
+      // 'processing' item left by a reloaded/closed tab becomes stale enough
+      // for healStaleProcessing() to recover it.
+      const wakeTimes = [
+        ...pendingItems.map(item => item.nextAttemptAt),
+        ...this.queue.filter(item => item.status === 'processing')
+          .map(item => (item.processingStartedAt || 0) + QUEUE_REQUEST_TIMEOUT_MS + 5000 + 50),
+      ].filter(Number.isFinite);
+      if (wakeTimes.length) this.scheduleProcess(Math.min(...wakeTimes) - now);
       this.updateBanner();
       return;
     }
@@ -1160,6 +1163,12 @@ async function handleScan(decodedText) {
 }
 
 async function startScanner() {
+  // A stop still in flight (e.g. tab hidden during startup) would shut down a
+  // camera started now; wait for it, then start only if scanning is still wanted.
+  if (scannerStopPromise) {
+    await scannerStopPromise;
+    if (!shouldScannerRun()) return;
+  }
   if (html5QrcodeScanner) return; // Guard against duplicate instantiations
 
   const scanConfig = { 
@@ -1227,6 +1236,18 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function stopScanner() {
+  if (scannerStopPromise) return scannerStopPromise;
+  if (!html5QrcodeScanner) return;
+  const stopping = stopScannerNow();
+  scannerStopPromise = stopping;
+  try {
+    await stopping;
+  } finally {
+    if (scannerStopPromise === stopping) scannerStopPromise = null;
+  }
+}
+
+async function stopScannerNow() {
   if (html5QrcodeScanner) {
     // If still starting, wait for the start promise to resolve first
     if (scannerStartPromise) {
