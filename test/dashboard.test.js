@@ -25,7 +25,7 @@ describe('/api/dashboard', () => {
     expect(res.redirectUrl).toBe('https://example.com/dashboard');
   });
 
-  it('should reject a spoofed auth cookie', () => {
+  it('should send a spoofed or expired auth cookie back to login without revealing the dashboard', () => {
     process.env.DASHBOARD_URL = 'https://example.com/dashboard';
     process.env.JWT_SECRET = 'test-secret';
     const req = createMockRequest({ headers: { cookie: 'auth_token=fake' } });
@@ -33,7 +33,8 @@ describe('/api/dashboard', () => {
 
     handler(req, res);
 
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe(302);
+    expect(res.redirectUrl).toBe('/');
   });
 
   it('should return 500 error if DASHBOARD_URL is not configured', () => {

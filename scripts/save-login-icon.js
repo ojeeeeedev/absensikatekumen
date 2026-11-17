@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const REICON_VERSION = '1.1.1';
 const ICON_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-export const ICON_SOURCE_FILES = ['index.html', 'icons.js', 'onboarding.js', 'profile.js', 'script.js', 'toast.js'];
+export const ICON_SOURCE_FILES = ['index.html', 'icons.js', 'profile.js', 'script.js', 'toast.js'];
 
 function componentName(name) {
   return name.split('-').map(part => part[0].toUpperCase() + part.slice(1)).join('');

@@ -128,4 +128,32 @@ describe('/api/photo', () => {
     expect(res.statusCode).toBe(400);
     expect(download).not.toHaveBeenCalled();
   });
+
+  const configured = () => {
+    process.env.JWT_SECRET = JWT_SECRET;
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_KEY = 'service-key';
+  };
+  const photoRequest = (method, query) => createMockRequest({ method, headers: { cookie: `auth_token=${makeToken()}` }, query });
+
+  it('lets the browser reuse versioned photo URLs privately, never unversioned ones', async () => {
+    configured();
+    download.mockResolvedValue({ data: new Blob(['photo-bytes']), error: null });
+    const versioned = createMockResponse();
+    await handler(photoRequest('GET', { studentId: '2025/SAB/001', filename: '2025-SAB-001.jpg', v: '1763370000000' }), versioned);
+    expect(versioned.headers['Cache-Control']).toBe('private, max-age=3600');
+
+    const unversioned = createMockResponse();
+    await handler(photoRequest('GET', { studentId: '2025/SAB/001', filename: '2025-SAB-001.jpg' }), unversioned);
+    expect(unversioned.headers['Cache-Control']).toBe('private, no-store');
+  });
+
+  it('answers HEAD without downloading the image', async () => {
+    configured();
+    list.mockResolvedValue({ data: [{ name: '2025-SAB-001.jpg' }], error: null });
+    const res = createMockResponse();
+    await handler(photoRequest('HEAD', { studentId: '2025/SAB/001' }), res);
+    expect(res.statusCode).toBe(200);
+    expect(download).not.toHaveBeenCalled();
+  });
 });

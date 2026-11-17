@@ -265,7 +265,6 @@
       const availableIcons = new Set(Reicon.icons);
       const usageByIcon = {
         "arrow-circle-right": "Login submit button",
-        "bolt": "Onboarding: consecutive QR scanning",
         "book-open": "Initial and active topic selectors",
         "cake": "Profile birthday field",
         "calendar": "Topic date selectors",
@@ -275,7 +274,7 @@
         "camera-add": "Photo upload dropzone",
         "check": "Successful scan history rows",
         "check-circle": "Login success, active count, and success toasts",
-        "chevron-down": "Topic, class, profile, and onboarding accordions",
+        "chevron-down": "Topic, class, and profile accordions",
         "chevron-left": "Previous topic control",
         "chevron-right": "Next topic control",
         "close-circle": "Failed scan history rows, errors, inactive count, and upload close button",
@@ -288,24 +287,19 @@
         "home-user": "Profile KI details",
         "incognito": "Empty student search state",
         "info-circle": "Topic instructions and information toasts",
-        "layers": "Onboarding: information layout",
         "login2": "Login submit button",
         "login4": "Login submit button",
         "logout": "Main navigation sign-out",
         "logout4": "Main navigation sign-out",
         "qr": "Scan navigation and QR actions",
-        "refresh": "Duplicate scan history rows, duplicate toasts, and onboarding changes",
+        "refresh": "Duplicate scan history rows and duplicate toasts",
         "search": "Profile and selector search fields",
         "scanner": "Scan navigation and empty scan history",
-        "sparkles": "Onboarding new-features heading",
-        "speedometer": "Onboarding: scanner speed",
-        "streets-nav": "Onboarding: simplified navigation",
-        "square-arrow-down2": "Profile and onboarding expand controls",
         "square-arrow-left2": "Previous topic control",
         "square-arrow-right2": "Next topic control",
         "timer-alt": "Pending scan queue rows",
         "user": "Profile placeholders and KK details",
-        "user-id": "Profile ID details and onboarding profile feature",
+        "user-id": "Profile ID details",
         "user-minus": "Inactive student group",
         "user-off": "Inactive student group",
         "user-search": "Empty student search state",
@@ -315,7 +309,6 @@
         "users3": "Class selector",
         "upload": "Photo upload dropzone",
         "verified": "Login success, active count, and success toasts",
-        "wifi-off": "Onboarding: offline storage",
         "x-circle": "Errors, inactive count, and dismiss controls"
       };
       const targetList = document.getElementById('target-list');
@@ -325,7 +318,7 @@
       const status = document.getElementById('preview-status');
       const saveButton = document.getElementById('save-icon');
       const saveStatus = document.getElementById('save-status');
-      const sourceFiles = ['index.html', 'icons.js', 'onboarding.js', 'profile.js', 'script.js', 'toast.js'];
+      const sourceFiles = ['index.html', 'icons.js', 'profile.js', 'script.js', 'toast.js'];
       const appIcons = new Map();
       const renderedAppIcons = new Map();
       let currentName = '';

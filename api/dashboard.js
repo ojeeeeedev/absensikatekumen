@@ -4,7 +4,8 @@ export default function handler(req, res) {
   try {
     verifyJwt(req, { allowCookie: true });
   } catch {
-    return res.status(401).send("Unauthorized");
+    // Missing or expired session: send the facilitator to the login screen.
+    return res.redirect(302, '/');
   }
 
   const dashboardUrl = process.env.DASHBOARD_URL;
@@ -13,6 +14,5 @@ export default function handler(req, res) {
     return res.status(500).send("Dashboard URL not configured on server.");
   }
 
-  // 307 Temporary Redirect preserves the method, though for a link click 302/307 are fine.
   res.redirect(307, dashboardUrl);
 }

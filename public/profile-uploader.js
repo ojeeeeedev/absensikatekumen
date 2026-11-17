@@ -1,14 +1,27 @@
 /**
  * Owns profile-photo selection, client-side validation, modal state, and upload.
- * Student lookup and list refresh stay with profile.js through callbacks so this
+ * Student data and list refresh stay with profile.js through callbacks so this
  * controller does not depend on that page's data model.
+ *
+ * States: closed -> open (idle) -> picked -> uploading -> success | failed
+ *   - While uploading, the user cannot close the sheet or pick another file.
+ *   - A programmatic close (view switch, logout) lets the upload finish in the
+ *     background; onUploaded always receives the student the upload was for.
  */
-window.createProfilePhotoUploader = function createProfilePhotoUploader({ getToken, findStudent, onUploaded }) {
+window.createProfilePhotoUploader = function createProfilePhotoUploader({ onUploaded, onAuthExpired }) {
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+  // Vercel rejects request bodies above ~4.5MB before the handler runs, so
+  // larger photos are downscaled in the browser first.
+  const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+  const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
+  const RESIZE_MAX_EDGE = 1600;
   const SHEET_MOTION_MS = 280;
   const SHEET_REDUCED_MOTION_MS = 120;
+  const SUCCESS_CLOSE_DELAY_MS = 600;
 
+  let isUploading = false;
+  let successTimer = null;
+  let selectionId = 0;
   let currentStudentId = null;
   let currentStudentName = null;
   let selectedFile = null;
@@ -40,18 +53,22 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
     if (!modal) return; // not on profile page
 
     // Close actions
-    closeBtn.addEventListener('click', close);
-    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    // User-initiated close is ignored mid-upload so the result is not lost.
+    const userClose = () => { if (!isUploading) close(); };
+    closeBtn.addEventListener('click', userClose);
+    modal.addEventListener('click', (e) => { if (e.target === modal) userClose(); });
 
     // Keyboard close
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal.classList.contains('open')) close();
+      if (!modal.classList.contains('open')) return;
+      if (e.key === 'Escape') userClose();
+      if (e.key === 'Tab') trapFocus(e);
     });
 
     // Dropzone click → open native file picker
-    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('click', () => { if (!isUploading) fileInput.click(); });
     dropzone.addEventListener('keydown', (e) => {
-      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); fileInput.click(); }
+      if ((e.key === ' ' || e.key === 'Enter') && !isUploading) { e.preventDefault(); fileInput.click(); }
     });
 
     // File input change
@@ -73,7 +90,33 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
     confirmBtn.addEventListener('click', doUpload);
   }
 
+  // aria-modal sheet: keep Tab and Shift+Tab inside it while it is open.
+  function trapFocus(event) {
+    const focusable = [...modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter(element => !element.disabled && element.getAttribute('aria-disabled') !== 'true'
+        && element.type !== 'file' && element.getClientRects().length > 0);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!modal.contains(document.activeElement)) {
+      event.preventDefault();
+      first.focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   function open(studentId, studentName, initialFile) {
+    if (isUploading) {
+      showToast('Tunggu unggahan foto sebelumnya selesai.', 'info');
+      return;
+    }
+    clearTimeout(successTimer);
+    successTimer = null;
     clearTimeout(closeTimer);
     clearTimeout(focusTimer);
     if (openFrame !== null) cancelAnimationFrame(openFrame);
@@ -129,7 +172,10 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
 
     modal.classList.remove('is-visible');
     modal.classList.add('is-closing');
-    if (modal.contains(document.activeElement)) returnFocus?.focus?.({ preventScroll: true });
+    // Return focus if it is inside the sheet, or was dropped to <body> because
+    // the focused control became disabled during the upload.
+    const focusLost = !document.activeElement || document.activeElement === document.body;
+    if (modal.contains(document.activeElement) || focusLost) returnFocus?.focus?.({ preventScroll: true });
     modal.inert = true;
     modal.setAttribute('aria-hidden', 'true');
 
@@ -142,9 +188,11 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
       modal.removeAttribute('aria-hidden');
       document.body.style.overflow = '';
       selectedFile = null;
+      selectionId += 1;
       currentStudentId = null;
       currentStudentName = null;
       fileInput.value = '';
+      resetDropzone(); // Release the (possibly large) data-URL preview.
       closeTimer = null;
       returnFocus = null;
       onClosed?.();
@@ -159,102 +207,143 @@ window.createProfilePhotoUploader = function createProfilePhotoUploader({ getTok
     dropzoneSubtext.style.display = '';
   }
 
-  function handleFileSelect(file) {
-    // Validate type
+  // Downscales a photo that is too large to upload; returns null if it cannot.
+  async function shrinkImage(file) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, RESIZE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close?.();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.88));
+      if (!blob || blob.size > MAX_UPLOAD_BYTES) return null;
+      const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+      return new File([blob], name, { type: 'image/jpeg' });
+    } catch (error) {
+      console.error('[PhotoUploader] Resize failed:', error);
+      return null;
+    }
+  }
+
+  async function handleFileSelect(file) {
+    if (isUploading) return;
     if (!ALLOWED_TYPES.includes(file.type)) {
       showToast('Format tidak didukung. Gunakan JPG, PNG, atau WebP.', 'error');
       return;
     }
-    // Validate size
-    if (file.size > MAX_SIZE_BYTES) {
-      showToast('Ukuran file melebihi batas 5MB.', 'error');
+    if (file.size > MAX_SOURCE_BYTES) {
+      showToast('Ukuran file terlalu besar.', 'error');
       return;
     }
 
-    selectedFile = file;
+    // Later selections win over earlier ones that are still being prepared.
+    const thisSelection = ++selectionId;
+    confirmBtn.disabled = true;
+    let uploadFile = file;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      uploadFile = await shrinkImage(file);
+      if (thisSelection !== selectionId) return;
+      if (!uploadFile) {
+        showToast('Foto terlalu besar dan tidak dapat diperkecil. Gunakan foto lain.', 'error');
+        return;
+      }
+    }
 
-    // Show preview
+    selectedFile = uploadFile;
+
     const reader = new FileReader();
     reader.onload = (e) => {
+      if (thisSelection !== selectionId) return;
       previewImg.src = e.target.result;
       previewImg.style.display = 'block';
       dropzoneIcon.style.display = 'none';
       dropzoneText.style.display = 'none';
       dropzoneSubtext.style.display = 'none';
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(uploadFile);
 
     confirmBtn.disabled = false;
   }
 
-  async function doUpload() {
-    if (!selectedFile || !currentStudentId) return;
+  function setProgress(percent) {
+    progressBar.style.width = `${percent}%`;
+    progressWrap.setAttribute('aria-valuenow', String(percent));
+  }
 
-    // Set uploading state
+  function resetUploadControls() {
+    confirmBtn.classList.remove('uploading');
+    confirmBtn.disabled = !selectedFile;
+    closeBtn.disabled = false;
+    dropzone.removeAttribute('aria-disabled');
+    progressWrap.classList.remove('visible');
+    setProgress(0);
+  }
+
+  async function doUpload() {
+    if (isUploading || !selectedFile || !currentStudentId) return;
+
+    // Captured now: the modal may be closed or reopened for another student
+    // before the request finishes.
+    const studentId = currentStudentId;
+    const file = selectedFile;
+    isUploading = true;
+
     confirmBtn.classList.add('uploading');
     confirmBtn.disabled = true;
     closeBtn.disabled = true;
+    dropzone.setAttribute('aria-disabled', 'true');
     progressWrap.classList.add('visible');
-    progressBar.style.width = '30%';
-    progressWrap.setAttribute('aria-valuenow', '30');
+    setProgress(30);
 
     const formData = new FormData();
-    formData.append('studentId', currentStudentId);
-    formData.append('photo', selectedFile, selectedFile.name);
+    formData.append('studentId', studentId);
+    formData.append('photo', file, file.name);
 
+    let res;
+    let data;
     try {
-      progressBar.style.width = '60%';
-      progressWrap.setAttribute('aria-valuenow', '60');
-
-      const res = await fetch('/api/upload-photo', {
+      setProgress(60);
+      res = await fetch('/api/upload-photo', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`,
-        },
         body: formData,
       });
-
-      progressBar.style.width = '90%';
-      progressWrap.setAttribute('aria-valuenow', '90');
-      const data = await res.json();
-
-      if (data.status === 'ok') {
-        progressBar.style.width = '100%';
-        progressWrap.setAttribute('aria-valuenow', '100');
-
-        const uploadedPhoto = {
-          studentId: currentStudentId,
-          image: data.image,
-        };
-
-        // Update the in-memory student data immediately with the private app URL
-        if (data.image) {
-          const student = findStudent(currentStudentId);
-          if (student) {
-            student.image = data.image;
-          }
-        }
-
-        showToast('Foto berhasil diunggah! ✓', 'success');
-
-        // Close the modal, then update the uploaded student's photo in place.
-        setTimeout(() => {
-          close({ onClosed: () => onUploaded(uploadedPhoto) });
-        }, 600);
-      } else {
-        throw new Error(data.message || 'Gagal mengunggah foto');
-      }
+      data = await res.json().catch(() => null);
     } catch (err) {
-      console.error('[PhotoUploader] Upload error:', err);
-      showToast(`Gagal mengunggah: ${err.message}`, 'error');
+      console.error('[PhotoUploader] Upload network error:', err);
+      isUploading = false;
+      showToast('Tidak ada koneksi. Foto belum terunggah, coba lagi.', 'error');
+      resetUploadControls();
+      return;
+    }
+    isUploading = false;
 
-      // Reset state
-      confirmBtn.classList.remove('uploading');
-      confirmBtn.disabled = false;
-      closeBtn.disabled = false;
-      progressWrap.classList.remove('visible');
-      progressBar.style.width = '0%';
-      progressWrap.setAttribute('aria-valuenow', '0');
+    if (res.status === 401) {
+      resetUploadControls();
+      onAuthExpired?.();
+      return;
+    }
+
+    if (!res.ok || data?.status !== 'ok') {
+      const message = res.status === 413
+        ? 'Ukuran foto terlalu besar.'
+        : (res.status < 500 && data?.message) || 'Gagal mengunggah foto. Coba lagi.';
+      showToast(message, 'error');
+      resetUploadControls();
+      return;
+    }
+
+    setProgress(100);
+    showToast('Foto berhasil diunggah! ✓', 'success');
+    // Always update the student this upload was for, even if the sheet was closed.
+    onUploaded?.({ studentId, image: data.image });
+
+    if (currentStudentId === studentId && modal.classList.contains('open')) {
+      successTimer = setTimeout(() => {
+        successTimer = null;
+        if (currentStudentId === studentId) close();
+      }, SUCCESS_CLOSE_DELAY_MS);
     }
   }
 

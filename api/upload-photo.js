@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
 import { bucketNameForClass, classCodeFromStudentId, ensureBucketExists, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
+import { getScriptMap } from './_gas-utils.js';
 
 // Max file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -72,7 +73,7 @@ export default async function handler(req, res) {
 
   // --- JWT Authentication ---
   try {
-    verifyJwt(req);
+    verifyJwt(req, { allowCookie: true });
   } catch (err) {
     return res.status(401).json({ status: 'error', message: 'Akses ditolak: Token tidak valid' });
   }
@@ -99,10 +100,15 @@ export default async function handler(req, res) {
     rawBody = await new Promise((resolve, reject) => {
       const chunks = [];
       let totalSize = 0;
+      let tooLarge = false;
       req.on('data', (chunk) => {
+        if (tooLarge) return; // Stop buffering once the limit is exceeded.
         totalSize += chunk.length;
         if (totalSize > MAX_FILE_SIZE + 10240) { // 5MB + 10KB header overhead
+          tooLarge = true;
+          chunks.length = 0;
           reject(new Error('FILE_TOO_LARGE'));
+          return;
         }
         chunks.push(chunk);
       });
@@ -141,6 +147,17 @@ export default async function handler(req, res) {
     return res.status(400).json({ status: 'error', message: 'Format studentId tidak valid' });
   }
 
+  // Only classes with a configured attendance deployment may get a bucket.
+  let knownClass = false;
+  try {
+    knownClass = Object.prototype.hasOwnProperty.call(getScriptMap(), classCode);
+  } catch (err) {
+    console.error('[upload-photo] Class map unavailable:', err.message);
+  }
+  if (!knownClass) {
+    return res.status(400).json({ status: 'error', message: 'Kelas tidak dikenali' });
+  }
+
   // --- Derive storage path ---
   const bucketName = bucketNameForClass(classCode);
   const ext = ALLOWED_EXTENSIONS[mimeType];
@@ -166,7 +183,7 @@ export default async function handler(req, res) {
 
     if (uploadError) {
       console.error('[upload-photo] Supabase upload error:', uploadError);
-      return res.status(500).json({ status: 'error', message: `Gagal mengunggah foto: ${uploadError.message}` });
+      return res.status(500).json({ status: 'error', message: 'Gagal mengunggah foto' });
     }
 
     // Remove only obsolete formats after the replacement is safely stored.
@@ -179,17 +196,17 @@ export default async function handler(req, res) {
       .map(f => f.name);
 
     if (toDelete.length > 0) {
-      await supabase.storage.from(bucketName).remove(toDelete);
+      const { error: removeError } = await supabase.storage.from(bucketName).remove(toDelete) || {};
+      if (removeError) console.error('[upload-photo] Old photo cleanup failed:', removeError);
     }
 
     return res.status(200).json({
       status: 'ok',
       message: 'Foto berhasil diunggah',
-      filename: targetFilename,
-      image: photoUrlForStudent(studentId, Date.now().toString()),
+      image: photoUrlForStudent(studentId, Date.now().toString(), targetFilename),
     });
   } catch (err) {
     console.error('[upload-photo] Unexpected error:', err);
-    return res.status(500).json({ status: 'error', message: err.message });
+    return res.status(500).json({ status: 'error', message: 'Gagal mengunggah foto' });
   }
 }

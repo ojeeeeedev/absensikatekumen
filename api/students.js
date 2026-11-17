@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyJwt } from './_auth.js';
 import { getScriptMap, readJsonResponse } from './_gas-utils.js';
-import { PHOTO_MIME_TYPES, bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent } from './_supabase-utils.js';
+import { PHOTO_MIME_TYPES, bucketNameForClass, listAllFiles, photoUrlForStudent, storageBaseNameForStudent, photoVersion } from './_supabase-utils.js';
 
 function rosterMeta(meta) {
   if (!meta || !['sheet', 'cache', 'stale-cache'].includes(meta.rosterSource)) return undefined;
@@ -94,7 +94,8 @@ export default async function handler(req, res) {
     }
 
     if (data.status !== "ok" || !Array.isArray(data.students)) {
-      return res.status(502).json({ status: "error", message: data.message || "Failed to fetch students from sheet" });
+      console.error("GAS roster error:", data.message);
+      return res.status(502).json({ status: "error", message: "Failed to fetch students from sheet" });
     }
 
     if (view === 'names') {
@@ -118,9 +119,9 @@ export default async function handler(req, res) {
     if (supabase && students.length > 0) {
       const { data: files, error } = await filesPromise;
       if (error) {
-        for (const student of students) {
-          if (storageBaseNameForStudent(student.studentId)) student.image = photoUrlForStudent(student.studentId);
-        }
+        // Without a listing we cannot know who has a photo. Guessing would make
+        // every thumbnail call /api/photo (one function + one list call each).
+        console.error("Photo listing failed; returning roster without photos:", error.message || error);
       } else if (files) {
         const filenames = new Map(files.map(file => [file.name.toLowerCase(), file.name]));
         for (const student of students) {
@@ -128,7 +129,10 @@ export default async function handler(req, res) {
           const filename = baseName && Object.keys(PHOTO_MIME_TYPES)
             .map(ext => filenames.get(`${baseName}.${ext}`))
             .find(Boolean);
-          if (filename) student.image = photoUrlForStudent(student.studentId, '', filename);
+          if (filename) {
+            const file = files.find(candidate => candidate.name === filename);
+            student.image = photoUrlForStudent(student.studentId, photoVersion(file), filename);
+          }
         }
       }
     }
@@ -137,6 +141,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ status: "ok", students, ...(meta && { meta }) });
   } catch (err) {
     console.error("API Error in /api/students:", err);
-    return res.status(500).json({ status: "error", message: err.message });
+    return res.status(500).json({ status: "error", message: "Gagal memuat data katekumen" });
   }
 }

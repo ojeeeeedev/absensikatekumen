@@ -51,6 +51,7 @@ function doPost(e) {
     }
 
     const studentIdNormalized = String(rawId).trim().toLowerCase();
+    const studentIdDisplay = String(rawId).trim().toUpperCase();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("Presensi");
 
@@ -58,42 +59,10 @@ function doPost(e) {
       return buildResponse_({ status: "error", message: "Sheet 'Presensi' not found" });
     }
 
-    // The cache improves lookup speed but must not control attendance availability.
-    let cache = null;
-    let studentMap = null;
-    try {
-      cache = CacheService.getScriptCache();
-      const cachedData = cache.get("STUDENT_MAP_V1");
-      if (cachedData) studentMap = JSON.parse(cachedData);
-      if (!studentMap || typeof studentMap !== "object" || Array.isArray(studentMap)) studentMap = null;
-    } catch (e) {
-      console.log("Cache read failed: " + e.toString());
-    }
-
-    if (!studentMap) {
-      studentMap = buildStudentMap_(ss, sheet);
-      if (cache) {
-        try {
-          cache.put("STUDENT_MAP_V1", JSON.stringify(studentMap), 21600);
-        } catch (e) {
-          console.log("Cache write failed: " + e.toString());
-        }
-      }
-    }
-
-    // 3. Determine Column based on Week (Must read header to be safe)
-    // Optimization: We could cache headers too, but they might change.
-    // Reading just the first row is very fast.
+    // Header row decides the topic column; it is read fresh on every scan.
     const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-
-    let headerName;
     const weekStr = String(weekRaw).trim();
-    if (/^R\d+$/i.test(weekStr)) {
-      headerName = "Topik " + weekStr.toUpperCase();
-    } else {
-      headerName = "Topik " + weekStr; 
-    }
-
+    const headerName = "Topik " + (/^R\d+$/i.test(weekStr) ? weekStr.toUpperCase() : weekStr);
     const topikCol = headerRow.indexOf(headerName) + 1; // 1-based index
 
     if (topikCol < 1) {
@@ -103,47 +72,52 @@ function doPost(e) {
       });
     }
 
-    // 4. Find Student using Map (O(1) Lookup)
-    const studentData = studentMap[studentIdNormalized];
-
-    if (!studentData) {
-       return buildResponse_({
-        status: "not found",
-        message: `❌ ID ${rawId.toUpperCase()} tidak terdaftar.`
-      });
-    }
-
-    // 5. Check Attendance in-memory/via Sheet (Fastest verification)
-    // Optimization: If attendance status is already cached, we can bypass spreadsheet cell reads!
-    // However, if the sheet gets manually altered, in-memory check might not reflect it.
-    // To balance speed and correctness, we read the specific status cell but bypass full lookups.
-    // Let's check the cached status if we implement checkins in cache, otherwise read cell.
-    const statusCell = sheet.getRange(studentData.r, topikCol);
+    // Attendance outcomes: ok | duplicate | not found | busy | error.
+    // "busy" means the lock was not acquired; the Vercel proxy turns it into a
+    // retryable HTTP 503, so the scan is retried instead of being lost.
     const lock = LockService.getScriptLock();
     if (!lock.tryLock(5000)) {
-      return buildResponse_({ status: "error", message: "Sistem sedang sibuk, silakan scan ulang." });
+      return buildResponse_({ status: "busy", message: "Sistem sedang sibuk, silakan scan ulang." });
     }
 
     try {
-      // ponytail: script-wide lock; revisit only if measured scan contention matters.
+      // The cached map stores row numbers. Rows move when the sheet is sorted
+      // or edited, so the row is verified before writing; a stale map is rebuilt.
+      let entry = getStudentMapEntry_(ss, sheet, false);
+      let studentData = entry.students[studentIdNormalized];
+      const rowMoved = studentData && !rowHoldsStudent_(sheet, studentData.r, studentIdNormalized);
+      // A student added since the map was built is not in it yet; rebuild at most
+      // once per STUDENT_MAP_MISS_REBUILD_MS_ so unknown IDs cannot keep the lock busy.
+      const missOnOldMap = !studentData && Date.now() - entry.builtAt > STUDENT_MAP_MISS_REBUILD_MS_;
+      if (rowMoved || missOnOldMap) {
+        entry = getStudentMapEntry_(ss, sheet, true);
+        studentData = entry.students[studentIdNormalized];
+      }
+      if (!studentData || !rowHoldsStudent_(sheet, studentData.r, studentIdNormalized)) {
+        return buildResponse_({
+          status: "not found",
+          message: `❌ ID ${studentIdDisplay} tidak terdaftar.`
+        });
+      }
+
+      const statusCell = sheet.getRange(studentData.r, topikCol);
       const currentValue = statusCell.getValue();
       if (currentValue === true || currentValue === "TRUE") {
         return buildResponse_({
           status: "duplicate",
-          studentId: rawId.toUpperCase(),
+          studentId: studentIdDisplay,
           name: studentData.n,
-          message: `Kode ${rawId.toUpperCase()} sudah absen sebelumnya.`
+          message: `Kode ${studentIdDisplay} sudah absen sebelumnya.`
         });
       }
 
-      // 6. Mark Attendance
       statusCell.setValue(true);
       SpreadsheetApp.flush();
+      // Photos are served by the authenticated /api/photo proxy, never from the sheet.
       return buildResponse_({
         status: "ok",
-        studentId: rawId.toUpperCase(),
+        studentId: studentIdDisplay,
         name: studentData.n,
-        image: studentData.i, // Retrieved from map/cache
         message: `✅ ${studentData.n} hadir ${headerName}`
       });
     } finally {
@@ -151,11 +125,52 @@ function doPost(e) {
     }
 
   } catch (err) {
+    console.error("doPost failed: " + err);
     return buildResponse_({
       status: "error",
-      message: "Internal: " + err.toString()
+      message: "Terjadi kesalahan pada server presensi."
     });
   }
+}
+
+const STUDENT_MAP_CACHE_KEY_ = "STUDENT_MAP_V2";
+const STUDENT_MAP_MISS_REBUILD_MS_ = 60 * 1000;
+const STUDENT_ID_COLUMN_ = 12; // Column L in Presensi and Data Siswa
+
+// Returns { builtAt, students: { normalizedId: { r: row, n: name } } }.
+// The cache only speeds up lookup; it never decides attendance on its own
+// (rows are re-verified with rowHoldsStudent_ before every write).
+function getStudentMapEntry_(ss, sheet, forceRebuild) {
+  let cache = null;
+  try {
+    cache = CacheService.getScriptCache();
+    if (!forceRebuild) {
+      const cachedData = cache.get(STUDENT_MAP_CACHE_KEY_);
+      const parsed = cachedData ? JSON.parse(cachedData) : null;
+      if (parsed && Number.isFinite(parsed.builtAt) && parsed.students
+          && typeof parsed.students === "object" && !Array.isArray(parsed.students)) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.log("Cache read failed: " + e.toString());
+  }
+
+  const entry = { builtAt: Date.now(), students: buildStudentMap_(ss, sheet) };
+  if (cache) {
+    try {
+      cache.put(STUDENT_MAP_CACHE_KEY_, JSON.stringify(entry), 21600);
+    } catch (e) {
+      console.log("Cache write failed: " + e.toString());
+    }
+  }
+  return entry;
+}
+
+function rowHoldsStudent_(sheet, row, studentIdNormalized) {
+  if (!row || row < 2) return false;
+  const value = sheet.getRange(row, STUDENT_ID_COLUMN_).getValue();
+  return String(value || "").trim().toLowerCase() === studentIdNormalized;
 }
 
 function getProfileCache_() {
@@ -322,35 +337,16 @@ function readStudentNamesFromSheets_(ss) {
  */
 function buildStudentMap_(ss, sheetPresensi) {
   const map = {};
-  
-  // 1. Read Presensi Data (Fast bulk read)
   const presensiData = sheetPresensi.getDataRange().getValues();
-  // Start from row 1 (skip header)
   for (let i = 1; i < presensiData.length; i++) {
-    const id = String(presensiData[i][11] || "").trim().toLowerCase(); // Column L (Index 11)
+    const id = String(presensiData[i][STUDENT_ID_COLUMN_ - 1] || "").trim().toLowerCase();
     if (id) {
       map[id] = {
-        r: i + 1, // Store 1-based row index
-        n: String(presensiData[i][1] || "").trim(), // Column B (Index 1)
-        i: "" // Image placeholder
+        r: i + 1, // 1-based row index
+        n: String(presensiData[i][1] || "").trim(), // Column B
       };
     }
   }
-
-  // 2. Read Data Siswa (for Images)
-  // Optimization: Only read if we have students
-  const sheetSiswa = ss.getSheetByName("Data Siswa");
-  if (sheetSiswa) {
-    const siswaData = sheetSiswa.getDataRange().getValues();
-    for (let k = 1; k < siswaData.length; k++) {
-      const sId = String(siswaData[k][11] || "").trim().toLowerCase(); // Column L
-      // Only add image if student exists in Presensi map
-      if (map[sId]) {
-        map[sId].i = siswaData[k][19]; // Column T (Index 19)
-      }
-    }
-  }
-
   return map;
 }
 
@@ -365,6 +361,7 @@ function doGet(e) {
     const cache = CacheService.getScriptCache();
     [
       "STUDENT_MAP_V1",
+      STUDENT_MAP_CACHE_KEY_,
       "PROFILE_NAMES_V1",
       "PROFILE_NAMES_STALE_V1",
       "PROFILE_FULL_V1",

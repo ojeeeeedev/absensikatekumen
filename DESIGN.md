@@ -9,7 +9,7 @@ Should feel:
 - Professional but not cold.
 - Dense enough for repeated work, with enough spacing to avoid mistakes.
 - Modern through typography, alignment, contrast, and interaction polish.
-- Consistent between scanner, profile, onboarding, modal, toast, and upload flows.
+- Consistent between scanner, profile, modal, toast, and upload flows.
 
 Should not feel:
 - Like a marketing landing page.
@@ -206,7 +206,6 @@ You can use these tools in this exact order if an animation is requested or need
 - Remove inline style only when it is visual and safe; do not move behavior-driving styles unless tested.
 - Update this file when adding a reusable UI pattern.
 - Use CSS variables for new colors, shadows, radii, and spacing.
-- Keep onboarding styling aligned with the same tokens.
 
 ## 13. AI Agent Instructions
 

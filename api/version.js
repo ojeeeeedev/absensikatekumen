@@ -20,6 +20,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ version: pkg.version });
   } catch (error) {
     console.error("Error reading version:", error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Version unavailable' });
   }
 }

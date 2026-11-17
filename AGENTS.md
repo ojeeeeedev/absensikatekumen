@@ -6,7 +6,7 @@ Mobile-first attendance system for the Catechumenate programme at St. Peter's Ca
 
 Flow:
 
-1. A facilitator signs in with a shared secret and receives a JWT.
+1. A facilitator signs in with a shared secret; the server sets the JWT as an `HttpOnly` `auth_token` cookie and returns only its expiry.
 2. The frontend scans a student QR code.
 3. A Vercel Node.js serverless function validates and proxies the request.
 4. Google Apps Script applies attendance rules and updates Google Sheets.
@@ -44,7 +44,7 @@ npx clasp push    # only when the user explicitly requests Apps Script deploymen
 
 Inspect `package.json` before using another script.
 
-Expected environment variables may include `AUTH_SECRET`, `JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_KEY`, `VERCEL_SCRIPT_MAP_JSON`, and `DASHBOARD_URL`.
+Environment variables read by the code: `AUTH_SECRET`, `JWT_SECRET`, `GAS_SECRET_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`, `VERCEL_SCRIPT_MAP_JSON`, `DASHBOARD_URL`, `DASHBOARD_PATH` (optional, middleware), `DAFTAR_URL` (registration redirect), and `PORT` (local Express only).
 
 - Never expose or commit secret values, credentials, private URLs, or `.env` files.
 - Preserve the class-code-to-GAS mapping in `VERCEL_SCRIPT_MAP_JSON`.
@@ -53,7 +53,7 @@ Expected environment variables may include `AUTH_SECRET`, `JWT_SECRET`, `SUPABAS
 
 ## Security invariants
 
-- Verify JWTs server-side for attendance and dashboard operations.
+- Verify JWTs server-side for attendance and dashboard operations. Keep the session cookie `HttpOnly; SameSite=Lax` (`Secure` on HTTPS) and never return the JWT in a response body.
 - Validate `studentId` and other external input at the trust boundary.
 - Keep Supabase buckets private and serve student images only through authenticated `/api/photo`.
 - Preserve `/api/reach` as the authenticated WhatsApp handoff. Do not rename it to a contact-specific route.
@@ -97,6 +97,26 @@ Use the global verification rules, then apply the relevant checks:
 - Apps Script: check its Vercel caller and test parsing, validation, and errors without production writes or deployment.
 - Supabase photos: confirm the bucket remains private, `/api/photo` remains required, unauthenticated access fails, and storage details stay hidden.
 - Routing: test public and protected routes, unauthorized access, redirect loops, and compatibility with `vercel.json`.
+
+## State machines
+
+The main flows are explicit state machines, documented where they live. Read the
+docblock before changing a flow:
+
+- Session (anonymous → authed → expired → logged out): `public/session.js`. Page scripts never see the JWT; they track only `sessionExpiresAt` in `localStorage`, shared by all tabs like the cookie. Logout is `POST /api/absensi {action:'logout'}`.
+- Scan queue items (pending → processing → success / duplicate / error, with
+  backoff and retry rules, shared safely across tabs): `ScanQueue` in `public/script.js`.
+- Attendance outcomes (`ok`, `duplicate`, `not found`, `busy`, `error`): `doPost`
+  in `apps-script/Code.js` and the proxy mapping in `api/absensi.js`
+  (`busy` becomes HTTP 503 so the client retries).
+- Photo upload (closed → picked → uploading → success / failed):
+  `public/profile-uploader.js`.
+- Class list loading (idle → loading → loaded / failed): `loadClasses` in
+  `public/profile.js`.
+
+`/api/absensi` forwards only `studentId` and `week` to Apps Script. Never
+spread the request body into a GAS payload; GAS also serves contact and roster
+actions.
 
 ## Known constraints
 

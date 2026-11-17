@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    verifyJwt(req);
+    verifyJwt(req, { allowCookie: true });
   } catch (e) {
     return res.status(401).json({ status: "error", message: "Unauthorized" });
   }

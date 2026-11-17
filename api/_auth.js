@@ -29,3 +29,24 @@ export function verifyJwt(req, { allowCookie = false } = {}) {
     throw Object.assign(new Error('Unauthorized'), { statusCode: 401 });
   }
 }
+
+// Session cookie: HttpOnly so page scripts (and any XSS) cannot read the JWT;
+// SameSite=Lax so cross-site POSTs never carry it; Secure on HTTPS (Vercel).
+const SESSION_COOKIE = 'auth_token';
+
+function isHttps(req) {
+  return String(req.headers?.['x-forwarded-proto'] || '').split(',')[0].trim() === 'https'
+    || Boolean(req.socket?.encrypted);
+}
+
+function cookieAttributes(req, maxAgeSeconds) {
+  return ['Path=/', `Max-Age=${maxAgeSeconds}`, 'HttpOnly', 'SameSite=Lax', ...(isHttps(req) ? ['Secure'] : [])].join('; ');
+}
+
+export function setSessionCookie(req, res, token, maxAgeSeconds) {
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${encodeURIComponent(token)}; ${cookieAttributes(req, maxAgeSeconds)}`);
+}
+
+export function clearSessionCookie(req, res) {
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; ${cookieAttributes(req, 0)}`);
+}

@@ -8,6 +8,10 @@ import {
   storageBaseNameForStudent,
 } from './_supabase-utils.js';
 
+// Versioned URLs (?v=) change whenever the photo changes, so the browser may
+// keep them privately for about one session. Unversioned URLs are never cached.
+const VERSIONED_PHOTO_CACHE = 'private, max-age=3600';
+
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return res.status(405).json({ status: 'error', message: `Method ${req.method} not allowed` });
@@ -53,6 +57,18 @@ export default async function handler(req, res) {
       return res.status(404).json({ status: 'error', message: 'Foto tidak ditemukan' });
     }
 
+    const cacheControl = String(req.query?.v || '').trim() ? VERSIONED_PHOTO_CACHE : 'private, no-store';
+
+    // HEAD only needs to know the photo exists; never download the image for it.
+    if (req.method === 'HEAD') {
+      const existing = requestedFilename ? await findStudentPhoto(supabase, bucketName, studentId) : photo;
+      if (!existing) return res.status(404).end();
+      res.setHeader('Content-Type', PHOTO_MIME_TYPES[existing.name.split('.').pop().toLowerCase()] || 'application/octet-stream');
+      res.setHeader('Cache-Control', cacheControl);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.status(200).end();
+    }
+
     let ext = photo.name.split('.').pop().toLowerCase();
     let { data, error } = await supabase.storage.from(bucketName).download(photo.name);
     if ((error || !data) && requestedFilename) {
@@ -67,9 +83,8 @@ export default async function handler(req, res) {
     }
 
     res.setHeader('Content-Type', PHOTO_MIME_TYPES[ext] || 'application/octet-stream');
-    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Cache-Control', cacheControl);
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    if (req.method === 'HEAD') return res.status(200).end();
 
     const buffer = Buffer.from(await data.arrayBuffer());
     return res.status(200).send(buffer);

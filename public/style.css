@@ -188,7 +188,7 @@ re-icon {
   color-scheme: dark;
   --slate-1: #181818;
   --slate-2: #242424;
-  --slate-3: #242424;
+  --slate-3: #2e2e2e;
   --slate-4: #272a2d;
   --slate-5: #2e3135;
   --slate-6: #363a3f;
@@ -2442,6 +2442,12 @@ a:focus-visible,
   .glass-container.state-scanning #scanning-panel {
     flex: 0 0 auto;
     min-height: auto;
+  }
+
+  /* 4px (spacing scale) instead of 6px keeps the scanner scroll-free on short
+     phones now that history cards carry a 2px semantic border. */
+  .glass-container.state-scanning .history-progress-container {
+    margin-bottom: var(--space-1);
   }
 
 }
