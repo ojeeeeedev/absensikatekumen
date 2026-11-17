@@ -177,6 +177,17 @@
     document.addEventListener('pointerdown', event => {
       if (!root.contains(event.target)) close();
     });
+    // Keyboard users leave with Tab: close when focus moves outside the combobox,
+    // so aria-expanded never claims an open popover the user has left. A blur
+    // with no new target only counts after Tab, so dismissing the iOS keyboard
+    // ("Done") keeps the list open.
+    let tabbing = false;
+    root.addEventListener('keydown', event => { tabbing = event.key === 'Tab'; });
+    root.addEventListener('focusout', event => {
+      const leftToElement = event.relatedTarget && !root.contains(event.relatedTarget);
+      if (leftToElement || (!event.relatedTarget && tabbing)) close();
+      tabbing = false;
+    });
 
     return { close, open, setItems, setValue };
   };

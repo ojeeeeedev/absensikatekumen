@@ -101,4 +101,29 @@ describe('/api/reach', () => {
     expect(JSON.stringify(res.body)).not.toContain(data.phone || '0812');
     expect(res.redirectUrl).toBeNull();
   });
+
+  it('renders a readable page instead of raw JSON when opened in a browser tab', async () => {
+    configure();
+    gasResult({ status: 'ok', phone: 'not-a-phone' });
+    const res = createMockResponse();
+
+    await handler(request({ headers: { cookie: `auth_token=${token()}`, accept: 'text/html,application/xhtml+xml' } }), res);
+
+    expect(res.statusCode).toBe(422);
+    expect(res.headers['Content-Type']).toMatch(/text\/html/);
+    expect(res.body).toContain('Format nomor WhatsApp tidak valid');
+    expect(res.body).toContain('href="/profile"');
+    expect(res.body).not.toContain('not-a-phone');
+  });
+
+  it('sends signed-out browser tabs back to login', async () => {
+    configure();
+    const res = createMockResponse();
+
+    await handler(request({ headers: { accept: 'text/html' } }), res);
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toContain('href="/"');
+    expect(res.body).toContain('Masuk kembali');
+  });
 });

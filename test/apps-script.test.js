@@ -16,13 +16,14 @@ const state = {
   cacheWriteError: false,
   cacheByteLength: null,
   sheetReadError: false,
+  presensiRows: null,
 };
 function load() {
   const cache = {
     get: vi.fn((key) => {
       if (state.cacheReadError) throw new Error('cache read failed');
       if (state.cacheValues.has(key)) return state.cacheValues.get(key);
-      return key === 'STUDENT_MAP_V1' ? state.cacheValue : null;
+      return key === 'STUDENT_MAP_V2' ? state.cacheValue : null;
     }),
     put: vi.fn((key, value) => {
       if (state.cacheWriteError) throw new Error('cache write failed');
@@ -33,13 +34,17 @@ function load() {
   const events = [];
   const lock = { tryLock: vi.fn(() => { events.push('tryLock'); return state.lockAcquired; }), releaseLock: vi.fn(() => events.push('releaseLock')) };
   const statusCell = { getValue: vi.fn(() => { events.push('getValue'); if (state.throwOnGet) throw new Error('cell read failed'); return state.currentValue; }), setValue: vi.fn(() => { events.push('setValue'); }) };
-  const presensiRows = [
+  const presensiRows = state.presensiRows || [
     ['', 'Name', '', '', '', '', '', '', '', '', '', 'Student ID'],
     ['', 'Ada', '', '', '', '', '', '', '', '', '', '1/SAB/2'],
   ];
   const sheet = {
     getLastColumn: () => 2,
-    getRange: vi.fn((row) => row === 1 ? { getValues: () => [['Name', 'Topik R1']] } : statusCell),
+    getRange: vi.fn((row, col) => {
+      if (row === 1) return { getValues: () => [['Name', 'Topik R1']] };
+      if (col === 12) return { getValue: () => presensiRows[row - 1]?.[11] ?? '' };
+      return statusCell;
+    }),
     getDataRange: vi.fn(() => {
       if (state.sheetReadError) throw new Error('sheet read failed');
       return { getValues: () => presensiRows };
@@ -55,11 +60,12 @@ const event = (extra = {}) => ({ postData: { contents: JSON.stringify({ api_secr
 describe('Apps Script GAS secret contract', () => {
   beforeEach(() => {
     state.secret = 'gas-secret';
+    state.presensiRows = null;
     state.currentValue = false;
     state.lockAcquired = true;
     state.throwOnGet = false;
     state.dataSiswaRows = null;
-    state.cacheValue = JSON.stringify({ '1/sab/2': { r: 2, n: 'Ada', i: '' } });
+    state.cacheValue = JSON.stringify({ builtAt: Date.now(), students: { '1/sab/2': { r: 2, n: 'Ada' } } });
     state.cacheValues = new Map();
     state.cacheServiceError = false;
     state.cacheReadError = false;
@@ -176,6 +182,7 @@ describe('Apps Script GAS secret contract', () => {
     expect(result.status).toBe('ok');
     expect(cache.remove.mock.calls.map(([key]) => key)).toEqual([
       'STUDENT_MAP_V1',
+      'STUDENT_MAP_V2',
       'PROFILE_NAMES_V1', 'PROFILE_NAMES_STALE_V1', 'PROFILE_FULL_V1', 'PROFILE_FULL_STALE_V1',
       'PROFILE_NAMES_V2', 'PROFILE_NAMES_STALE_V2', 'PROFILE_FULL_V2', 'PROFILE_FULL_STALE_V2',
     ]);
@@ -184,7 +191,39 @@ describe('Apps Script GAS secret contract', () => {
   it('rejects clear_cache when both the Script Property and incoming secret are absent', () => { state.secret = undefined; const { doGet, cache } = load(); const result = JSON.parse(doGet({ parameter: { action: 'clear_cache' } }).getContent()); expect(result.status).toBe('error'); expect(cache.remove).not.toHaveBeenCalled(); });
   it('acquires the lock before reading and writing the attendance cell', () => { const { doPost, events, lock, statusCell } = load(); const result = JSON.parse(doPost(event()).getContent()); expect(result.status).toBe('ok'); expect(lock.tryLock).toHaveBeenCalledWith(5000); expect(events).toEqual(['tryLock', 'getValue', 'setValue', 'flush', 'releaseLock']); expect(statusCell.setValue).toHaveBeenCalledWith(true); });
   it('returns duplicate after acquisition and releases the lock', () => { state.currentValue = true; const { doPost, events, lock, statusCell } = load(); const result = JSON.parse(doPost(event()).getContent()); expect(result.status).toBe('duplicate'); expect(events).toEqual(['tryLock', 'getValue', 'releaseLock']); expect(lock.releaseLock).toHaveBeenCalledTimes(1); expect(statusCell.setValue).not.toHaveBeenCalled(); });
-  it('returns a rescan error when lock acquisition times out without releasing', () => { state.lockAcquired = false; const { doPost, events, lock, statusCell } = load(); const result = JSON.parse(doPost(event()).getContent()); expect(result.status).toBe('error'); expect(result.message).toMatch(/scan|rescan/i); expect(events).toEqual(['tryLock']); expect(lock.releaseLock).not.toHaveBeenCalled(); expect(statusCell.setValue).not.toHaveBeenCalled(); });
+  it('returns a retryable busy status when lock acquisition times out without releasing', () => { state.lockAcquired = false; const { doPost, events, lock, statusCell } = load(); const result = JSON.parse(doPost(event()).getContent()); expect(result.status).toBe('busy'); expect(result.message).toMatch(/scan|rescan/i); expect(events).toEqual(['tryLock']); expect(lock.releaseLock).not.toHaveBeenCalled(); expect(statusCell.setValue).not.toHaveBeenCalled(); });
+  it('rebuilds a stale cached row index instead of writing to the wrong student', () => {
+    state.presensiRows = [
+      ['', 'Name', '', '', '', '', '', '', '', '', '', 'Student ID'],
+      ['', 'Budi', '', '', '', '', '', '', '', '', '', '1/SAB/9'],
+      ['', 'Ada', '', '', '', '', '', '', '', '', '', '1/SAB/2'],
+    ];
+    const { doPost, sheet, statusCell, cache } = load();
+    const result = JSON.parse(doPost(event()).getContent());
+    expect(result).toMatchObject({ status: 'ok', name: 'Ada' });
+    const writtenRow = sheet.getRange.mock.calls.find(([row, col]) => row !== 1 && col === 2)[0];
+    expect(writtenRow).toBe(3);
+    expect(statusCell.setValue).toHaveBeenCalledWith(true);
+    expect(JSON.parse(cache.put.mock.calls.at(-1)[1]).students['1/sab/2'].r).toBe(3);
+  });
+  it('finds a student added after the map was cached', () => {
+    state.cacheValue = JSON.stringify({ builtAt: Date.now() - 5 * 60 * 1000, students: { '1/sab/9': { r: 2, n: 'Budi' } } });
+    const { doPost } = load();
+    expect(JSON.parse(doPost(event()).getContent()).status).toBe('ok');
+  });
+  it('does not rebuild a freshly built map for an unknown ID (keeps the lock short)', () => {
+    state.cacheValue = JSON.stringify({ builtAt: Date.now(), students: { '1/sab/9': { r: 2, n: 'Budi' } } });
+    const { doPost, sheet } = load();
+    expect(JSON.parse(doPost(event()).getContent()).status).toBe('not found');
+    expect(sheet.getDataRange).not.toHaveBeenCalled();
+  });
+  it('does not return the raw sheet image or internal error text', () => {
+    const ok = JSON.parse(load().doPost(event()).getContent());
+    expect(ok.image).toBeUndefined();
+    state.throwOnGet = true;
+    const failed = JSON.parse(load().doPost(event()).getContent());
+    expect(failed.message).not.toMatch(/Internal|cell read failed/);
+  });
   it('releases an acquired lock when the cell operation throws', () => { state.throwOnGet = true; const { doPost, events, lock } = load(); const result = JSON.parse(doPost(event()).getContent()); expect(result.status).toBe('error'); expect(events).toEqual(['tryLock', 'getValue', 'releaseLock']); expect(lock.releaseLock).toHaveBeenCalledTimes(1); });
   it('returns only the selected student contact from the exact No.HP header', () => {
     state.dataSiswaRows = [

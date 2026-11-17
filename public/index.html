@@ -52,13 +52,25 @@
     <main id="app-container" class="glass-container">
       <script>
         (function() {
-          const cookieToken = document.cookie.split('; ').find(value => value.startsWith('auth_token='))?.split('=')[1];
-          const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
-          if (cookieToken && !sessionStorage.getItem('authToken')) {
-            sessionStorage.setItem('authToken', decodeURIComponent(cookieToken));
-          }
+          // First-paint guess only; script.js onload makes the real session decision.
+          const isUnexpired = (token) => {
+            try {
+              const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+              const exp = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='))).exp;
+              return Number.isFinite(exp) && exp > Date.now() / 1000;
+            } catch (e) {
+              return false;
+            }
+          };
+          // The session token is an HttpOnly cookie; only its expiry is readable.
+          // Tokens from older releases (sessionStorage or script cookie) still count.
+          const rawCookie = document.cookie.split('; ').find(value => value.startsWith('auth_token='))?.split('=')[1];
+          const legacyToken = sessionStorage.getItem('authToken') || (rawCookie ? decodeURIComponent(rawCookie) : null);
+          const sessionExpiresAt = Number(localStorage.getItem('sessionExpiresAt'));
+          const signedIn = (Number.isFinite(sessionExpiresAt) && sessionExpiresAt > Date.now() / 1000)
+            || (legacyToken && isUnexpired(legacyToken));
           const container = document.currentScript.parentElement;
-          if (sessionToken) {
+          if (signedIn) {
             container.classList.add('state-scanning');
             const savedWeek = localStorage.getItem('selectedWeek');
             if (!savedWeek) {
@@ -351,6 +363,5 @@
     <script src="profile-uploader.js"></script>
     <script src="profile.js"></script>
     <script src="script.js"></script>
-    <script src="onboarding.js" defer></script>
   </body>
 </html>

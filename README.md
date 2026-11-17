@@ -107,10 +107,12 @@ Configure the following environment variables in your Vercel project or local `.
 AUTH_SECRET=your_shared_login_password
 JWT_SECRET=your_random_jwt_secret_string
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_supabase_anon_key
+SUPABASE_KEY=your_supabase_service_role_key   # server-only; never ship to the browser
 VERCEL_SCRIPT_MAP_JSON={"SAB":"https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"}
 GAS_SECRET_KEY=replace_with_the_same_secret_used_by_apps_script
 DASHBOARD_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=sharing
+DAFTAR_URL=https://forms.example/registration    # target of /daftar
+# DASHBOARD_PATH=/api/dashboard                  # optional middleware rewrite target
 ```
 
 _Note: `VERCEL_SCRIPT_MAP_JSON` maps class codes (e.g., "SAB") to their respective Google Apps Script URLs._

@@ -53,11 +53,14 @@ describe('/api/upload-photo multipart validation', () => {
   const originalJwtSecret = process.env.JWT_SECRET;
   const originalSupabaseUrl = process.env.SUPABASE_URL;
   const originalSupabaseKey = process.env.SUPABASE_KEY;
+  const originalScriptMap = process.env.VERCEL_SCRIPT_MAP_JSON;
 
   afterEach(() => {
     process.env.JWT_SECRET = originalJwtSecret;
     process.env.SUPABASE_URL = originalSupabaseUrl;
     process.env.SUPABASE_KEY = originalSupabaseKey;
+    if (originalScriptMap === undefined) delete process.env.VERCEL_SCRIPT_MAP_JSON;
+    else process.env.VERCEL_SCRIPT_MAP_JSON = originalScriptMap;
     vi.clearAllMocks();
     list.mockResolvedValue({ data: [], error: null });
     remove.mockResolvedValue({ error: null });
@@ -68,6 +71,7 @@ describe('/api/upload-photo multipart validation', () => {
     process.env.JWT_SECRET = JWT_SECRET;
     process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_KEY = 'service-key';
+    process.env.VERCEL_SCRIPT_MAP_JSON = JSON.stringify({ SAB: 'https://gas.example/exec' });
   }
 
   it('parses a valid student field and file without altering file bytes', () => {
@@ -179,4 +183,27 @@ describe('/api/upload-photo multipart validation', () => {
     log.mockRestore();
   });
 
+  it('refuses classes without a configured attendance deployment before touching storage', async () => {
+    configureEnvironment();
+    const req = streamRequest(multipartBody({ studentId: '2025/ZZZ/001', file: Buffer.from('photo') }));
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('does not leak storage error details to the client', async () => {
+    configureEnvironment();
+    list.mockResolvedValue({ data: [], error: null });
+    upload.mockResolvedValue({ error: { message: 'bucket pasfoto-sab quota exceeded' } });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const res = createMockResponse();
+
+    await handler(streamRequest(multipartBody({ studentId: '2025/SAB/001', file: Buffer.from('photo') })), res);
+
+    expect(res.body.message).toBe('Gagal mengunggah foto');
+    log.mockRestore();
+  });
 });

@@ -1,6 +1,5 @@
 
 
-const getProfileToken = () => sessionStorage.getItem('authToken') || getCookie('auth_token');
 
 let allStudents = [];
 let activeProfileId = null;
@@ -126,6 +125,7 @@ function updateProfilePhoto(studentId, image) {
     height: 40,
   });
 
+  item.querySelector('.student-photo-large-frame')?.setAttribute('aria-label', `Ganti foto ${studentName}`);
   updateProfilePhotoFrame(item.querySelector('.student-photo-large-frame'), {
     image,
     studentId: targetId,
@@ -137,13 +137,29 @@ function updateProfilePhoto(studentId, image) {
   });
 }
 
+// Photos uploaded in this session win over roster responses that were already
+// in flight when the upload finished (those still carry the old image).
+const uploadedPhotoOverrides = new Map();
+
+function classCodeOfStudent(studentId) {
+  return normalizeClassCode(String(studentId || '').split('/')[1]);
+}
+
+function withUploadedPhoto(student) {
+  const override = uploadedPhotoOverrides.get(String(student.studentId));
+  return override ? { ...student, image: override } : student;
+}
+
 const PhotoUploader = createProfilePhotoUploader({
-  getToken: getProfileToken,
-  findStudent: studentId => allStudents.find(student => student.studentId === studentId),
   onUploaded: ({ studentId, image } = {}) => {
-    invalidateSelectedStudentCache();
+    if (!studentId || !image) return;
+    uploadedPhotoOverrides.set(String(studentId), image);
+    invalidateStudentCache(classCodeOfStudent(studentId));
+    const student = allStudents.find(candidate => String(candidate.studentId) === String(studentId));
+    if (student) student.image = image;
     updateProfilePhoto(studentId, image);
   },
+  onAuthExpired: () => handleProfileAuthExpired(),
 });
 
 // ============================================================
@@ -178,8 +194,12 @@ function rememberStudentResponse(classCode, view, data) {
   studentDataCache.set(key, entry);
 }
 
-function invalidateSelectedStudentCache() {
-  studentDataCache.delete(normalizeClassCode(document.getElementById('class-selector')?.value));
+// Drops cached and in-flight roster data for one class so the next load is fresh.
+function invalidateStudentCache(classCode) {
+  const key = normalizeClassCode(classCode);
+  studentCacheRevision += 1;
+  studentDataCache.delete(key);
+  studentRequests.delete(key);
 }
 
 window.clearProfileStudentCache = function clearProfileStudentCache() {
@@ -187,8 +207,17 @@ window.clearProfileStudentCache = function clearProfileStudentCache() {
   studentLoadId += 1;
   studentDataCache.clear();
   studentRequests.clear();
+  uploadedPhotoOverrides.clear();
   activeStudentLoadClass = '';
 };
+
+// 401 from any profile request: the session is over, never fall back to cached roster data.
+class ProfileAuthError extends Error {}
+
+function handleProfileAuthExpired() {
+  window.expireSession?.();
+  window.setAppState?.(0);
+}
 
 function getStudentRequest(classCode, view = '') {
   const cacheView = view || 'full';
@@ -198,7 +227,10 @@ function getStudentRequest(classCode, view = '') {
   const revision = studentCacheRevision;
   if (view) params.set('view', view);
   return fetch(`/api/students?${params.toString()}`)
-    .then(response => response.json())
+    .then(response => {
+      if (response.status === 401) throw new ProfileAuthError('Unauthorized');
+      return response.json();
+    })
     .then(data => {
       if (revision === studentCacheRevision) rememberStudentResponse(classCode, cacheView, data);
       return data;
@@ -233,6 +265,7 @@ async function resolveStudentResponse(request, classCode, view) {
       return { data, stale: data.meta?.rosterSource === 'stale-cache' };
     }
   } catch (error) {
+    if (error instanceof ProfileAuthError) throw error;
     requestError = error;
   }
   const fallback = getCachedStudentResponse(classCode, view, STUDENT_CACHE_STALE_MS);
@@ -251,22 +284,33 @@ function showStudentList() {
   }
 }
 
+// Class list states: idle -> loading -> loaded | failed. A failed load is
+// retried the next time the profile view opens (see initializeProfileView).
+let classesState = 'idle';
+
 async function loadClasses() {
+  if (classesState === 'loading' || classesState === 'loaded') return;
+  classesState = 'loading';
   try {
-    const res = await fetch('/api/classes', {
-      headers: {
-        'Authorization': `Bearer ${getProfileToken()}`
-      }
-    });
-    const data = await res.json();
-    if (data.status === 'ok') {
+    // Authenticated by the HttpOnly session cookie.
+    const res = await fetch('/api/classes');
+    if (res.status === 401) {
+      classesState = 'idle';
+      handleProfileAuthExpired();
+      return;
+    }
+    const data = await res.json().catch(() => null);
+    if (data?.status === 'ok') {
       classCombobox.setItems(data.classes, 'Kelas tidak tersedia');
+      classesState = 'loaded';
     } else {
+      classesState = 'failed';
       classCombobox.setItems([], 'Gagal memuat kelas');
-      showToast(data.message || "Gagal memuat daftar kelas", "error");
+      showToast("Gagal memuat daftar kelas", "error");
     }
   } catch (e) {
     console.error("Error loading classes:", e);
+    classesState = 'failed';
     classCombobox.setItems([], 'Gagal memuat kelas');
     showToast("Gagal memuat daftar kelas", "error");
   }
@@ -304,7 +348,7 @@ async function loadStudents(classCode) {
   if (loader) loader.style.display = 'flex';
 
   if (freshFullRoster) {
-    allStudents = freshFullRoster.students.map(student => ({ ...student, detailsLoaded: true }));
+    allStudents = freshFullRoster.students.map(student => withUploadedPhoto({ ...student, detailsLoaded: true }));
     if (infoBar) infoBar.style.display = 'flex';
     renderStudents(allStudents);
     filterStudents();
@@ -341,12 +385,22 @@ async function loadStudents(classCode) {
         if (loadId !== studentLoadId) return;
         if (result.stale) showStaleWarning();
         mergeStudentEnrichment(result.data.students);
-        filterStudents();
+        // Details arriving must not close the profile the user already opened.
+        filterStudents({ preserveOpenProfile: true });
       })
       .catch(error => {
         if (loadId !== studentLoadId) return;
+        if (error instanceof ProfileAuthError) return handleProfileAuthExpired();
         console.error('Error loading student details:', error);
-        showToast('Gagal memuat detail katekumen', 'error');
+        markStudentDetailsUnavailable();
+        showToast('Gagal memuat detail katekumen', 'error', {
+          actionLabel: 'Coba lagi',
+          duration: 8000,
+          onAction: () => {
+            invalidateStudentCache(normalizedClassCode);
+            loadStudents(normalizedClassCode);
+          }
+        });
       })
       .finally(() => {
         if (loadId === studentLoadId) activeStudentLoadClass = '';
@@ -354,15 +408,20 @@ async function loadStudents(classCode) {
     return;
   } catch (e) {
     if (loadId !== studentLoadId) return;
+    if (e instanceof ProfileAuthError) {
+      activeStudentLoadClass = '';
+      return handleProfileAuthExpired();
+    }
     try {
       const fallbackResult = await resolveStudentResponse(request.full, normalizedClassCode, 'full');
       if (fallbackResult.stale) showStaleWarning();
-      allStudents = fallbackResult.data.students.map(student => ({ ...student, detailsLoaded: true }));
+      allStudents = fallbackResult.data.students.map(student => withUploadedPhoto({ ...student, detailsLoaded: true }));
       if (infoBar) infoBar.style.display = 'flex';
       renderStudents(allStudents);
       filterStudents();
       showStudentList();
     } catch (fallbackError) {
+      if (fallbackError instanceof ProfileAuthError) return handleProfileAuthExpired();
       console.error('Error loading students:', fallbackError);
       showToast('Gagal mengambil data katekumen', 'error');
     } finally {
@@ -495,7 +554,9 @@ function reconcileStudentGrouping() {
   if (groupCount) groupCount.textContent = `Nonaktif (${inactiveItems.length})`;
   if (!inactiveItems.length) {
     groupHeader?.classList.remove('open');
-    groupWrapper.querySelector('.inactive-group-body')?.classList.remove('open');
+    const groupBody = groupWrapper.querySelector('.inactive-group-body');
+    groupBody?.classList.remove('open');
+    if (groupBody) groupBody.inert = true;
     groupHeader?.setAttribute('aria-expanded', 'false');
   }
 }
@@ -504,7 +565,7 @@ function mergeStudentEnrichment(enrichedStudents) {
   const currentIds = allStudents.map(student => String(student.studentId));
   const enrichedIds = enrichedStudents.map(student => String(student.studentId));
   if (currentIds.length !== enrichedIds.length || currentIds.some(id => !enrichedIds.includes(id))) {
-    allStudents = enrichedStudents.map(student => ({ ...student, detailsLoaded: true }));
+    allStudents = enrichedStudents.map(student => withUploadedPhoto({ ...student, detailsLoaded: true }));
     renderStudents(allStudents);
     return;
   }
@@ -513,13 +574,14 @@ function mergeStudentEnrichment(enrichedStudents) {
   allStudents = allStudents.map(student => {
     const enrichment = byId.get(String(student.studentId));
     return enrichment
-      ? { ...student, ...enrichment, inactive: isInactive(enrichment), detailsLoaded: true }
+      ? withUploadedPhoto({ ...student, ...enrichment, inactive: isInactive(enrichment), detailsLoaded: true })
       : student;
   });
 
+  const itemsById = new Map([...document.querySelectorAll('.student-accordion-item')]
+    .map(candidate => [candidate.dataset.profileId, candidate]));
   allStudents.forEach(student => {
-    const item = [...document.querySelectorAll('.student-accordion-item')]
-      .find(candidate => candidate.dataset.profileId === String(student.studentId));
+    const item = itemsById.get(String(student.studentId));
     if (!item) return;
 
     const header = item.querySelector('.student-accordion-header');
@@ -620,7 +682,6 @@ function renderStudents(students) {
     const cleanup = () => {
       clearTimeout(fallbackTimer);
       body.removeEventListener('transitionend', onEnd);
-      body.removeEventListener('transitioncancel', onCancel);
       transitionCleanups.delete(body);
     };
     const complete = () => {
@@ -630,12 +691,13 @@ function renderStudents(students) {
     const onEnd = event => {
       if (event.target === body && event.propertyName === 'grid-template-rows') complete();
     };
-    const onCancel = event => {
-      if (event.target === body && event.propertyName === 'grid-template-rows') cleanup();
-    };
+    // transitioncancel is deliberately not a terminal event: closing a profile
+    // while it is still opening cancels the *opening* transition, and that event
+    // arrives after this listener is attached. Treating it as the end left the
+    // body stuck in "closing". The fallback timer always completes the wait, and
+    // the revision check drops completions superseded by a newer interaction.
     transitionCleanups.set(body, cleanup);
     body.addEventListener('transitionend', onEnd);
-    body.addEventListener('transitioncancel', onCancel);
     fallbackTimer = setTimeout(complete, fallbackMs);
   };
 
@@ -885,7 +947,11 @@ function renderStudents(students) {
       event.preventDefault();
       handlePhotoFrameAction(event);
     });
-    photoInput?.addEventListener('change', () => choosePhoto(photoInput.files?.[0]));
+    photoInput?.addEventListener('change', () => {
+      const file = photoInput.files?.[0];
+      photoInput.value = ''; // Allow choosing the same file again after a cancel.
+      choosePhoto(file);
+    });
     photoFrame?.addEventListener('dragenter', (event) => {
       event.preventDefault();
       openPhotoMenu();
@@ -1045,6 +1111,9 @@ function renderStudents(students) {
 
   const groupBody = document.createElement('div');
   groupBody.className = 'inactive-group-body';
+  groupBody.id = 'inactive-group-body';
+  groupBody.inert = true; // Collapsed rows must not be reachable by Tab or screen readers.
+  groupHeader.setAttribute('aria-controls', groupBody.id);
 
   const groupInner = document.createElement('div');
   groupInner.className = 'inactive-group-inner';
@@ -1060,10 +1129,12 @@ function renderStudents(students) {
     if (isOpen) {
       groupHeader.classList.remove('open');
       groupBody.classList.remove('open');
+      groupBody.inert = true;
       groupHeader.setAttribute('aria-expanded', 'false');
     } else {
       groupHeader.classList.add('open');
       groupBody.classList.add('open');
+      groupBody.inert = false;
       groupHeader.setAttribute('aria-expanded', 'true');
     }
   };
@@ -1091,7 +1162,20 @@ function renderStudents(students) {
   updateProfileScrollTail();
 }
 
-function filterStudents() {
+// Details failed to load: replace "Memuat..." with a settled, honest state.
+function markStudentDetailsUnavailable() {
+  document.querySelectorAll('.student-accordion-body[aria-busy="true"]').forEach(body => {
+    body.querySelectorAll('[data-detail-field]').forEach(element => { element.textContent = 'Tidak tersedia'; });
+    body.setAttribute('aria-busy', 'false');
+  });
+  document.querySelectorAll('.student-accordion-item [aria-busy="true"]').forEach(element => {
+    element.setAttribute('aria-busy', 'false');
+  });
+}
+
+// preserveOpenProfile: re-apply the search filter without collapsing the open
+// profile or scrolling (used when background data arrives).
+function filterStudents({ preserveOpenProfile = false } = {}) {
   const searchInput = document.getElementById('search-input');
   const listContainer = document.getElementById('students-list');
   if (!searchInput || !listContainer) return;
@@ -1103,8 +1187,10 @@ function filterStudents() {
   let visibleCount = 0;
   let visibleInactiveCount = 0;
 
-  listContainer.scrollTop = 0;
-  cancelProfileInteraction();
+  if (!preserveOpenProfile) {
+    listContainer.scrollTop = 0;
+    cancelProfileInteraction();
+  }
 
   listContainer.querySelectorAll('.student-accordion-item').forEach((item) => {
     const matches = scope
@@ -1120,6 +1206,7 @@ function filterStudents() {
 
     const body = item.querySelector('.student-accordion-body');
     const header = item.querySelector('.student-accordion-header');
+    if (preserveOpenProfile && matches) return;
     if (body?.classList.contains('expanded') || body?.classList.contains('closing')) {
       if (item.dataset.profileId === activeProfileId) activeProfileId = null;
       body.classList.remove('expanded', 'closing');
@@ -1137,9 +1224,12 @@ function filterStudents() {
     const groupHeader = inactiveGroup.querySelector('.inactive-group-header');
     const groupBody = inactiveGroup.querySelector('.inactive-group-body');
     const groupCount = inactiveGroup.querySelector('.inactive-group-count');
-    groupHeader?.classList.remove('open');
-    groupBody?.classList.remove('open');
-    groupHeader?.setAttribute('aria-expanded', 'false');
+    if (!preserveOpenProfile) {
+      groupHeader?.classList.remove('open');
+      groupBody?.classList.remove('open');
+      if (groupBody) groupBody.inert = true;
+      groupHeader?.setAttribute('aria-expanded', 'false');
+    }
     if (groupCount) groupCount.textContent = `Nonaktif (${visibleInactiveCount})`;
   }
 
@@ -1151,7 +1241,10 @@ function filterStudents() {
 let profileInitialized = false;
 
 window.initializeProfileView = function initializeProfileView() {
-  if (profileInitialized) return;
+  if (profileInitialized) {
+    if (classesState === 'failed' || classesState === 'idle') loadClasses();
+    return;
+  }
   profileInitialized = true;
   initTheme();
   PhotoUploader.init();
@@ -1186,7 +1279,7 @@ window.initializeProfileView = function initializeProfileView() {
   
   const searchInput = document.getElementById('search-input');
   if (searchInput) {
-    searchInput.addEventListener('input', filterStudents);
+    searchInput.addEventListener('input', () => filterStudents());
   }
 };
 

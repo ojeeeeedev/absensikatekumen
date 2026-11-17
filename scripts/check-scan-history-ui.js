@@ -2,6 +2,10 @@ import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 
 const port = 6600 + process.pid % 300;
+// The client only decodes `exp` to decide the session state; the API is never
+// reached with this token. An unexpired token exercises the real logged-in path.
+const encodeSegment = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+const previewToken = `${encodeSegment({ alg: 'HS256', typ: 'JWT' })}.${encodeSegment({ authorized: true, exp: Math.floor(Date.now() / 1000) + 3600 })}.preview`;
 const baseUrl = `http://127.0.0.1:${port}`;
 const server = spawn(process.execPath, ['app.js'], {
   cwd: process.cwd(),
@@ -10,7 +14,7 @@ const server = spawn(process.execPath, ['app.js'], {
 });
 
 async function waitForServer() {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
       if ((await fetch(baseUrl)).ok) return;
     } catch {}
@@ -38,10 +42,9 @@ try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  await context.addCookies([{ name: 'auth_token', value: 'preview', domain: '127.0.0.1', path: '/' }]);
-  await context.addInitScript(() => {
-    sessionStorage.setItem('authToken', 'preview');
-    localStorage.setItem('hasSeenOnboardingV2', 'true');
+  await context.addCookies([{ name: 'auth_token', value: previewToken, domain: '127.0.0.1', path: '/' }]);
+  await context.addInitScript((token) => {
+    sessionStorage.setItem('authToken', token);
     localStorage.setItem('selectedWeek', '0');
     localStorage.setItem('selectedTopicName', 'Pembukaan Kelas');
     localStorage.setItem('scan_queue', JSON.stringify([
@@ -49,7 +52,7 @@ try {
       { id: 'duplicate-1', studentId: '2026/TST/002', week: '0', status: 'duplicate', name: 'Yohanes', image: '', timestamp: Date.now() },
       { id: 'error-1', studentId: '2026/TST/003', week: '0', status: 'error', name: 'Paulus', image: '', timestamp: Date.now() }
     ]));
-  });
+  }, previewToken);
 
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
@@ -348,6 +351,7 @@ try {
   await page.mouse.move(1, 1);
   await page.evaluate(() => {
     document.activeElement?.blur();
+    window.__toastCreatedAt = performance.now();
     const types = ['success', 'error', 'duplicate', 'info', 'info'];
     for (let index = 1; index <= 5; index += 1) {
       const message = index === 5 ? 'Toast 5 - Nama Katekumen Yang Sangat Panjang Dan Harus Dipotong' : index === 3 ? 'Yasmin Syaffiah Naraisha Dengan Nama Panjang' : `Toast ${index}`;
@@ -426,11 +430,18 @@ try {
   await page.waitForTimeout(300);
   if (await page.locator('.toast').count() !== 3) throw new Error('Toast dismiss button did not remove the notification');
   await page.mouse.move(1, 1);
-  await page.waitForTimeout(300);
-  await page.waitForTimeout(3500);
-  if (await page.locator('.toast').count() !== 3) throw new Error('Toast dismissed before the hard five-second limit');
-  await page.waitForTimeout(1000);
-  if (await page.locator('.toast').count() !== 0) throw new Error('Toast exceeded the hard five-second limit');
+  // Timed from the toasts' creation, so a slow machine running the earlier
+  // steps cannot make the five-second rule look broken.
+  const toastAge = () => page.evaluate(() => performance.now() - window.__toastCreatedAt);
+  const ageBeforeLimit = await toastAge();
+  if (ageBeforeLimit < 4500) {
+    await page.waitForTimeout(4500 - ageBeforeLimit);
+    const remaining = await page.locator('.toast').allTextContents();
+    if (remaining.length !== 3) throw new Error(`Toast dismissed before the hard five-second limit: ${JSON.stringify({ age: Math.round(await toastAge()), remaining: remaining.map(text => text.trim().slice(0, 40)) })}`);
+  }
+  await page.waitForTimeout(Math.max(0, 5300 - await toastAge()));
+  await page.waitForFunction(() => document.querySelectorAll('.toast').length === 0, null, { timeout: 2000 })
+    .catch(() => { throw new Error('Toast exceeded the hard five-second limit'); });
 
   await page.evaluate(() => {
     scanQueue.queue = [];

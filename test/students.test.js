@@ -140,4 +140,38 @@ describe('/api/students', () => {
     expect(res.body.message).toBe('Server GAS authentication is not configured');
     expect(global.fetch).not.toHaveBeenCalled();
   });
+
+  it('returns no photo URLs when the bucket listing fails instead of one /api/photo call per student', async () => {
+    configure();
+    process.env.SUPABASE_URL = 'https://storage.example';
+    process.env.SUPABASE_KEY = 'storage-key';
+    list.mockResolvedValue({ data: null, error: { message: 'Bucket not found' } });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'ok', students: [{ studentId: '1/SAB/2', name: 'Ada' }] })) });
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'SAB' } }), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.students[0].image).toBe('');
+  });
+
+  it('does not forward internal GAS error text', async () => {
+    configure();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'error', message: 'Internal: Exception at Code.js:412' })) });
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'SAB' } }), res);
+    expect(res.statusCode).toBe(502);
+    expect(res.body.message).not.toMatch(/Internal|Code\.js/);
+  });
+
+  it('versions roster photo URLs with the stored file timestamp', async () => {
+    configure();
+    process.env.SUPABASE_URL = 'https://storage.example';
+    process.env.SUPABASE_KEY = 'storage-key';
+    list.mockResolvedValue({ data: [{ name: '1-SAB-2.jpg', updated_at: '2026-11-17T10:00:00.000Z' }], error: null });
+    global.fetch = vi.fn().mockResolvedValue({ text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'ok', students: [{ studentId: '1/SAB/2', name: 'Ada' }] })) });
+    const res = createMockResponse();
+    await handler(createMockRequest({ method: 'GET', headers: { authorization: `Bearer ${token()}` }, query: { classCode: 'SAB' } }), res);
+    expect(res.body.students[0].image).toBe(`/api/photo?studentId=1%2FSAB%2F2&v=${Date.parse('2026-11-17T10:00:00.000Z')}&filename=1-SAB-2.jpg`);
+  });
 });

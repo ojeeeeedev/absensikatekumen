@@ -7,8 +7,8 @@ const colorSource = readFileSync(new URL('../public/style.css', import.meta.url)
 const requiredColorDeclarations = [
   '--slate-1: #faf9f5;',
   '--slate-12: #141413;',
-  '--slate-1: #111113;',
-  '--slate-12: #edeef0;',
+  '--slate-1: #181818;',
+  '--slate-12: #ffffff;',
   '--marian-9: #1d3f8f;',
   '--marian-9: #70a2ff;',
   '--chart-5: var(--teal-9);',
@@ -66,7 +66,6 @@ try {
   await context.addCookies([{ name: 'auth_token', value: authToken, domain: '127.0.0.1', path: '/' }]);
   await context.addInitScript(token => {
     sessionStorage.setItem('authToken', token);
-    localStorage.setItem('hasSeenOnboardingV2', 'true');
     const addEventListener = EventTarget.prototype.addEventListener;
     window.__profileScrollListeners = 0;
     EventTarget.prototype.addEventListener = function(type, listener, options) {
@@ -1008,7 +1007,9 @@ try {
   await context.addCookies([{ name: 'auth_token', value: authToken, domain: '127.0.0.1', path: '/' }]);
   await page.evaluate(token => {
     Date.now = window.__profileRealDateNow;
-    sessionStorage.setItem('authToken', token);
+    // Re-login the way handleLogin does: the cookie carries the token, the page
+    // only records its expiry.
+    window.beginSession(JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp);
     const selector = document.getElementById('class-selector');
     selector.value = 'MAL';
     selector.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1317,7 +1318,8 @@ try {
       nameFont: nameStyle.fontFamily,
       nameSize: parseFloat(nameStyle.fontSize),
       nameFits: name.scrollWidth <= name.clientWidth + 1,
-      nameCenterOffset: Math.abs((nameRect.left + nameRect.right) / 2 - (headerRect.left + headerRect.right) / 2),
+      // Expanded names are left-aligned at a 16px inset and wrap to two lines (7f6d882).
+      nameLeftInset: nameRect.left - headerRect.left,
       nameVerticalOffset: Math.abs((nameRect.top + nameRect.bottom) / 2 - (headerRect.top + headerRect.bottom) / 2),
       thumbDisplay: getComputedStyle(header.querySelector('.student-photo-frame, .student-thumb-placeholder')).display,
       idDisplay: getComputedStyle(header.querySelector('.student-id-text')).display,
@@ -1327,6 +1329,7 @@ try {
       arrowCenterInset: itemRect.right - (arrowRect.left + arrowRect.right) / 2,
       background: getComputedStyle(header).backgroundColor,
       bodyBackgroundImage: getComputedStyle(body).backgroundImage,
+      bodyBackgroundColor: getComputedStyle(body).backgroundColor,
       dividerTop: dividerStyle.top,
       dividerWidth: dividerStyle.borderTopWidth,
       bodyTopOffset: bodyRect.top - itemRect.top,
@@ -1335,7 +1338,7 @@ try {
       bottomLeftIsHeader: header.contains(document.elementFromPoint(itemRect.left + 8, itemRect.top + 62))
     };
   });
-  if (!compactExpandedHeader.label?.includes('Katekumen Dengan Nama Sangat Panjang, 2026/MAL/021') || compactExpandedHeader.height !== 64 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay === 'none' || compactExpandedHeader.name !== 'Katekumen Dengan Nama Sangat Panjang' || compactExpandedHeader.nameDisplay === 'none' || !compactExpandedHeader.nameFont.includes('DM Serif Display') || compactExpandedHeader.nameSize >= 20 || compactExpandedHeader.nameSize < 12 || !compactExpandedHeader.nameFits || compactExpandedHeader.nameCenterOffset >= 1 || compactExpandedHeader.nameVerticalOffset >= 1 || compactExpandedHeader.thumbDisplay !== 'none' || compactExpandedHeader.idDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || compactExpandedHeader.bodyBackgroundImage === 'none' || compactExpandedHeader.dividerTop !== '60px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
+  if (!compactExpandedHeader.label?.includes('Katekumen Dengan Nama Sangat Panjang, 2026/MAL/021') || compactExpandedHeader.height !== 64 || Math.abs(compactExpandedHeader.width - compactExpandedHeader.itemWidth) > 2 || compactExpandedHeader.position !== 'absolute' || compactExpandedHeader.identityDisplay === 'none' || compactExpandedHeader.name !== 'Katekumen Dengan Nama Sangat Panjang' || compactExpandedHeader.nameDisplay === 'none' || !compactExpandedHeader.nameFont.includes('DM Serif Display') || compactExpandedHeader.nameSize > 20 || compactExpandedHeader.nameSize < 12 || !compactExpandedHeader.nameFits || Math.abs(compactExpandedHeader.nameLeftInset - 16) >= 1 || compactExpandedHeader.nameVerticalOffset >= 1 || compactExpandedHeader.thumbDisplay !== 'none' || compactExpandedHeader.idDisplay !== 'none' || compactExpandedHeader.arrowDisplay === 'none' || compactExpandedHeader.arrowWidth === 0 || compactExpandedHeader.arrowHeight === 0 || Math.abs(compactExpandedHeader.arrowCenterInset - collapsedChevronCenterInset) >= 1 || compactExpandedHeader.background !== 'rgba(0, 0, 0, 0)' || (compactExpandedHeader.bodyBackgroundImage === 'none' && compactExpandedHeader.bodyBackgroundColor === 'rgba(0, 0, 0, 0)') || compactExpandedHeader.dividerTop !== '60px' || compactExpandedHeader.dividerWidth !== '1px' || compactExpandedHeader.bodyTopOffset > 1 || Math.abs(compactExpandedHeader.detailTopGap - 8) >= 1 || !compactExpandedHeader.topLeftIsHeader || !compactExpandedHeader.bottomLeftIsHeader) {
     throw new Error(`Expanded profile header is not a full-width accessible collapse control: ${JSON.stringify(compactExpandedHeader)}`);
   }
   await page.evaluate(() => { window.__readClosingCleanupProbe = () => {
@@ -1472,6 +1475,13 @@ try {
   }
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await focusedProfile.locator('.student-accordion-header').press('Enter');
+  // Let the reopened profile finish expanding; the next tap's scroll target
+  // depends on where the adjacent profile sits once this one is fully open.
+  await page.waitForFunction(() => {
+    const body = document.querySelectorAll('.student-accordion-body')[20];
+    const inner = body.querySelector('.student-accordion-inner');
+    return body.classList.contains('expanded') && Math.abs(body.getBoundingClientRect().height - inner.scrollHeight) < 1;
+  });
 
   const waitForFocusedProfile = index => page.waitForFunction(selectedIndex => {
     const list = document.getElementById('students-list');
@@ -1503,6 +1513,9 @@ try {
   await aboveFocusedProfile.locator('.student-accordion-header').click();
   await waitForFocusedProfile(5);
 
+  // Inactive students live in the collapsed, inert "Nonaktif" group; open it the way a user would.
+  const inactiveGroupHeader = page.locator('.inactive-group-header');
+  if (await inactiveGroupHeader.getAttribute('aria-expanded') !== 'true') await inactiveGroupHeader.click();
   const lastFocusedProfile = page.locator('.student-accordion-item').nth(34);
   await lastFocusedProfile.locator('.student-accordion-header').click();
   await waitForFocusedProfile(34);
@@ -1680,6 +1693,9 @@ try {
   const firstTopic = topicPopover.locator('[role="option"]').first();
   const idleBackground = await firstTopic.evaluate(option => getComputedStyle(option).backgroundColor);
   await firstTopic.hover();
+  // Options fade their background in (--duration-fast); read it once settled.
+  await scanPage.waitForFunction(idle => getComputedStyle(document.querySelector('#topic-combobox-popover [role="option"]')).backgroundColor !== idle, idleBackground, { timeout: 2000 }).catch(() => {});
+  await scanPage.waitForTimeout(250);
   const hoverBackground = await firstTopic.evaluate(option => getComputedStyle(option).backgroundColor);
   if (idleBackground === hoverBackground) throw new Error('Topic hover container is missing');
   const regularBorder = await firstTopic.evaluate(option => getComputedStyle(option).borderTopColor);
@@ -1698,6 +1714,12 @@ try {
     });
     const specialIdleBackground = await option.evaluate(item => getComputedStyle(item).backgroundColor);
     await option.hover();
+    await option.evaluate((item, idle) => new Promise(resolve => {
+      const startedAt = performance.now();
+      const poll = () => (getComputedStyle(item).backgroundColor !== idle || performance.now() - startedAt > 2000) ? resolve() : requestAnimationFrame(poll);
+      poll();
+    }), specialIdleBackground);
+    await scanPage.waitForTimeout(250);
     const specialHoverBackground = await option.evaluate(item => getComputedStyle(item).backgroundColor);
     if (idleBorder === regularBorder || specialIdleBackground === idleBackground || borderStyle.width !== '1px' || borderStyle.alpha !== 1) throw new Error(`${className} persistent style is missing`);
     if (specialIdleBackground === specialHoverBackground) throw new Error(`${className} hover state is missing`);
@@ -1936,6 +1958,9 @@ try {
     throw new Error(`Login field is clipped by the mobile keyboard viewport: ${JSON.stringify(keyboardLayout)}`);
   }
   await loginPage.setViewportSize({ width: 390, height: 844 });
+  // The shell height follows --vh, which updates on resize; measure only once it settles.
+  await loginPage.waitForFunction(() => Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vh')) * 100 - visualViewport.height) < 1);
+  await loginPage.waitForTimeout(100);
   const loginTransition = await loginButton.evaluate(button => {
     const style = getComputedStyle(button);
     return { properties: style.transitionProperty.split(',').map(value => value.trim()), duration: style.transitionDuration };

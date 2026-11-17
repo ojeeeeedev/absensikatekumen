@@ -85,6 +85,13 @@ export function storageBaseNameForStudent(studentId) {
   return normalized.replace(/\//g, '-');
 }
 
+// A version that changes whenever the stored object changes, so a versioned
+// /api/photo URL can be cached without ever showing an outdated photo.
+export function photoVersion(file) {
+  const updated = Date.parse(file?.updated_at || file?.created_at || '');
+  return Number.isFinite(updated) ? String(updated) : '';
+}
+
 export function photoUrlForStudent(studentId, version = '', filename = '') {
   const params = new URLSearchParams({ studentId });
   if (version) params.set('v', version);

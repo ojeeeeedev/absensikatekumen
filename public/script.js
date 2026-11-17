@@ -6,6 +6,13 @@ let viewfinderDimTimer = null;
 const LAST_QR_SCAN_KEY = 'last_qr_scan';
 const SCAN_REPEAT_WINDOW_MS = 5000;
 const VIEWFINDER_INACTIVE_MS = 800;
+// Mirrors classCodeFromStudentId() in api/_supabase-utils.js.
+const STUDENT_ID_PATTERN = /^[A-Za-z0-9_-]+\/[A-Za-z0-9]{2,5}\/[A-Za-z0-9_-]+$/;
+const INVALID_QR_FEEDBACK_MS = 2500;
+const QUEUE_REQUEST_TIMEOUT_MS = 20000;
+const QUEUE_MAX_SERVER_ATTEMPTS = 6;
+const QUEUE_RETRY_DELAYS_MS = [2000, 5000, 10000, 20000, 30000];
+let lastInvalidQrFeedbackAt = 0;
 
 window.scrollCarousel = function(direction) {
   const listContainer = document.getElementById('queue-list');
@@ -57,6 +64,7 @@ function updateNavButtons(listContainer, renderItemsLength) {
 
 
 let scannerStartPromise = null;
+const CAMERA_LOADER_HTML = '<app-spinner class="app-spinner spinner" aria-hidden="true"></app-spinner><span>Memuat Kamera...</span>';
 
 // --- STATE MANAGEMENT ---
 // State 0: Auth, State 1: Selection, State 2: Scanning
@@ -67,6 +75,9 @@ window.setAppState = async function(state) {
   
   if (state === 0) {
     container.classList.add('state-auth');
+    // Nothing from the authenticated session may stay open over the login screen.
+    window.closeStudentModal?.();
+    window.closeProfileViewUI?.();
     await stopScanner();
     if (nav) nav.style.display = 'none';
     setViewVisibility('scan');
@@ -185,7 +196,7 @@ function animateContainerResize(fromHeight, animate) {
 }
 
 async function applyAppView(view, { historyMode = 'push', focus = true } = {}) {
-  if (!sessionStorage.getItem('authToken')) {
+  if (!window.hasActiveSession?.()) {
     await setAppState(0);
     return;
   }
@@ -298,8 +309,23 @@ window.hideLoginError = function() {
 }
 
 // --- AUTHENTICATION ---
+let loginInFlight = false;
+
+function restoreSavedTopic() {
+  const savedWeek = localStorage.getItem('selectedWeek');
+  const savedTopicName = localStorage.getItem('selectedTopicName');
+  if (savedWeek && savedTopicName) {
+    selectedWeek = savedWeek;
+    topicComboboxLarge?.setValue(savedWeek);
+    topicComboboxActive?.setValue(savedWeek);
+  }
+}
+
 window.handleLogin = async function() {
-  const secret = document.getElementById('login-input').value;
+  if (loginInFlight) return;
+  const input = document.getElementById('login-input');
+  const loginButton = document.getElementById('login-btn');
+  const secret = input.value;
   const errorBox = document.getElementById('login-error-box');
   const successIcon = document.getElementById('login-success-icon');
   const loginLoader = document.getElementById('login-loader');
@@ -311,93 +337,194 @@ window.handleLogin = async function() {
   }
 
   window.hideLoginError();
+  loginInFlight = true;
+  if (loginButton) loginButton.disabled = true;
+  input.setAttribute('aria-busy', 'true');
 
+  const showLoginError = (message) => {
+    errorBox.textContent = message;
+    errorBox.style.display = 'block';
+    input.style.animation = 'shake 0.4s';
+    setTimeout(() => input.style.animation = '', 400);
+  };
+  const release = () => {
+    loginInFlight = false;
+    if (loginButton) loginButton.disabled = false;
+    input.removeAttribute('aria-busy');
+  };
+
+  let response;
+  let data;
   try {
-    const response = await fetch("/api/absensi", {
+    response = await fetch("/api/absensi", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: 'login', secret }),
     });
-    const data = await response.json();
-
-    if (data.status === 'ok' && data.token) {
-      successIcon.style.display = 'block';
-      
-      setTimeout(() => {
-        successIcon.style.display = 'none';
-        loginLoader.style.display = 'flex';
-
-        setTimeout(() => {
-          sessionStorage.setItem('authToken', data.token);
-          // Set the cookie for server-side middleware and profile page access
-          document.cookie = `auth_token=${data.token}; path=/; max-age=3600; SameSite=Lax`;
-          loginLoader.style.display = 'none';
-          
-          initializeApp();
-          window.navigateToAppView('scan', { historyMode: 'replace', focus: false });
-
-          // Safe trigger for onboarding
-          if (typeof window.checkOnboarding === 'function') {
-            window.checkOnboarding();
-          }
-        }, 250);
-      }, 800);
-    } else {
-      errorBox.textContent = data.message || 'Login gagal.';
-      errorBox.style.display = 'block';
-      document.getElementById('login-input').style.animation = 'shake 0.4s';
-      setTimeout(() => document.getElementById('login-input').style.animation = '', 400);
-    }
+    data = await response.json().catch(() => null);
   } catch (e) {
     console.error("Login request failed:", e);
-    errorBox.textContent = 'Error koneksi ke server.';
-    errorBox.style.display = 'block';
+    showLoginError('Tidak ada koneksi. Periksa jaringan lalu coba lagi.');
+    release();
+    return;
   }
-}
 
+  if (!(response.ok && data?.status === 'ok' && window.beginSession(data.expiresAt))) {
+    const message = response.status === 401 ? (data?.message || 'Password salah')
+      : response.status === 429 ? 'Terlalu banyak percobaan. Tunggu sebentar.'
+      : 'Server sedang bermasalah. Coba lagi nanti.';
+    showLoginError(message);
+    release();
+    return;
+  }
+
+  // Clear the shared secret so it is not left in the field (or shown) later.
+  input.value = '';
+  input.type = 'password';
+  successIcon.style.display = 'block';
+
+  setTimeout(() => {
+    successIcon.style.display = 'none';
+    loginLoader.style.display = 'flex';
+
+    setTimeout(() => {
+      loginLoader.style.display = 'none';
+      window.checkTopicExpiry?.();
+      initializeApp();
+      restoreSavedTopic();
+      window.navigateToAppView('scan', { historyMode: 'replace', focus: false });
+      release();
+    }, 250);
+  }, 800);
+}
 
 
 // --- BACKGROUND SCAN QUEUE ENGINE ---
 /**
- * Persists scans in `scan_queue` and processes the oldest pending item first.
- * Pending items survive reloads; 401 pauses processing for a new login, while
- * network, 429, and 5xx failures remain pending for retry. Completed history is
- * retained for the UI and trimmed by clearOldHistory().
+ * Persists scans in `scan_queue` and processes the oldest eligible pending item.
+ *
+ * Item states: pending -> processing -> success | duplicate | error
+ *   - No token: processing pauses until the next login.
+ *   - 401: item returns to pending, session expires, login screen shows.
+ *   - Network failure or timeout: item returns to pending, the whole queue
+ *     waits (backoff) because connectivity is shared by every item.
+ *   - 5xx / 429 / busy: only that item backs off (nextAttemptAt), so one broken
+ *     class deployment cannot block other scans. After
+ *     QUEUE_MAX_SERVER_ATTEMPTS it becomes an error and the user rescans.
+ *   - Other 4xx or a GAS error/not-found: error with the server's message.
+ * A single timer (retryTimer) drives retries. Completed history is retained
+ * for the UI and trimmed by clearOldHistory().
+ *
+ * Several tabs share `scan_queue`: save() merges storage first (newest
+ * `updatedAt` wins, removed ids stay removed), the storage event mirrors other
+ * tabs' scans, and a Web Lock lets only one tab send at a time.
  */
 class ScanQueue {
   constructor() {
-    try {
-      this.queue = JSON.parse(localStorage.getItem('scan_queue') || '[]');
-    } catch (e) {
-      console.error("Failed to read localStorage:", e);
-      this.queue = [];
-    }
-
-    // Self-healing: Reset any stuck 'processing' status back to 'pending' on load
-    let modified = false;
-    this.queue.forEach(item => {
-      if (item.status === 'processing') {
-        item.status = 'pending';
-        modified = true;
-      }
-    });
-    if (modified) this.save();
+    this.queue = this.readStoredQueue();
+    // Cross-tab bookkeeping: what storage held at our last sync, a snapshot of
+    // each item as last synced (to detect local edits), and ids we removed.
+    this.lastStoredIds = new Set(this.queue.map(item => item.id));
+    this.snapshots = new Map();
+    this.removedIds = new Set();
+    this.snapshotAll();
 
     this.isProcessing = false;
-    const initialPending = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
-    this.totalInBatch = initialPending;
+    this.retryTimer = null;
+    this.offlineNotified = false;
+    this.healStaleProcessing();
     this.cleanExpiredItems();
     this.expireTimer = setInterval(() => this.cleanExpiredItems(), 15000);
+
+    // Another tab changed the shared queue: show its scans here as well.
+    window.addEventListener('storage', (event) => {
+      if (event.key !== 'scan_queue') return;
+      this.mergeStored();
+      this.snapshotAll();
+      this.render();
+    });
+  }
+
+  readStoredQueue() {
+    try {
+      const stored = JSON.parse(localStorage.getItem('scan_queue') || '[]');
+      return Array.isArray(stored) ? stored : [];
+    } catch (e) {
+      console.error("Failed to read localStorage:", e);
+      return [];
+    }
+  }
+
+  serialize(item) {
+    const { updatedAt: _updatedAt, ...rest } = item;
+    return JSON.stringify(rest);
+  }
+
+  snapshotAll() {
+    this.snapshots = new Map(this.queue.map(item => [item.id, this.serialize(item)]));
+  }
+
+  isDirty(item) {
+    return this.snapshots.get(item.id) !== this.serialize(item);
+  }
+
+  // Merges other tabs' writes into this.queue in place, so references held by
+  // in-flight work (e.g. the item being sent) stay valid. Local edits win.
+  mergeStored() {
+    const stored = this.readStoredQueue();
+    const storedIds = new Set(stored.map(item => item.id));
+    const localById = new Map(this.queue.map(item => [item.id, item]));
+    // Removed by another tab (e.g. dismissed or trimmed) and untouched here.
+    this.queue = this.queue.filter(item =>
+      !(this.lastStoredIds.has(item.id) && !storedIds.has(item.id) && !this.isDirty(item)));
+    for (const storedItem of stored) {
+      if (this.removedIds.has(storedItem.id)) continue;
+      const local = localById.get(storedItem.id);
+      if (!local) {
+        this.queue.push(storedItem);
+      } else if ((storedItem.updatedAt || 0) > (local.updatedAt || 0) && !this.isDirty(local)) {
+        Object.assign(local, storedItem);
+      }
+    }
+    this.queue.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    this.lastStoredIds = storedIds;
   }
 
   save() {
+    const now = Date.now();
+    this.queue.forEach(item => { if (this.isDirty(item)) item.updatedAt = now; });
+    const currentIds = new Set(this.queue.map(item => item.id));
+    this.snapshots.forEach((_, id) => { if (!currentIds.has(id)) this.removedIds.add(id); });
+
+    this.mergeStored();
     this.clearOldHistory(); // Slice first
+    const keptIds = new Set(this.queue.map(item => item.id));
+    currentIds.forEach(id => { if (!keptIds.has(id)) this.removedIds.add(id); });
     try {
       localStorage.setItem('scan_queue', JSON.stringify(this.queue));
+      this.lastStoredIds = keptIds;
     } catch (e) {
       console.error("Failed to write localStorage:", e);
     }
+    this.snapshotAll();
     this.render();
+  }
+
+  // An item stays 'processing' only while some tab is sending it. One older
+  // than a request timeout was abandoned (tab closed or reloaded mid-request);
+  // it may already be in the Sheet, so a later "duplicate" means "recorded".
+  healStaleProcessing() {
+    const staleBefore = Date.now() - QUEUE_REQUEST_TIMEOUT_MS - 5000;
+    let healed = false;
+    this.queue.forEach(item => {
+      if (item.status === 'processing' && !(item.processingStartedAt > staleBefore)) {
+        item.status = 'pending';
+        item.mayHaveReachedServer = true;
+        delete item.processingStartedAt;
+        healed = true;
+      }
+    });
+    if (healed) this.save();
   }
 
   dismiss(id) {
@@ -418,6 +545,7 @@ class ScanQueue {
 
   restore(item, index) {
     if (!item || this.queue.some(existing => existing.id === item.id)) return false;
+    this.removedIds.delete(item.id);
     this.queue.splice(Math.min(index, this.queue.length), 0, item);
     this.save();
     return true;
@@ -432,11 +560,16 @@ class ScanQueue {
     } catch {
       localStorage.removeItem(LAST_QR_SCAN_KEY);
     }
-    if (lastScan?.studentId === studentId && lastScan.expiresAt > timestamp) {
+    if (lastScan?.studentId === studentId && lastScan.week === week && lastScan.expiresAt > timestamp) {
       return false;
     }
+    const alreadyQueued = this.queue.some(item =>
+      item.studentId === studentId && item.week === week &&
+      (item.status === 'pending' || item.status === 'processing'));
+    if (alreadyQueued) return false;
+
     const expiresAt = timestamp + SCAN_REPEAT_WINDOW_MS;
-    localStorage.setItem(LAST_QR_SCAN_KEY, JSON.stringify({ studentId, expiresAt }));
+    localStorage.setItem(LAST_QR_SCAN_KEY, JSON.stringify({ studentId, week, expiresAt }));
     setTimeout(() => {
       try {
         const current = JSON.parse(localStorage.getItem(LAST_QR_SCAN_KEY) || 'null');
@@ -459,12 +592,6 @@ class ScanQueue {
     };
 
     this.queue.unshift(item); // Add to the top of list
-    const pendingCount = this.queue.filter(q => q.status === 'pending' || q.status === 'processing').length;
-    if (this.totalInBatch === 0 || this.totalInBatch < pendingCount) {
-      this.totalInBatch = pendingCount;
-    } else {
-      this.totalInBatch += 1;
-    }
     this.save();
     
     // Trigger immediate sequential processing loop
@@ -472,141 +599,207 @@ class ScanQueue {
     return true;
   }
 
+  scheduleProcess(delayMs) {
+    clearTimeout(this.retryTimer);
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      this.process();
+    }, Math.max(0, delayMs));
+  }
+
+  // Called when connectivity returns: retry everything now.
+  resumeNow() {
+    this.queue.forEach(item => { if (item.status === 'pending') delete item.nextAttemptAt; });
+    this.scheduleProcess(0);
+  }
+
+  retryDelay(item) {
+    const step = Math.min(Math.max((item.attempts || 1) - 1, 0), QUEUE_RETRY_DELAYS_MS.length - 1);
+    return QUEUE_RETRY_DELAYS_MS[step];
+  }
+
+  deferItem(item, message, { mayHaveReachedServer = true } = {}) {
+    const delayMs = this.retryDelay(item);
+    item.status = 'pending';
+    delete item.processingStartedAt;
+    item.errorMsg = message;
+    item.nextAttemptAt = Date.now() + delayMs;
+    if (mayHaveReachedServer) item.mayHaveReachedServer = true;
+    this.save();
+    return delayMs;
+  }
+
+  failItem(item, message) {
+    item.status = 'error';
+    delete item.processingStartedAt;
+    item.errorMsg = message;
+    delete item.nextAttemptAt;
+    showToast(message, 'error', { badge: `Gagal · Topik ${item.week}` });
+    const container = document.getElementById('app-container');
+    if (container && container.classList.contains('state-scanning')) {
+      triggerVisualFlash('error');
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    }
+  }
+
+  notifyOffline() {
+    if (this.offlineNotified) return;
+    this.offlineNotified = true;
+    showToast('Koneksi terputus. Pindaian disimpan dan dikirim otomatis.', 'info', { duration: 5000 });
+  }
+
+  imageFor(item, data) {
+    const localMatch = this.queue.find(other => other.studentId === item.studentId && other.image);
+    return data.image || (localMatch ? localMatch.image : '');
+  }
+
+  // Only one tab sends at a time (Web Locks); the others pick up its results
+  // through the storage event and retry shortly in case it stops.
   async process() {
     if (this.isProcessing) return;
+    if (!navigator.locks?.request) return this.processNext();
+    return navigator.locks.request('scan-queue-sender', { ifAvailable: true }, async (lock) => {
+      if (!lock) {
+        this.scheduleProcess(1500);
+        return;
+      }
+      await this.processNext();
+    });
+  }
 
-    // Find the oldest pending item
-    const pendingItem = [...this.queue].reverse().find(item => item.status === 'pending');
+  async processNext() {
+    if (this.isProcessing) return;
+
+    if (!window.hasActiveSession?.()) {
+      // Logged out: keep items pending until the next login calls process().
+      this.updateBanner();
+      return;
+    }
+
+    this.mergeStored();
+    this.snapshotAll();
+    this.healStaleProcessing();
+    const now = Date.now();
+    const pendingItems = this.queue.filter(item => item.status === 'pending');
+    if (pendingItems.length === 0) {
+      this.updateBanner();
+      return;
+    }
+
+    // Oldest first, skipping items that are backing off.
+    const pendingItem = [...pendingItems].reverse().find(item => !(item.nextAttemptAt > now));
     if (!pendingItem) {
-      this.isProcessing = false;
+      const nextAt = Math.min(...pendingItems.map(item => item.nextAttemptAt));
+      this.scheduleProcess(nextAt - now);
       this.updateBanner();
       return;
     }
 
     this.isProcessing = true;
     pendingItem.status = 'processing';
+    pendingItem.processingStartedAt = Date.now();
+    pendingItem.attempts = (pendingItem.attempts || 0) + 1;
     this.save();
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), QUEUE_REQUEST_TIMEOUT_MS);
+    let response;
+    let data;
     try {
-      const token = sessionStorage.getItem('authToken');
-      const response = await fetch("/api/absensi", {
+      response = await fetch("/api/absensi", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          "Authorization": `Bearer ${token}` 
-        },
+        // The HttpOnly session cookie authenticates this same-origin request.
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId: pendingItem.studentId, week: pendingItem.week }),
+        signal: controller.signal,
       });
-
-      if (!response.ok) {
-        // Insert this check in process() immediately after checking response status:
-        if (response.status === 401) {
-          pendingItem.status = 'pending';
-          this.isProcessing = false;
-          this.save();
-          window.expireSession?.();
-          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-          triggerVisualFlash('error');
-          if (typeof setAppState === 'function') setAppState(0);
-          return; // Stop queue loop
-        }
-
-        // Transient server errors (5xx) or rate limits (429) should be retried.
-        if (response.status >= 500 || response.status === 429) {
-          pendingItem.status = 'pending';
-          pendingItem.errorMsg = `HTTP ${response.status} (Menunggu retry)`;
-          this.isProcessing = false;
-          this.save();
-          // Trigger retry after 5 seconds
-          setTimeout(() => this.process(), 5000);
-          return; // Stop current loop
-        } else {
-          // Permanent client errors (e.g. 400, 404)
-          pendingItem.status = 'error';
-          pendingItem.errorMsg = `HTTP ${response.status}`;
-          
-          showToast(pendingItem.errorMsg || 'Gagal sinkronisasi', 'error', {
-            badge: `Gagal · Topik ${pendingItem.week}`
-          });
-
-          triggerVisualFlash('error');
-        }
-      } else {
-        const data = await response.json();
-        
-        if (data.status === "ok") {
-          pendingItem.status = 'success';
-          pendingItem.name = data.name;
-          const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
-          pendingItem.image = data.image || (localMatch ? localMatch.image : '');
-          
-          showToast(data.name || 'Katekumen', 'success', {
-            badge: `Hadir · Topik ${pendingItem.week}`
-          });
-
-          const container = document.getElementById('app-container');
-          if (container && container.classList.contains('state-scanning')) {
-            triggerVisualFlash('success');
-          }
-          if (navigator.vibrate) navigator.vibrate(200);
-        } else if (data.status === "duplicate") {
-          pendingItem.status = 'duplicate';
-          pendingItem.name = data.name || 'Presensi Sudah Tercatat';
-          const localMatch = this.queue.find(item => item.studentId === pendingItem.studentId && item.image);
-          pendingItem.image = data.image || (localMatch ? localMatch.image : '');
-          
-          showToast(data.name || 'Katekumen', 'duplicate', {
-            badge: `Duplikat · Topik ${pendingItem.week}`
-          });
-
-          const container = document.getElementById('app-container');
-          if (container && container.classList.contains('state-scanning')) {
-            triggerVisualFlash('duplicate');
-          }
-          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        } else {
-          pendingItem.status = 'error';
-          pendingItem.errorMsg = data.message || 'Gagal sinkronisasi';
-          
-          showToast(pendingItem.errorMsg || 'Gagal sinkronisasi', 'error', {
-            badge: `Gagal · Topik ${pendingItem.week}`
-          });
-
-          const container = document.getElementById('app-container');
-          if (container && container.classList.contains('state-scanning')) {
-            triggerVisualFlash('error');
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-          }
-        }
-      }
+      data = await response.json().catch(() => null);
     } catch (error) {
+      // Offline, DNS failure, or timeout: connectivity is shared, so the whole queue waits.
       console.error("Queue sync network error:", error);
-      pendingItem.status = 'pending'; // Revert back to pending to retry when online
-      this.save();
-      
+      clearTimeout(timeout);
       this.isProcessing = false;
-      this.updateBanner();
-      setTimeout(() => this.process(), 5000);
-      return; // Stop processing loop until back online
+      const delayMs = this.deferItem(pendingItem, 'Menunggu koneksi');
+      this.notifyOffline();
+      this.scheduleProcess(delayMs);
+      return;
+    }
+    clearTimeout(timeout);
+    this.isProcessing = false;
+    this.offlineNotified = false;
+
+    if (response.status === 401) {
+      pendingItem.status = 'pending';
+      delete pendingItem.processingStartedAt;
+      this.save();
+      window.expireSession?.();
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      triggerVisualFlash('error');
+      if (typeof setAppState === 'function') setAppState(0);
+      return; // Resumes from handleLogin.
     }
 
-    this.isProcessing = false;
+    const serverFailed = response.status >= 500 || response.status === 429 || (response.ok && !data);
+    if (serverFailed) {
+      if (pendingItem.attempts >= QUEUE_MAX_SERVER_ATTEMPTS) {
+        this.failItem(pendingItem, 'Server tidak merespons. Silakan pindai ulang.');
+        this.save();
+      } else {
+        // A busy answer means nothing was written; anything else may have been.
+        this.deferItem(pendingItem, 'Menunggu server', { mayHaveReachedServer: data?.status !== 'busy' });
+      }
+      this.scheduleProcess(300); // Other items continue while this one backs off.
+      return;
+    }
+
+    if (!response.ok) {
+      this.failItem(pendingItem, data?.message || 'Gagal sinkronisasi');
+    } else if (data.status === "ok" || (data.status === "duplicate" && pendingItem.mayHaveReachedServer)) {
+      // A "duplicate" for an item whose earlier attempt may have been written
+      // is this scan's own record, not a second scan.
+      pendingItem.status = 'success';
+      delete pendingItem.processingStartedAt;
+      pendingItem.name = data.name;
+      pendingItem.image = this.imageFor(pendingItem, data);
+      pendingItem.errorMsg = '';
+
+      showToast(data.name || 'Katekumen', 'success', {
+        badge: `Hadir · Topik ${pendingItem.week}`
+      });
+
+      const container = document.getElementById('app-container');
+      if (container && container.classList.contains('state-scanning')) {
+        triggerVisualFlash('success');
+      }
+      if (navigator.vibrate) navigator.vibrate(200);
+    } else if (data.status === "duplicate") {
+      pendingItem.status = 'duplicate';
+      delete pendingItem.processingStartedAt;
+      pendingItem.name = data.name || 'Presensi Sudah Tercatat';
+      pendingItem.image = this.imageFor(pendingItem, data);
+      pendingItem.errorMsg = '';
+
+      showToast(data.name || 'Katekumen', 'duplicate', {
+        badge: `Duplikat · Topik ${pendingItem.week}`
+      });
+
+      const container = document.getElementById('app-container');
+      if (container && container.classList.contains('state-scanning')) {
+        triggerVisualFlash('duplicate');
+      }
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    } else {
+      this.failItem(pendingItem, data.message || 'Gagal sinkronisasi');
+    }
+
     this.save();
-    
-    // Continue processing remaining items in queue
-    setTimeout(() => this.process(), 500);
+    this.scheduleProcess(300);
   }
 
   updateBanner() {
     const pendingCount = this.queue.filter(item => item.status === 'pending' || item.status === 'processing').length;
     const progressBar = document.querySelector('.segmented-progress-bar');
     
-    if (pendingCount === 0) {
-      this.totalInBatch = 0;
-    } else if (this.totalInBatch < pendingCount) {
-      this.totalInBatch = pendingCount;
-    }
-
     if (progressBar) {
       const isLoading = pendingCount > 0;
       progressBar.classList.toggle('is-loading', isLoading);
@@ -945,10 +1138,18 @@ async function handleScan(decodedText) {
 
   let originalStudentId;
   try {
-    originalStudentId = safeAtob(decodedText);
-  } catch (e) {
+    originalStudentId = safeAtob(decodedText).trim();
+  } catch {
+    originalStudentId = null;
+  }
+  if (!originalStudentId || !STUDENT_ID_PATTERN.test(originalStudentId)) {
+    // The decoder fires ~30 times a second while a bad code is in view.
+    const now = Date.now();
+    if (now - lastInvalidQrFeedbackAt < INVALID_QR_FEEDBACK_MS) return;
+    lastInvalidQrFeedbackAt = now;
     if (navigator.vibrate) navigator.vibrate([100, 50]);
     triggerVisualFlash('error');
+    showToast('QR tidak valid. Gunakan kartu QR katekumen.', 'error');
     return;
   }
 
@@ -975,6 +1176,12 @@ async function startScanner() {
     }
   };
 
+  const loader = document.getElementById("camera-loader");
+  if (loader) {
+    loader.innerHTML = CAMERA_LOADER_HTML;
+    loader.style.display = "flex";
+  }
+
   html5QrcodeScanner = new Html5Qrcode("reader", /* verbose= */ false);
   scannerStartPromise = html5QrcodeScanner.start(
     { facingMode: "environment" },
@@ -992,10 +1199,32 @@ async function startScanner() {
     html5QrcodeScanner = null; // Reset reference so retry can be attempted
     const loader = document.getElementById("camera-loader");
     if (loader) {
-      loader.innerHTML = '<div style="color:var(--status-duplicate-text); text-align:center; padding:10px;">Izin kamera ditolak<br>atau kamera tidak tersedia</div>';
+      const denied = /NotAllowed|Permission/i.test(String(err?.name || err));
+      const message = denied
+        ? 'Izin kamera ditolak.<br>Izinkan akses kamera di pengaturan browser.'
+        : 'Kamera tidak tersedia<br>atau sedang dipakai aplikasi lain.';
+      loader.innerHTML = `<div class="camera-error" role="alert" style="color:var(--status-duplicate-text); text-align:center; padding:10px;">${message}<br><button type="button" class="camera-retry-btn" style="margin-top:12px; min-height:44px; padding:0 18px; border-radius:999px; border:1px solid currentColor; background:transparent; color:inherit; font:inherit; cursor:pointer;">Coba lagi</button></div>`;
+      loader.querySelector('.camera-retry-btn')?.addEventListener('click', () => startScanner());
     }
   });
 }
+
+// Release the camera while the tab is hidden; resume when it returns to the scan view.
+function shouldScannerRun() {
+  const container = document.getElementById('app-container');
+  return document.visibilityState === 'visible'
+    && !!selectedWeek
+    && !!container?.classList.contains('state-scanning')
+    && (document.body.dataset.activeView || 'scan') === 'scan';
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    stopScanner();
+  } else if (shouldScannerRun()) {
+    startScanner();
+  }
+});
 
 async function stopScanner() {
   if (html5QrcodeScanner) {
@@ -1090,33 +1319,32 @@ window.onload = async () => {
   initTheme();
   loadVersion();
   
-  // Connect background queue trigger for online state detection
+  // Connectivity returned: retry queued scans immediately.
   window.addEventListener('online', () => {
-    scanQueue.process();
+    scanQueue.resumeNow();
   });
 
-  const cookieToken = getCookie('auth_token');
-  const sessionToken = sessionStorage.getItem('authToken') || cookieToken;
-  if (sessionToken && !window.isSessionTokenExpired?.(sessionToken)) {
-    sessionStorage.setItem('authToken', sessionToken);
-    // Sync the auth_token cookie with the sessionStorage token
-    document.cookie = `auth_token=${sessionToken}; path=/; max-age=3600; SameSite=Lax`;
-    
+  if (window.hasActiveSession?.()) {
     initializeApp();
-    const savedWeek = localStorage.getItem('selectedWeek');
-    const savedTopicName = localStorage.getItem('selectedTopicName');
-    if (savedWeek && savedTopicName) {
-      selectedWeek = savedWeek;
-      topicComboboxLarge?.setValue(savedWeek);
-      topicComboboxActive?.setValue(savedWeek);
-    }
-    
+    restoreSavedTopic();
+
     await window.navigateToAppView(viewFromPath(), { historyMode: 'replace', focus: false });
   } else {
-    if (sessionToken) window.expireSession?.();
+    if (window.sessionExpiresAt?.()) window.expireSession?.();
     await setAppState(0); // Authentication screen
   }
 }
+
+// Back/forward cache can restore a page after logout or expiry; re-check it.
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  if (!window.hasActiveSession?.()) {
+    if (window.sessionExpiresAt?.()) window.expireSession?.();
+    setAppState(0);
+  } else if (shouldScannerRun()) {
+    startScanner();
+  }
+});
 
 let studentModalReturnFocus = null;
 let studentModalCloseTimer = null;
